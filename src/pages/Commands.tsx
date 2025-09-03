@@ -66,6 +66,9 @@ export default function Commands() {
   useEffect(() => {
     if (user) {
       fetchCommands();
+    } else {
+      // If no user, stop loading immediately
+      setLoading(false);
     }
   }, [user]);
 
