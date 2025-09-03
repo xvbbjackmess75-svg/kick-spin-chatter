@@ -10,7 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
-import KickCallback from "./pages/KickCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import Commands from "./pages/Commands";
@@ -29,7 +28,6 @@ const App = () => (
           <Routes>
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/kick-callback" element={<KickCallback />} />
             <Route
               path="/"
               element={

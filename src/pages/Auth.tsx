@@ -82,19 +82,6 @@ export default function Auth() {
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Kick OAuth Button - Disabled */}
-          <Button 
-            type="button"
-            className="w-full mb-4"
-            variant="outline"
-            disabled={true}
-          >
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-muted-foreground" />
-              Kick Integration Not Available
-            </div>
-          </Button>
-
           {/* Continue as Guest Button */}
           <Button 
             type="button"

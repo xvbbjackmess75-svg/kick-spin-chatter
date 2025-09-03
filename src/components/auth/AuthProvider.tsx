@@ -9,7 +9,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
-  signInWithKick: () => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,15 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signInWithKick = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github', // Kick OAuth not available, using GitHub as placeholder
-      options: {
-        redirectTo: `${window.location.origin}/`
-      }
-    });
-    return { error };
-  };
 
   const value = {
     user,
@@ -86,7 +76,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    signInWithKick,
   };
 
   return (
