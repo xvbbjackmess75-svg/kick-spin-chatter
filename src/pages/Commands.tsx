@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { CommandTester } from "@/components/CommandTester";
 import { 
   Plus, 
   Edit, 
@@ -15,60 +19,225 @@ import {
   MessageSquare,
   Zap,
   Settings,
-  Copy
+  Copy,
+  Play,
+  Loader2
 } from "lucide-react";
 
-const commands = [
-  {
-    id: 1,
-    command: "!discord",
-    response: "Join our Discord server: https://discord.gg/example",
-    uses: 1247,
-    enabled: true,
-    cooldown: 30,
-    userLevel: "everyone"
-  },
-  {
-    id: 2,
-    command: "!socials",
-    response: "Follow me on Twitter: @streamer | Instagram: @streamer_ig",
-    uses: 892,
-    enabled: true,
-    cooldown: 60,
-    userLevel: "everyone"
-  },
-  {
-    id: 3,
-    command: "!giveaway",
-    response: "Current giveaway: Gaming Headset! Type !enter to join!",
-    uses: 456,
-    enabled: true,
-    cooldown: 10,
-    userLevel: "everyone"
-  },
-  {
-    id: 4,
-    command: "!help",
-    response: "Available commands: !discord, !socials, !giveaway, !enter",
-    uses: 324,
-    enabled: true,
-    cooldown: 30,
-    userLevel: "everyone"
-  },
-  {
-    id: 5,
-    command: "!mod",
-    response: "Moderator-only command executed successfully!",
-    uses: 89,
-    enabled: true,
-    cooldown: 0,
-    userLevel: "moderator"
-  }
-];
+interface Command {
+  id: string;
+  command: string;
+  response: string;
+  uses: number;
+  enabled: boolean;
+  cooldown: number;
+  user_level: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface KickUser {
+  id: number;
+  username: string;
+  display_name: string;
+  avatar: string;
+  authenticated: boolean;
+}
 
 export default function Commands() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [commands, setCommands] = useState<Command[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [testingCommand, setTestingCommand] = useState<string | null>(null);
+  
+  // Form states
+  const [newCommand, setNewCommand] = useState("");
+  const [newResponse, setNewResponse] = useState("");
+  const [newCooldown, setNewCooldown] = useState(30);
+  const [newUserLevel, setNewUserLevel] = useState("everyone");
+  const [newEnabled, setNewEnabled] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchCommands();
+    }
+  }, [user]);
+
+  const fetchCommands = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('commands')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCommands(data || []);
+    } catch (error) {
+      console.error('Error fetching commands:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load commands",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCommand = async () => {
+    if (!newCommand.trim() || !newResponse.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Ensure command starts with !
+    const commandText = newCommand.startsWith('!') ? newCommand : `!${newCommand}`;
+
+    try {
+      const { data, error } = await supabase
+        .from('commands')
+        .insert({
+          command: commandText,
+          response: newResponse,
+          cooldown: newCooldown,
+          user_level: newUserLevel,
+          enabled: newEnabled,
+          user_id: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Command ${commandText} created successfully!`
+      });
+
+      setCommands([data, ...commands]);
+      setIsCreateDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      console.error('Error creating command:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create command",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const testCommand = async (command: Command) => {
+    setTestingCommand(command.id);
+    
+    try {
+      // Get Kick user data and tokens
+      const kickUserData = localStorage.getItem('kick_user');
+      const kickTokenData = localStorage.getItem('kick_token');
+      
+      if (!kickUserData) {
+        toast({
+          title: "Error",
+          description: "Please link your Kick account first",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const kickUser: KickUser = JSON.parse(kickUserData);
+      const kickToken = kickTokenData ? JSON.parse(kickTokenData) : null;
+
+      // Test the command processing
+      const response = await supabase.functions.invoke('kick-chat-api', {
+        body: {
+          action: 'process_command',
+          command: command.command,
+          user: {
+            username: kickUser.username,
+            user_id: kickUser.id.toString(),
+            user_level: 'owner' // Test as owner to bypass permissions
+          },
+          channel_id: 'test_channel',
+          token_info: kickToken
+        }
+      });
+
+      console.log('Test command response:', response);
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (response.data?.success) {
+        toast({
+          title: "Command Test Successful! ✅",
+          description: `Response: "${response.data.response || command.response}"`,
+        });
+      } else {
+        throw new Error(response.data?.error || 'Unknown error');
+      }
+
+    } catch (error: any) {
+      console.error('Error testing command:', error);
+      toast({
+        title: "Test Failed",
+        description: error.message || "Failed to test command",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingCommand(null);
+    }
+  };
+
+  const deleteCommand = async (commandId: string) => {
+    try {
+      const { error } = await supabase
+        .from('commands')
+        .delete()
+        .eq('id', commandId);
+
+      if (error) throw error;
+
+      setCommands(commands.filter(cmd => cmd.id !== commandId));
+      toast({
+        title: "Success",
+        description: "Command deleted successfully"
+      });
+    } catch (error: any) {
+      console.error('Error deleting command:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete command",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setNewCommand("");
+    setNewResponse("");
+    setNewCooldown(30);
+    setNewUserLevel("everyone");
+    setNewEnabled(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-muted-foreground">Loading commands...</p>
+        </div>
+      </div>
+    );
+  }
 
   const filteredCommands = commands.filter(cmd =>
     cmd.command.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,20 +278,44 @@ export default function Commands() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="command">Command</Label>
-                <Input id="command" placeholder="!example" className="bg-secondary/30" />
+                <Input 
+                  id="command" 
+                  placeholder="!example" 
+                  className="bg-secondary/30" 
+                  value={newCommand}
+                  onChange={(e) => setNewCommand(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="response">Response</Label>
-                <Textarea id="response" placeholder="Enter the bot's response..." className="bg-secondary/30" rows={3} />
+                <Textarea 
+                  id="response" 
+                  placeholder="Enter the bot's response..." 
+                  className="bg-secondary/30" 
+                  rows={3}
+                  value={newResponse}
+                  onChange={(e) => setNewResponse(e.target.value)}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="cooldown">Cooldown (seconds)</Label>
-                  <Input id="cooldown" type="number" placeholder="30" className="bg-secondary/30" />
+                  <Input 
+                    id="cooldown" 
+                    type="number" 
+                    placeholder="30" 
+                    className="bg-secondary/30"
+                    value={newCooldown}
+                    onChange={(e) => setNewCooldown(parseInt(e.target.value) || 0)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="userLevel">User Level</Label>
-                  <select className="w-full p-2 rounded-md bg-secondary/30 border border-border text-foreground">
+                  <select 
+                    className="w-full p-2 rounded-md bg-secondary/30 border border-border text-foreground"
+                    value={newUserLevel}
+                    onChange={(e) => setNewUserLevel(e.target.value)}
+                  >
                     <option value="everyone">Everyone</option>
                     <option value="subscriber">Subscribers</option>
                     <option value="moderator">Moderators</option>
@@ -130,11 +323,17 @@ export default function Commands() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="enabled" />
+                <Switch 
+                  id="enabled" 
+                  checked={newEnabled}
+                  onCheckedChange={setNewEnabled}
+                />
                 <Label htmlFor="enabled">Enable command</Label>
               </div>
               <div className="flex gap-3 pt-4">
-                <Button className="gaming-button flex-1">Create Command</Button>
+                <Button className="gaming-button flex-1" onClick={createCommand}>
+                  Create Command
+                </Button>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="flex-1">
                   Cancel
                 </Button>
@@ -143,6 +342,9 @@ export default function Commands() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Command Tester */}
+      <CommandTester />
 
       {/* Search and Filters */}
       <Card className="gaming-card">
@@ -175,8 +377,8 @@ export default function Commands() {
                     <code className="text-lg font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded">
                       {command.command}
                     </code>
-                    <Badge className={getUserLevelColor(command.userLevel)}>
-                      {command.userLevel}
+                    <Badge className={getUserLevelColor(command.user_level)}>
+                      {command.user_level}
                     </Badge>
                     {command.enabled ? (
                       <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30">
@@ -204,13 +406,36 @@ export default function Commands() {
                 </div>
                 
                 <div className="flex gap-2 ml-4">
-                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="text-kick-green hover:text-kick-green hover:bg-kick-green/10"
+                    onClick={() => testCommand(command)}
+                    disabled={testingCommand === command.id}
+                  >
+                    {testingCommand === command.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => navigator.clipboard.writeText(command.command)}
+                  >
                     <Copy className="h-4 w-4" />
                   </Button>
                   <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteCommand(command.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

@@ -197,6 +197,12 @@ export default function Giveaways() {
     
     if (!isSupabaseUser) return;
     
+    // Check for commands first
+    if (message.content && message.content.startsWith('!')) {
+      await processCommand(message);
+    }
+    
+    // Then check for giveaway keywords
     const { data: currentGiveaways, error } = await supabase
       .from('giveaways')
       .select('*')
@@ -273,6 +279,51 @@ export default function Giveaways() {
       } else {
         console.log(`❌ Keyword "${keyword}" not found in message: "${message.content}"`);
       }
+    }
+  };
+
+  const processCommand = async (message: any) => {
+    try {
+      const commandText = message.content.split(' ')[0]; // Get the command part (!command)
+      console.log(`🤖 Processing command: ${commandText} from ${message.username}`);
+
+      // Get user level based on chat message (you might need to parse this from message metadata)
+      const userLevel = message.badges?.includes('moderator') ? 'moderator' : 
+                       message.badges?.includes('subscriber') ? 'subscriber' : 'viewer';
+
+      // Get Kick token for sending responses
+      const kickTokenData = localStorage.getItem('kick_token');
+      const kickToken = kickTokenData ? JSON.parse(kickTokenData) : null;
+
+      const response = await supabase.functions.invoke('kick-chat-api', {
+        body: {
+          action: 'process_command',
+          command: commandText,
+          user: {
+            username: message.username,
+            user_id: message.userId?.toString() || message.username,
+            user_level: userLevel
+          },
+          channel_id: message.channelId || connectedChannel,
+          token_info: kickToken
+        }
+      });
+
+      console.log('Command processing response:', response);
+
+      if (response.data?.success) {
+        console.log(`✅ Command ${commandText} processed successfully`);
+        
+        // Show notification for successful command
+        toast({
+          title: "🤖 Command Executed",
+          description: `${message.username} used ${commandText}`,
+        });
+      } else if (response.data?.error && response.data.error !== 'Command not found') {
+        console.log(`❌ Command failed: ${response.data.error}`);
+      }
+    } catch (error) {
+      console.error('Error processing command:', error);
     }
   };
 
