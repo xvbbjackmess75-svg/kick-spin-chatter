@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,9 @@ export default function Dashboard() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<DashboardParticipant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatConnected, setChatConnected] = useState(false);
+  const [connectedChannel, setConnectedChannel] = useState<string>("");
+  const socketRef = useRef<WebSocket | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -62,7 +65,14 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchGiveaways();
+      initializeWebSocket();
     }
+    
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
   }, [user]);
 
   const fetchGiveaways = async () => {
@@ -84,6 +94,127 @@ export default function Dashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const initializeWebSocket = () => {
+    try {
+      socketRef.current = new WebSocket('wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor');
+      
+      socketRef.current.onopen = () => {
+        console.log('Connected to chat monitor');
+      };
+
+      socketRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('Received:', data);
+
+        switch (data.type) {
+          case 'connected':
+            setChatConnected(true);
+            setConnectedChannel(data.channelName);
+            toast({
+              title: "Chat Connected",
+              description: `Now monitoring ${data.channelName} chat for keywords`,
+            });
+            break;
+            
+          case 'chat_message':
+            handleChatMessage(data.data);
+            break;
+            
+          case 'disconnected':
+            setChatConnected(false);
+            setConnectedChannel("");
+            break;
+            
+          case 'error':
+            console.error('WebSocket error:', data.message);
+            toast({
+              title: "Connection Error",
+              description: data.message,
+              variant: "destructive"
+            });
+            break;
+        }
+      };
+
+      socketRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        toast({
+          title: "Connection Error", 
+          description: "Failed to connect to chat monitor",
+          variant: "destructive"
+        });
+      };
+
+      socketRef.current.onclose = () => {
+        console.log('WebSocket disconnected');
+        setChatConnected(false);
+        setConnectedChannel("");
+      };
+    } catch (error) {
+      console.error('Error initializing WebSocket:', error);
+    }
+  };
+
+  const handleChatMessage = async (message: any) => {
+    // Check if message matches any active giveaway keywords
+    const activeGiveaways = giveaways.filter(g => g.status === 'active');
+    
+    for (const giveaway of activeGiveaways) {
+      // Extract keyword from description (format: "Channel: x, Keyword: y")
+      const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
+      if (!keywordMatch) continue;
+      
+      const keyword = keywordMatch[1].trim();
+      
+      if (message.content && message.content.toLowerCase().includes(keyword.toLowerCase())) {
+        console.log(`Keyword "${keyword}" detected from user: ${message.username}`);
+        
+        // Add participant to giveaway
+        try {
+          await supabase
+            .from('giveaway_participants')
+            .insert({
+              giveaway_id: giveaway.id,
+              kick_username: message.username,
+              kick_user_id: message.userId?.toString() || message.username
+            });
+
+          // Update participant count
+          const { data: participants } = await supabase
+            .from('giveaway_participants')
+            .select('id')
+            .eq('giveaway_id', giveaway.id);
+
+          await supabase
+            .from('giveaways')
+            .update({ participants_count: participants?.length || 0 })
+            .eq('id', giveaway.id);
+
+          fetchGiveaways();
+          
+          toast({
+            title: "New Participant",
+            description: `${message.username} entered "${giveaway.title}" giveaway!`,
+          });
+        } catch (error) {
+          // Ignore duplicate participant errors
+          if (!error.message?.includes('duplicate')) {
+            console.error('Error adding participant:', error);
+          }
+        }
+      }
+    }
+  };
+
+  const joinChatChannel = (channelName: string) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'join_channel',
+        channelName: channelName
+      }));
     }
   };
 
@@ -135,7 +266,7 @@ export default function Dashboard() {
 
       toast({
         title: "Success",
-        description: `Giveaway "${title}" created! Users can now type "${keyword}" in ${channelName} chat to enter.`,
+        description: `Giveaway "${title}" created! Click "Start Monitoring" to track chat.`,
       });
 
       setTitle("");
@@ -398,6 +529,45 @@ export default function Dashboard() {
                           <Zap className="h-3 w-3 mr-2" />
                           Pick Winner
                         </Button>
+                        {!chatConnected ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
+                              if (channelMatch) {
+                                joinChatChannel(channelMatch[1].trim());
+                              }
+                            }}
+                          >
+                            <Users className="h-3 w-3 mr-2" />
+                            Start Monitoring
+                          </Button>
+                        ) : connectedChannel === giveaway.description?.match(/Channel: ([^,]+)/)?.[1]?.trim() ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="bg-kick-green/20 text-kick-green border-kick-green/30"
+                            disabled
+                          >
+                            <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse mr-2" />
+                            Monitoring Chat
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
+                              if (channelMatch) {
+                                joinChatChannel(channelMatch[1].trim());
+                              }
+                            }}
+                          >
+                            <Users className="h-3 w-3 mr-2" />
+                            Monitor This Channel
+                          </Button>
+                        )}
                         <Button 
                           size="sm" 
                           variant="outline"
