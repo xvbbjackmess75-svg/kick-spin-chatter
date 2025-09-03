@@ -22,7 +22,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
-import { RouletteWheel } from "@/components/RouletteWheel";
+import { HorizontalRoulette } from "@/components/HorizontalRoulette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -639,210 +639,190 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          
-          {/* Roulette Wheel */}
-          <div className="lg:col-span-1">
-            <Card className="border-2 border-dashed border-primary/20 bg-gradient-to-br from-card to-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-primary" />
-                  Winner Selection
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center space-y-6">
-                <RouletteWheel
-                  participants={participants.map((p, index) => ({
-                    id: index,
-                    username: p.username,
-                    avatar: p.avatar || '/placeholder-avatar.jpg',
-                    isWinner: p.isWinner
-                  }))}
-                  isSpinning={isSpinning}
-                  onSpin={() => {}}
-                  winner={winner ? {
-                    id: 0,
-                    username: winner.username,
-                    avatar: winner.avatar || '/placeholder-avatar.jpg',
-                    isWinner: winner.isWinner
-                  } : undefined}
-                />
-                
-                {participants.length > 0 && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    {participants.length} participant{participants.length !== 1 ? 's' : ''} ready for drawing
-                  </p>
-                )}
+        {/* Active Giveaways */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Gift className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold">Active Giveaways</h2>
+            <Badge variant="outline" className="text-primary border-primary/30">
+              {activeGiveaways.length} running
+            </Badge>
+          </div>
+
+          {activeGiveaways.length === 0 ? (
+            <Card className="border-dashed border-muted-foreground/30">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Gift className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Active Giveaways</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Create your first giveaway to start engaging with your Kick audience!
+                </p>
+                <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Giveaway
+                </Button>
               </CardContent>
             </Card>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {activeGiveaways.map((giveaway) => {
+                const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
+                const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
+                const channel = channelMatch?.[1]?.trim();
+                const keyword = keywordMatch?.[1]?.trim();
+                const isMonitoring = chatConnected && connectedChannel === channel;
 
-          {/* Active Giveaways */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center gap-3">
-              <Gift className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-semibold">Active Giveaways</h2>
-              <Badge variant="outline" className="text-primary border-primary/30">
-                {activeGiveaways.length} running
-              </Badge>
-            </div>
-
-            {activeGiveaways.length === 0 ? (
-              <Card className="border-dashed border-muted-foreground/30">
-                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                  <Gift className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Active Giveaways</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    Create your first giveaway to start engaging with your Kick audience!
-                  </p>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Giveaway
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {activeGiveaways.map((giveaway) => {
-                  const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
-                  const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
-                  const channel = channelMatch?.[1]?.trim();
-                  const keyword = keywordMatch?.[1]?.trim();
-                  const isMonitoring = chatConnected && connectedChannel === channel;
-
-                  return (
-                    <Card key={giveaway.id} className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                          
-                          {/* Giveaway Info */}
-                          <div className="flex-1 space-y-3">
-                            <div className="flex items-start justify-between">
-                              <h3 className="text-xl font-semibold">{giveaway.title}</h3>
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                                Active
-                              </Badge>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Channel:</span>
-                                <span className="font-medium ml-2">{channel}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Keyword:</span>
-                                <code className="font-mono bg-secondary px-2 py-1 rounded ml-2">{keyword}</code>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Participants:</span>
-                                <span className="font-bold text-primary ml-2">{giveaway.participants_count || 0}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Status:</span>
-                                <div className="flex items-center gap-2 ml-2">
-                                  {isMonitoring ? (
-                                    <>
-                                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                      <span className="text-green-600 font-medium">Monitoring</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <AlertCircle className="h-4 w-4 text-orange-500" />
-                                      <span className="text-orange-600 font-medium">Waiting</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+                return (
+                  <Card key={giveaway.id} className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                        
+                        {/* Giveaway Info */}
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <h3 className="text-xl font-semibold">{giveaway.title}</h3>
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                              Active
+                            </Badge>
                           </div>
                           
-                          {/* Action Buttons */}
-                          <div className="flex gap-2">
-                            <div className="flex flex-col gap-2 min-w-[200px]">
-                              {!isMonitoring ? (
-                                <Button 
-                                  onClick={() => joinChatChannel(channel || '')}
-                                  className="w-full bg-blue-600 hover:bg-blue-700"
-                                >
-                                  <Monitor className="h-4 w-4 mr-2" />
-                                  Start Monitoring
-                                </Button>
-                              ) : (
-                                <Button 
-                                  onClick={stopChatMonitoring}
-                                  variant="outline"
-                                  className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10"
-                                >
-                                  <MonitorX className="h-4 w-4 mr-2" />
-                                  Stop Monitoring
-                                </Button>
-                              )}
-                              
-                              <Button 
-                                onClick={() => drawWinner(giveaway)}
-                                disabled={isSpinning || (giveaway.participants_count || 0) === 0}
-                                className="w-full bg-gradient-to-r from-primary to-primary/80"
-                              >
-                                <Trophy className="h-4 w-4 mr-2" />
-                                {isSpinning ? 'Drawing...' : 'Pick Winner'}
-                              </Button>
-                              
-                              <Button 
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => simulateParticipant(giveaway.id)}
-                                className="w-full"
-                              >
-                                <Users className="h-3 w-3 mr-2" />
-                                Add Test Participant
-                              </Button>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Channel:</span>
+                              <span className="font-medium ml-2">{channel}</span>
                             </div>
-                            
-                            {/* Management Dropdown */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="px-2">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    setEditingGiveaway(giveaway);
-                                    setNewKeyword(keyword || '');
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Keyword
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => setClearParticipantsId(giveaway.id)}
-                                  disabled={(giveaway.participants_count || 0) === 0}
-                                >
-                                  <UserX className="h-4 w-4 mr-2" />
-                                  Clear Participants
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => setDeleteGiveawayId(giveaway.id)}
-                                  className="text-red-600 focus:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Giveaway
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div>
+                              <span className="text-muted-foreground">Keyword:</span>
+                              <code className="font-mono bg-secondary px-2 py-1 rounded ml-2">{keyword}</code>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Participants:</span>
+                              <span className="font-bold text-primary ml-2">{giveaway.participants_count || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Status:</span>
+                              <div className="flex items-center gap-2 ml-2">
+                                {isMonitoring ? (
+                                  <>
+                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                    <span className="text-green-600 font-medium">Monitoring</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                                    <span className="text-orange-600 font-medium">Waiting</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <div className="flex flex-col gap-2 min-w-[200px]">
+                            {!isMonitoring ? (
+                              <Button 
+                                onClick={() => joinChatChannel(channel || '')}
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Monitor className="h-4 w-4 mr-2" />
+                                Start Monitoring
+                              </Button>
+                            ) : (
+                              <Button 
+                                onClick={stopChatMonitoring}
+                                variant="outline"
+                                className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10"
+                              >
+                                <MonitorX className="h-4 w-4 mr-2" />
+                                Stop Monitoring
+                              </Button>
+                            )}
+                            
+                            <Button 
+                              onClick={() => drawWinner(giveaway)}
+                              disabled={isSpinning || (giveaway.participants_count || 0) === 0}
+                              className="w-full bg-gradient-to-r from-primary to-primary/80"
+                            >
+                              <Trophy className="h-4 w-4 mr-2" />
+                              {isSpinning ? 'Drawing...' : 'Pick Winner'}
+                            </Button>
+                            
+                            <Button 
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => simulateParticipant(giveaway.id)}
+                              className="w-full"
+                            >
+                              <Users className="h-3 w-3 mr-2" />
+                              Add Test Participant
+                            </Button>
+                          </div>
+                          
+                          {/* Management Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="px-2">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setEditingGiveaway(giveaway);
+                                  setNewKeyword(keyword || '');
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Keyword
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setClearParticipantsId(giveaway.id)}
+                                disabled={(giveaway.participants_count || 0) === 0}
+                              >
+                                <UserX className="h-4 w-4 mr-2" />
+                                Clear Participants
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteGiveawayId(giveaway.id)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Giveaway
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Horizontal Roulette - Below Giveaways */}
+        {participants.length > 0 && (
+          <HorizontalRoulette
+            participants={participants.map((p, index) => ({
+              id: index,
+              username: p.username,
+              avatar: p.avatar || '/placeholder-avatar.jpg',
+              isWinner: p.isWinner
+            }))}
+            isSpinning={isSpinning}
+            onSpin={() => {}}
+            winner={winner ? {
+              id: 0,
+              username: winner.username,
+              avatar: winner.avatar || '/placeholder-avatar.jpg',
+              isWinner: winner.isWinner
+            } : undefined}
+          />
+        )}
 
         {/* Recent Participants */}
         {participants.length > 0 && (

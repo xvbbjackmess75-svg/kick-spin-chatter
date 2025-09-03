@@ -164,6 +164,15 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes scroll-horizontal {
+    from { 
+      transform: translateX(0);
+    }
+    to { 
+      transform: translateX(var(--scroll-distance, -2000px));
+    }
+  }
+
   /* Gaming utility classes */
   .gaming-card {
     @apply bg-gradient-to-br from-card via-card to-secondary/50 border border-border/50 backdrop-blur-sm;
@@ -182,6 +191,10 @@ All colors MUST be HSL.
 
   .roulette-spin {
     animation: spin-slow 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  }
+
+  .roulette-scroll {
+    animation: scroll-horizontal 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
   }
 
   .chat-message {
