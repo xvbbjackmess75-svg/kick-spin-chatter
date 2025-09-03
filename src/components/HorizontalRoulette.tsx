@@ -106,37 +106,23 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setIsAnimating(true);
       setShowWinner(false);
       
+      // ALWAYS reset to start position for consistent behavior
+      console.log("Resetting roulette to start position");
+      setScrollPosition(0);
+      
       const participantWidth = 80;
       const containerWidth = 800;
       const centerLinePosition = containerWidth / 2;
       
-      // Generate provably fair result
+      // Generate provably fair result - this determines the actual landing position
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Determine target winner
-      let targetWinner: Participant;
-      if (winner) {
-        targetWinner = winner;
-      } else {
-        targetWinner = participants[result.winnerTicket];
-      }
+      // ALWAYS use provably fair winner for positioning calculation
+      const targetWinner = participants[result.winnerTicket];
+      console.log("Provably fair winner:", targetWinner.username, "at index:", result.winnerTicket);
       
-      console.log("Target winner:", targetWinner.username);
-      
-      // Reset to beginning if we're picking a new winner (different from last one)
-      const isNewWinner = !lastWinnerId || (winner && winner.id !== lastWinnerId);
-      let startPosition = 0;
-      
-      if (isNewWinner) {
-        console.log("New winner detected, resetting scroll position");
-        setScrollPosition(0); // Reset immediately
-        startPosition = 0;
-      } else {
-        startPosition = scrollPosition;
-      }
-      
-      // Find ALL positions where this winner appears in the extended array
+      // Find ALL positions where this provably fair winner appears in the extended array
       const winnerPositions = [];
       extendedParticipants.forEach((participant, index) => {
         if (participant.id === targetWinner.id) {
@@ -144,75 +130,64 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }
       });
       
-      console.log("Winner appears at positions:", winnerPositions.slice(0, 10)); // Log first 10 positions
+      console.log("Winner appears at positions:", winnerPositions.slice(0, 10));
       
-      // Choose a position that's far enough for a good spin effect
-      // Start from the current position and add minimum scroll distance
-      const minScrollDistance = 1500;
-      const minPosition = Math.ceil((startPosition + minScrollDistance) / participantWidth);
+      // Choose a position that gives us a good spin effect (at least 20 full cycles)
+      const minScrollDistance = 20 * participants.length * participantWidth; // 20 complete cycles minimum
+      const minPosition = Math.ceil(minScrollDistance / participantWidth);
       
       const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
       
       if (suitablePositions.length === 0) {
-        console.error("No suitable winner positions found");
+        console.error("No suitable winner positions found, using fallback");
         setIsAnimating(false);
         return;
       }
       
-      // Add some randomness by choosing from the first several suitable positions
-      const maxPositionsToConsider = Math.min(10, suitablePositions.length);
-      const randomIndex = Math.floor(Math.random() * maxPositionsToConsider);
-      const chosenPosition = suitablePositions[randomIndex];
+      // Choose the first suitable position for consistency
+      const chosenPosition = suitablePositions[0];
       
-      console.log("Chosen position:", chosenPosition, "starting from:", startPosition);
+      console.log("Chosen position:", chosenPosition, "for winner:", targetWinner.username);
       
       // Calculate the exact scroll position needed
-      // We want the center of the chosen avatar to align with the center line
       const avatarLeftEdge = chosenPosition * participantWidth;
       const avatarCenter = avatarLeftEdge + (participantWidth / 2);
       
-      // To center the avatar, we need to scroll so that:
-      // avatarCenter - scrollPosition = centerLinePosition
-      // Therefore: scrollPosition = avatarCenter - centerLinePosition
+      // Calculate scroll to center the avatar on the center line
       let finalScrollPosition = avatarCenter - centerLinePosition;
       
-      // Add the landing offset for slight randomness within the avatar
+      // Add the provably fair landing offset
       finalScrollPosition += result.landingOffset;
       
-      console.log("Scroll calculation:", {
+      console.log("Final scroll calculation:", {
         chosenPosition,
         avatarLeftEdge,
         avatarCenter,
         centerLinePosition,
         landingOffset: result.landingOffset,
-        finalScrollPosition,
-        startPosition
+        finalScrollPosition
       });
       
-      // Set the target scroll position with slight delay to ensure reset is applied
+      // Apply the scroll with a slight delay to ensure reset is processed
       setTimeout(() => {
+        console.log("Setting final scroll position:", finalScrollPosition);
         setScrollPosition(finalScrollPosition);
-      }, isNewWinner ? 100 : 0); // Small delay for new winners to ensure reset
-      
-      // Track the current winner
-      if (winner) {
-        setLastWinnerId(winner.id);
-      }
+      }, 100);
       
       // Animation complete handler
       const animationDuration = 5000;
       setTimeout(() => {
         setIsAnimating(false);
-      }, animationDuration);
-
-      // Show winner announcement
+      }, animationDuration + 100); // Add buffer for the delayed scroll
+      
+      // Show winner announcement (show the passed winner prop, but position was calculated with provably fair)
       if (winner) {
         setTimeout(() => {
           setShowWinner(true);
-        }, animationDuration + 1000);
+        }, animationDuration + 1500);
       }
     }
-  }, [isSpinning, participants, winner, isAnimating, extendedParticipants, scrollPosition, lastWinnerId]);
+  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
 
   return (
     <Card className="gaming-card w-full">
