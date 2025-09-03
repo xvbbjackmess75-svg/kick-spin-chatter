@@ -28,6 +28,8 @@ interface DrawResult {
   hash: string;
   winnerTicket: number;
   totalTickets: number;
+  winningTicketNumber: number;
+  ticketsPerParticipant: number;
   landingOffset: number;
 }
 
@@ -36,7 +38,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   const [showWinner, setShowWinner] = useState(false);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [lastWinnerId, setLastWinnerId] = useState<number | null>(null);
+  const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
 
   // Provably fair system functions
   const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
@@ -60,12 +62,17 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     const nonce = Date.now();
     const hash = hashSeeds(clientSeed, serverSeed, nonce);
     
-    // Create ticket system - each participant gets one ticket
-    const totalTickets = participants.length;
+    // Fixed 1000 tickets distributed equally among participants
+    const totalTickets = 1000;
+    const ticketsPerParticipant = Math.floor(totalTickets / participants.length);
     
-    // Use hash to determine winner ticket
+    // Use hash to determine winning ticket number (1-1000)
     const hashInt = parseInt(hash.substring(0, 8), 16);
-    const winnerTicket = hashInt % totalTickets;
+    const winningTicketNumber = (hashInt % totalTickets) + 1; // 1-1000
+    
+    // Determine which participant owns this ticket
+    const winnerIndex = Math.floor((winningTicketNumber - 1) / ticketsPerParticipant);
+    const actualWinnerIndex = Math.min(winnerIndex, participants.length - 1); // Ensure within bounds
     
     // Random offset within avatar bounds for landing position (-20 to +20 pixels)
     const landingOffset = (hashInt % 41) - 20; // Range: -20 to +20
@@ -75,8 +82,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       serverSeed,
       nonce,
       hash,
-      winnerTicket,
+      winnerTicket: actualWinnerIndex,
       totalTickets,
+      winningTicketNumber,
+      ticketsPerParticipant,
       landingOffset
     };
   };
@@ -102,7 +111,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   }, [participants]);
 
   useEffect(() => {
-    if (isSpinning && participants.length > 0 && !isAnimating && winner) {
+    if (isSpinning && participants.length > 0 && !isAnimating) {
       setIsAnimating(true);
       setShowWinner(false);
       
@@ -114,15 +123,16 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const containerWidth = 800;
       const centerLinePosition = containerWidth / 2;
       
-      // Generate provably fair result - but ONLY use it for the landing offset
+      // Generate provably fair result to determine the winner
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Use the ACTUAL winner passed as prop, not the provably fair winner
-      const targetWinner = winner;
-      console.log("Actual selected winner:", targetWinner.username);
+      // Use the provably fair winner
+      const targetWinner = participants[result.winnerTicket];
+      setSelectedWinner(targetWinner); // Store the selected winner
+      console.log("Provably fair winner:", targetWinner.username, "Ticket:", result.winningTicketNumber, "Tickets per participant:", result.ticketsPerParticipant);
       
-      // Find ALL positions where this ACTUAL winner appears in the extended array
+      // Find ALL positions where this winner appears in the extended array
       const winnerPositions = [];
       extendedParticipants.forEach((participant, index) => {
         if (participant.id === targetWinner.id) {
@@ -130,10 +140,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }
       });
       
-      console.log("Selected winner appears at positions:", winnerPositions.slice(0, 10));
+      console.log("Winner appears at positions:", winnerPositions.slice(0, 10));
       
       if (winnerPositions.length === 0) {
-        console.error("Selected winner not found in extended array");
+        console.error("Winner not found in extended array");
         setIsAnimating(false);
         return;
       }
@@ -145,7 +155,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
       
       if (suitablePositions.length === 0) {
-        console.error("No suitable positions for selected winner, using closest available");
+        console.error("No suitable positions for winner, using closest available");
         // Fallback to the first available position that's reasonably far
         const fallbackMinPosition = Math.ceil((5 * participants.length * participantWidth) / participantWidth);
         const fallbackPositions = winnerPositions.filter(pos => pos >= fallbackMinPosition);
@@ -159,7 +169,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         var chosenPosition = suitablePositions[0];
       }
       
-      console.log("Chosen position:", chosenPosition, "for selected winner:", targetWinner.username);
+      console.log("Chosen position:", chosenPosition, "for winner:", targetWinner.username);
       
       // Calculate the exact scroll position needed
       const avatarLeftEdge = chosenPosition * participantWidth;
@@ -171,8 +181,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       // Add the provably fair landing offset for slight randomness
       finalScrollPosition += result.landingOffset;
       
-      console.log("Final scroll calculation for selected winner:", {
-        selectedWinner: targetWinner.username,
+      console.log("Final scroll calculation:", {
+        winner: targetWinner.username,
         chosenPosition,
         avatarLeftEdge,
         avatarCenter,
@@ -193,12 +203,12 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         setIsAnimating(false);
       }, animationDuration + 100);
       
-      // Show winner announcement
+      // Show winner announcement - show the provably fair winner
       setTimeout(() => {
         setShowWinner(true);
       }, animationDuration + 1500);
     }
-  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
+  }, [isSpinning, participants, isAnimating, extendedParticipants]);
 
   return (
     <Card className="gaming-card w-full">
@@ -266,7 +276,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         </div>
 
         {/* Winner Display */}
-        {winner && showWinner && (
+        {selectedWinner && showWinner && (
           <div className="space-y-4 animate-fade-in">
             <div className="p-4 sm:p-6 rounded-xl bg-kick-green/10 border border-kick-green/30">
               <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
@@ -278,18 +288,18 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               <div className="flex items-center justify-center gap-4">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-kick-green pulse-glow">
                   <AvatarImage 
-                    src={`https://files.kick.com/images/user/${winner.username}/profile_image/conversion/300x300-medium.webp`}
-                    alt={winner.username}
+                    src={`https://files.kick.com/images/user/${selectedWinner.username}/profile_image/conversion/300x300-medium.webp`}
+                    alt={selectedWinner.username}
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-avatar.jpg';
                     }}
                   />
                   <AvatarFallback className="bg-kick-green text-kick-dark font-bold text-lg">
-                    {winner.username.slice(0, 2).toUpperCase()}
+                    {selectedWinner.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{winner.username}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{selectedWinner.username}</p>
                   <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30 mt-1">
                     <Crown className="h-3 w-3 mr-1" />
                     Winner
@@ -342,7 +352,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                     <div className="pt-2 border-t">
                       <p className="font-medium text-foreground">Result:</p>
                       <p className="text-muted-foreground">
-                        Ticket #{drawResult.winnerTicket + 1} of {drawResult.totalTickets} total tickets
+                        Winning ticket: #{drawResult.winningTicketNumber} of {drawResult.totalTickets} total tickets
+                      </p>
+                      <p className="text-muted-foreground">
+                        Tickets per participant: {drawResult.ticketsPerParticipant}
                       </p>
                       <p className="text-muted-foreground">
                         Landing offset: {drawResult.landingOffset}px
