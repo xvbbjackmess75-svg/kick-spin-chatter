@@ -67,7 +67,7 @@ export default function Auth() {
       const redirectUri = encodeURIComponent(`${window.location.origin}/kick-callback`);
       const scope = encodeURIComponent('user:read');
       
-      const kickAuthUrl = `https://kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=oauth_state`;
+      const kickAuthUrl = `https://id.kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=oauth_state`;
       
       // Redirect to Kick OAuth
       window.location.href = kickAuthUrl;
