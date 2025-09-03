@@ -143,8 +143,8 @@ export default function History() {
     );
   }
 
-  // Guest mode - show login message
-  if (isGuestMode) {
+  // Guest mode - show login message (only if not authenticated)
+  if (isGuestMode && !user) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto">
