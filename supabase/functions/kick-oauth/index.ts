@@ -113,15 +113,26 @@ Deno.serve(async (req) => {
 
       const tokenData = await tokenResponse.json()
       console.log('✅ Token exchange successful')
+      console.log('🔍 FULL TOKEN RESPONSE:', JSON.stringify(tokenData, null, 2))
 
-      console.log('🔧 Getting user info...')
       let kickUser = null
-      
-      // Check if user info is included in token response first
-      if (tokenData.user) {
-        kickUser = tokenData.user
-        console.log('✅ User info found in token response:', kickUser.username || kickUser.name)
+
+      // Check if user info is included in the token response
+      if (tokenData.user || tokenData.userinfo || tokenData.profile) {
+        const userFromToken = tokenData.user || tokenData.userinfo || tokenData.profile
+        console.log('🔍 Found user data in token response:', JSON.stringify(userFromToken, null, 2))
+        
+        kickUser = {
+          id: userFromToken.id || userFromToken.user_id || userFromToken.sub || `kick_${Date.now()}`,
+          username: userFromToken.username || userFromToken.preferred_username || userFromToken.name || userFromToken.login || `user_${Date.now()}`,
+          display_name: userFromToken.display_name || userFromToken.name || userFromToken.username || 'Kick User',
+          avatar: userFromToken.avatar || userFromToken.picture || userFromToken.avatar_url || null
+        }
+        
+        console.log('✅ Extracted user from token:', JSON.stringify(kickUser, null, 2))
       } else {
+        console.log('🔧 No user data in token, trying API call...')
+        
         // Use the correct Kick API endpoint for authenticated user
         try {
           console.log('🔧 Attempting API call to: https://kick.com/api/v1/user')
@@ -196,8 +207,9 @@ Deno.serve(async (req) => {
         message: 'Kick OAuth completed successfully',
         debug_info: {
           api_called: 'https://kick.com/api/v1/user',
-          user_fields_available: Object.keys(kickUser),
-          fallback_used: kickUser.username?.includes('user_') || kickUser.username?.includes('kick_user_')
+          user_fields_available: kickUser ? Object.keys(kickUser) : [],
+          fallback_used: kickUser ? (kickUser.username?.includes('user_') || kickUser.username?.includes('kick_user_')) : true,
+          token_has_user_data: !!(tokenData.user || tokenData.userinfo || tokenData.profile)
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
