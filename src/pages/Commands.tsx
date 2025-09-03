@@ -64,13 +64,15 @@ export default function Commands() {
   const [newEnabled, setNewEnabled] = useState(true);
 
   useEffect(() => {
+    console.log('🔧 Commands useEffect - user:', user?.email, 'loading:', loading);
+    
     if (user) {
       fetchCommands();
-    } else {
-      // If no user, stop loading immediately
+    } else if (!loading) {
+      // If no user and not loading, stop loading immediately
       setLoading(false);
     }
-  }, [user]);
+  }, [user, loading]);
 
   const fetchCommands = async () => {
     try {

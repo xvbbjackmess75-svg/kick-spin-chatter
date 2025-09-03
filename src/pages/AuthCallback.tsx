@@ -102,69 +102,115 @@ export default function AuthCallback() {
               localStorage.setItem('kick_token', JSON.stringify(token_info));
             }
 
-            // Auto-create Supabase account for seamless experience
+            // Auto-create and sign into Supabase account for seamless experience
             try {
               console.log('🔄 Creating hybrid Supabase account for Kick user...');
               
-              // Create a unique email for the Kick user if they don't have one
-              const userEmail = user.email || `kick_${user.id}@kickuser.lovable.app`;
+              // Create a unique email for the Kick user
+              const userEmail = `kick_${user.id}@kickuser.lovable.app`;
               
               // Generate a secure random password
               const randomPassword = crypto.getRandomValues(new Uint8Array(32));
               const password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
               
-              // Try to create Supabase account
-              const { data: authData, error: signUpError } = await supabase.auth.signUp({
+              // Try to sign in first (in case account already exists)
+              console.log('🔄 Attempting sign in to existing account...');
+              const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: userEmail,
-                password: password,
-                options: {
-                  emailRedirectTo: `${window.location.origin}/`,
-                  data: {
-                    kick_username: user.username,
-                    kick_user_id: user.id.toString(),
-                    kick_avatar: user.avatar,
-                    display_name: user.display_name || user.username,
-                    is_hybrid_account: true,
-                    created_via_kick: true
+                password: password
+              });
+              
+              if (signInError && !signInError.message.includes('Invalid login credentials')) {
+                console.error('❌ Sign in failed:', signInError);
+              }
+              
+              // If sign in failed, try to create account
+              if (signInError) {
+                console.log('🔄 Creating new Supabase account...');
+                const { data: authData, error: signUpError } = await supabase.auth.signUp({
+                  email: userEmail,
+                  password: password,
+                  options: {
+                    emailRedirectTo: `${window.location.origin}/`,
+                    data: {
+                      kick_username: user.username,
+                      kick_user_id: user.id.toString(),
+                      kick_avatar: user.avatar,
+                      display_name: user.display_name || user.username,
+                      is_hybrid_account: true,
+                      created_via_kick: true
+                    }
+                  }
+                });
+
+                if (signUpError && !signUpError.message.includes('already registered')) {
+                  console.error('❌ Failed to create Supabase account:', signUpError);
+                  throw signUpError;
+                } else if (authData?.user) {
+                  console.log('✅ Hybrid account created successfully');
+                  
+                  // Store the credentials for future use
+                  localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
+                    email: userEmail,
+                    password: password,
+                    created_at: new Date().toISOString(),
+                    kick_user_id: user.id
+                  }));
+                  
+                  // Automatically confirm the user (skip email verification)
+                  if (authData.user && !authData.user.email_confirmed_at) {
+                    console.log('🔄 Auto-confirming user to skip email verification...');
+                    // Note: In production, you might want email verification
+                    // For now, we'll sign them in directly since the account was created
+                    await supabase.auth.signInWithPassword({
+                      email: userEmail,
+                      password: password
+                    });
+                  }
+                  
+                  toast({
+                    title: "Account Enhanced!",
+                    description: `Welcome ${user.username}! Your Kick account is now linked with enhanced features.`,
+                  });
+                } else if (signUpError?.message.includes('already registered')) {
+                  console.log('ℹ️ User already exists, attempting sign in...');
+                  const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+                    email: userEmail,
+                    password: password
+                  });
+                  
+                  if (retrySignInError) {
+                    console.error('❌ Retry sign in failed:', retrySignInError);
+                    // Try to use stored credentials
+                    const storedCreds = localStorage.getItem('kick_hybrid_credentials');
+                    if (storedCreds) {
+                      const creds = JSON.parse(storedCreds);
+                      if (creds.kick_user_id.toString() === user.id.toString()) {
+                        const { error: storedCredsError } = await supabase.auth.signInWithPassword({
+                          email: creds.email,
+                          password: creds.password
+                        });
+                        if (!storedCredsError) {
+                          console.log('✅ Signed in with stored credentials');
+                        }
+                      }
+                    }
+                  } else {
+                    console.log('✅ Signed in to existing account');
                   }
                 }
-              });
-
-              if (signUpError && !signUpError.message.includes('already registered')) {
-                console.error('❌ Failed to create Supabase account:', signUpError);
-                // Still allow Kick-only login, just log the issue
-                console.log('⚠️ Continuing with Kick-only authentication');
-              } else if (authData?.user) {
-                console.log('✅ Hybrid account created successfully');
-                
-                // Store the generated credentials securely for potential future use
-                localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
-                  email: userEmail,
-                  created_at: new Date().toISOString(),
-                  kick_user_id: user.id
-                }));
-                
-                toast({
-                  title: "Enhanced Account Created!",
-                  description: `Welcome ${user.username}! Your account has been enhanced with additional security features.`,
-                });
               } else {
-                console.log('ℹ️ User may already have account, attempting sign in...');
-                
-                // Try to sign in with existing account if creation failed due to existing user
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                  email: userEmail,
-                  password: password
-                });
-                
-                if (!signInError) {
-                  console.log('✅ Signed in to existing hybrid account');
-                }
+                console.log('✅ Signed in to existing hybrid account');
               }
               
             } catch (hybridError) {
               console.error('❌ Hybrid account creation failed:', hybridError);
               // Continue with Kick-only authentication
+              toast({
+                title: "Partial Authentication",
+                description: `Signed in as ${user.username}. Some features may require account verification.`,
+                variant: "default"
+              });
             }
 
             const successMessage = isLinkingMode 
