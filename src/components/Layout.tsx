@@ -23,9 +23,50 @@ export function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
   const location = useLocation();
 
+  // Check for Kick authentication
+  const kickUserData = localStorage.getItem('kick_user');
+  const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
+  // Determine current user info
+  const getCurrentUserInfo = () => {
+    if (kickUser?.authenticated) {
+      return {
+        username: kickUser.username,
+        displayName: kickUser.display_name || kickUser.username,
+        avatar: kickUser.avatar,
+        initials: kickUser.username?.slice(0, 2).toUpperCase() || 'KU'
+      };
+    } else if (user) {
+      return {
+        username: user.email?.split('@')[0] || 'User',
+        displayName: user.email?.split('@')[0] || 'User', 
+        avatar: null,
+        initials: user.email?.slice(0, 2).toUpperCase() || 'U'
+      };
+    } else if (isGuestMode) {
+      return {
+        username: 'Guest',
+        displayName: 'Guest User',
+        avatar: null,
+        initials: 'G'
+      };
+    }
+    return {
+      username: 'User',
+      displayName: 'User',
+      avatar: null,
+      initials: 'U'
+    };
+  };
+
+  const userInfo = getCurrentUserInfo();
+
   const handleSignOut = async () => {
-    // Clear guest mode if active
+    // Clear guest mode and Kick auth data
     localStorage.removeItem('guest_mode');
+    localStorage.removeItem('kick_user');
+    localStorage.removeItem('kick_token');
     
     // Sign out from Supabase if user is authenticated
     if (user) {
@@ -89,12 +130,15 @@ export function Layout({ children }: LayoutProps) {
             
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
+                {userInfo.avatar ? (
+                  <AvatarImage src={userInfo.avatar} alt={userInfo.username} />
+                ) : null}
                 <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
-                  {user?.email?.slice(0, 2).toUpperCase() || 'U'}
+                  {userInfo.initials}
                 </AvatarFallback>
               </Avatar>
               <span className="text-sm font-medium hidden sm:block">
-                {user?.email?.split('@')[0] || 'User'}
+                {userInfo.displayName}
               </span>
             </div>
             
