@@ -60,29 +60,39 @@ Deno.serve(async (req) => {
     
     // If no action in URL, check request body for POST requests
     if (!action && req.method === 'POST') {
-      const body = await req.json()
-      action = body.action
-      
-      // For authorize action, also get the origin from body
-      if (action === 'authorize' && body.origin) {
-        url.searchParams.set('origin', body.origin)
-      }
-      
-      // For exchange action, get additional parameters
-      if (action === 'exchange') {
-        if (body.code) url.searchParams.set('code', body.code)
-        if (body.state) url.searchParams.set('state', body.state)
-        if (body.code_verifier) url.searchParams.set('code_verifier', body.code_verifier)
-        if (body.origin) url.searchParams.set('origin', body.origin)
+      console.log('🎯 Reading request body...')
+      try {
+        const body = await req.json()
+        console.log('🎯 Request body:', body)
+        action = body.action
+        
+        // For authorize action, also get the origin from body
+        if (action === 'authorize' && body.origin) {
+          url.searchParams.set('origin', body.origin)
+        }
+        
+        // For exchange action, get additional parameters
+        if (action === 'exchange') {
+          if (body.code) url.searchParams.set('code', body.code)
+          if (body.state) url.searchParams.set('state', body.state)
+          if (body.code_verifier) url.searchParams.set('code_verifier', body.code_verifier)
+          if (body.origin) url.searchParams.set('origin', body.origin)
+        }
+        console.log('🎯 Action and params set from body')
+      } catch (bodyError) {
+        console.error('❌ Error reading request body:', bodyError)
+        throw new Error(`Failed to parse request body: ${bodyError.message}`)
       }
     }
     
     console.log('🎯 Action determined:', action)
 
     // Initialize Supabase client
+    console.log('🎯 Initializing Supabase client...')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    console.log('🎯 Supabase client initialized')
 
     if (action === 'authorize') {
       // Generate authorization URL - temporarily hardcode for testing
