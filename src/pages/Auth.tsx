@@ -89,10 +89,12 @@ export default function Auth() {
         throw response.error;
       }
 
-      const { authUrl } = response.data;
+      const { authUrl, codeVerifier } = response.data;
       console.log('🔗 Auth URL received:', authUrl);
       
       if (authUrl) {
+        // Store code verifier for later use
+        sessionStorage.setItem('kick_code_verifier', codeVerifier);
         console.log('🚀 Redirecting to:', authUrl);
         window.location.href = authUrl;
       } else {

@@ -27,12 +27,17 @@ export default function AuthCallback() {
 
       if (code) {
         try {
+          // Get stored code verifier
+          const codeVerifier = sessionStorage.getItem('kick_code_verifier');
+          sessionStorage.removeItem('kick_code_verifier'); // Clean up
+          
           // Exchange the code for tokens via our edge function
           const response = await supabase.functions.invoke('kick-oauth', {
             body: { 
               action: 'exchange',
               code: code,
               state: state,
+              code_verifier: codeVerifier,
               origin: window.location.origin
             }
           });

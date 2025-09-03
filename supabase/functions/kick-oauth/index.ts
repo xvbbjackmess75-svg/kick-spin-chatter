@@ -24,6 +24,26 @@ interface KickTokenResponse {
   scope: string
 }
 
+// PKCE helper functions
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return btoa(String.fromCharCode.apply(null, Array.from(array)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(verifier)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+}
+
 Deno.serve(async (req) => {
   console.log('🚀 Kick OAuth function called with method:', req.method)
   console.log('🚀 Request URL:', req.url)
@@ -67,18 +87,25 @@ Deno.serve(async (req) => {
       const state = crypto.randomUUID()
       const scopes = ['user:read'].join(' ')
       
+      // Generate PKCE parameters (required by Kick)
+      const codeVerifier = generateCodeVerifier()
+      const codeChallenge = await generateCodeChallenge(codeVerifier)
+      
       const authUrl = new URL('https://id.kick.com/oauth/authorize')
       authUrl.searchParams.set('client_id', clientId)
       authUrl.searchParams.set('redirect_uri', redirectUri)
       authUrl.searchParams.set('response_type', 'code')
       authUrl.searchParams.set('scope', scopes)
       authUrl.searchParams.set('state', state)
+      authUrl.searchParams.set('code_challenge', codeChallenge)
+      authUrl.searchParams.set('code_challenge_method', 'S256')
 
       console.log('🔗 Generated authorization URL:', authUrl.toString())
 
       return new Response(JSON.stringify({ 
         authUrl: authUrl.toString(),
-        state 
+        state,
+        codeVerifier // Store this for the token exchange
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -87,6 +114,7 @@ Deno.serve(async (req) => {
     if (action === 'exchange') {
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
+      const codeVerifier = url.searchParams.get('code_verifier') // This should come from the client
       const origin = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       
       if (!code) {
@@ -111,6 +139,7 @@ Deno.serve(async (req) => {
           client_secret: clientSecret,
           redirect_uri: redirectUri,
           code: code,
+          code_verifier: codeVerifier || '', // PKCE code verifier
         }),
       })
 
