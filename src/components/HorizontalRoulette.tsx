@@ -32,8 +32,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const containerWidth = 800; // Visible container width
       const visibleParticipants = Math.floor(containerWidth / participantWidth);
       
-      // Create enough scrolling distance (6-10 full cycles) plus landing position
-      const fullCycles = 6 + Math.random() * 4; // 6-10 cycles
+      // Create enough scrolling distance (20-50 full cycles) plus landing position
+      const fullCycles = 20 + Math.random() * 30; // 20-50 cycles
       const cycleDistance = participants.length * participantWidth;
       const baseCycles = Math.floor(fullCycles) * cycleDistance;
       
