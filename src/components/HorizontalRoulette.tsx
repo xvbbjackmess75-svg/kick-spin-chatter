@@ -36,6 +36,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   const [animationClass, setAnimationClass] = useState("");
   const [showWinner, setShowWinner] = useState(false);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
+  const [lastWinnerId, setLastWinnerId] = useState<number | null>(null);
 
   // Provably fair system functions
   const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
@@ -92,11 +93,6 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Create enough scrolling distance (20-50 full cycles) plus landing position
-      const fullCycles = 20 + Math.random() * 30;
-      const cycleDistance = participants.length * participantWidth;
-      const baseCycles = Math.floor(fullCycles) * cycleDistance;
-      
       // Use winner from props or provably fair selection
       let targetParticipantIndex;
       if (winner) {
@@ -106,15 +102,34 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         targetParticipantIndex = result.winnerTicket;
       }
       
+      // Calculate minimum cycles needed to ensure forward movement
+      const cycleDistance = participants.length * participantWidth;
+      const currentCyclePosition = scrollPosition % cycleDistance;
       const targetPosition = targetParticipantIndex * participantWidth;
       
-      // Add random offset for landing position within the winner's avatar bounds (not outside)
+      // Ensure we move forward by at least 15 full cycles
+      let additionalCycles = 15 + Math.random() * 20; // 15-35 cycles
+      
+      // If we have multiple winners being selected, ensure we move forward
+      if (winner && lastWinnerId !== null && winner.id !== lastWinnerId) {
+        additionalCycles = Math.max(20, additionalCycles); // Minimum 20 cycles for multiple winners
+      }
+      
+      const baseCycles = Math.floor(additionalCycles) * cycleDistance;
+      
+      // Add random offset for landing position within the winner's avatar bounds
       const centerOffset = containerWidth / 2 - participantWidth / 2;
       // Limit random offset to stay within the avatar bounds (±20px max to stay in avatar area)
       const randomOffset = (result.landingOffset / 30) * 20; // Scale down from ±30 to ±20
       
-      const finalScrollPosition = baseCycles + targetPosition - centerOffset + randomOffset;
+      // Calculate final position: current position + additional cycles + target position
+      const finalScrollPosition = scrollPosition + baseCycles + (targetPosition - currentCyclePosition) + randomOffset;
       setScrollPosition(finalScrollPosition);
+      
+      // Track the current winner
+      if (winner) {
+        setLastWinnerId(winner.id);
+      }
       
       // Reset animation after spinning
       setTimeout(() => {
@@ -128,7 +143,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }, 11000); // 8000ms animation + 3000ms delay
       }
     }
-  }, [isSpinning, participants.length, winner]);
+  }, [isSpinning, participants.length, winner, scrollPosition, lastWinnerId]);
 
   // Create extended participants array for seamless infinite scrolling
   // Calculate based on maximum possible scroll distance to ensure we always have enough participants
