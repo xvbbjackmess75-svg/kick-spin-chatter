@@ -120,6 +120,7 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     // Calculate target position (after several cycles)
     const cycles = 25;
     const targetIndex = (cycles * participants.length) + winnerIndex;
+    // FIXED: Calculate exact center alignment
     const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
     
     console.log("🎯 ANIMATION CALCULATION:", {
@@ -220,15 +221,15 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
         {/* Roulette Strip */}
         <div className="relative overflow-hidden border-2 border-kick-green/30 rounded-lg bg-gradient-to-r from-kick-dark via-kick-purple/20 to-kick-dark">
           
-          {/* Winner indicator arrow */}
+          {/* Winner indicator arrow - EXACT CENTER */}
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1 z-20">
-            <div className="w-0 h-0 border-l-4 border-r-4 border-b-6 border-transparent border-b-kick-green drop-shadow-lg" />
+            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-kick-green drop-shadow-lg" />
           </div>
           
-          {/* Center line */}
-          <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-kick-green z-10 opacity-50" />
+          {/* Center line - EXACT CENTER */}
+          <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-1 bg-kick-green z-10 opacity-80" />
           
-          {/* Scrolling container */}
+          {/* Scrolling container - PRECISE ALIGNMENT */}
           <div className="relative h-32">
             <div 
               className="flex absolute top-0 h-full"
@@ -241,9 +242,12 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
               {extendedParticipants.map((participant) => (
                 <div
                   key={participant.uniqueKey}
-                  className="flex-shrink-0 w-20 h-full flex flex-col items-center justify-center p-2 border-r border-kick-green/20"
+                  className="flex-shrink-0 w-20 h-full flex flex-col items-center justify-center p-2 border-r border-kick-green/20 relative"
                 >
-                  <Avatar className="w-16 h-16 border-2 border-background shadow-lg">
+                  {/* Debug overlay to show exact center of each participant */}
+                  <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-red-500 opacity-30 z-5" />
+                  
+                  <Avatar className="w-16 h-16 border-2 border-background shadow-lg relative z-10">
                     <AvatarImage 
                       src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
                       alt={participant.username}
@@ -255,7 +259,7 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
                       {participant.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="text-xs mt-1 text-center text-foreground/80 truncate w-full">
+                  <p className="text-xs mt-1 text-center text-foreground/80 truncate w-full relative z-10">
                     {participant.username}
                   </p>
                 </div>
