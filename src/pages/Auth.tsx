@@ -30,7 +30,7 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      navigate('/dashboard');
+      navigate('/');
     }
     
     setLoading(false);
@@ -66,7 +66,7 @@ export default function Auth() {
       description: "You're now accessing the dashboard as a guest.",
       variant: "default"
     });
-    navigate('/dashboard');
+    navigate('/');
   };
 
   return (

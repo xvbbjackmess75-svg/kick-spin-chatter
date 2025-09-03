@@ -91,7 +91,7 @@ export default function KickCallback() {
         });
         
         // Navigate to dashboard
-        navigate('/dashboard');
+        navigate('/');
         
       } catch (error) {
         console.error('Kick callback error:', error);
