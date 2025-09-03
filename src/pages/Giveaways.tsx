@@ -747,7 +747,7 @@ export default function Giveaways() {
                 <Trophy className="h-12 w-12 text-kick-green mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">Fair Winner Selection</h3>
                 <p className="text-sm text-muted-foreground">
-                  Provably fair roulette system ensures every participant has an equal chance to win.
+                  Advanced roulette system ensures every participant has an equal chance to win.
                 </p>
               </CardContent>
             </Card>

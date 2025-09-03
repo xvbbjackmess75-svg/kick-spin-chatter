@@ -46,6 +46,14 @@ export default function History() {
   const [filteredWinners, setFilteredWinners] = useState<Winner[]>([]);
 
   useEffect(() => {
+    // Check if in guest mode
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    
+    if (isGuestMode) {
+      setLoading(false);
+      return;
+    }
+    
     if (user) {
       console.log("📚 HISTORY: Component mounted, fetching winners...");
       fetchWinners();
@@ -121,12 +129,40 @@ export default function History() {
     }
   };
 
+  // Check if in guest mode
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="text-muted-foreground">Loading winning history...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Guest mode - show login message
+  if (isGuestMode) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-20 bg-gradient-primary/10 rounded-xl border border-primary/20">
+            <div className="max-w-md mx-auto px-6">
+              <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+              <h1 className="text-3xl font-bold text-foreground mb-4">History</h1>
+              <p className="text-xl text-muted-foreground mb-8">
+                You need to login to access your giveaway history and winning records.
+              </p>
+              <Button 
+                className="gaming-button" 
+                onClick={() => window.location.href = '/auth'}
+              >
+                Login to View History
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -329,8 +365,8 @@ export default function History() {
                                   </div>
                                 </div>
 
-                                {/* Provably Fair Info */}
-                                {winner.winning_ticket && (
+                                {/* Provably Fair Info - Hidden for guest users */}
+                                {winner.winning_ticket && !localStorage.getItem('guest_mode') && (
                                   <div className="flex-1">
                                     <div className="grid grid-cols-3 gap-3 text-center">
                                       <div>
