@@ -407,33 +407,10 @@ export default function Dashboard() {
         return;
       }
 
+      // Set participants for the roulette and start spinning
+      setParticipants(giveawayParticipants);
       setIsSpinning(true);
       setWinner(null);
-
-      setTimeout(async () => {
-        const randomWinner = giveawayParticipants[Math.floor(Math.random() * giveawayParticipants.length)];
-        setWinner({ ...randomWinner, isWinner: true });
-        setIsSpinning(false);
-
-        try {
-          await supabase
-            .from('giveaways')
-            .update({ 
-              winner_user_id: randomWinner.username,
-              status: 'completed'
-            })
-            .eq('id', giveaway.id);
-
-          toast({
-            title: "Winner Selected!",
-            description: `Congratulations to ${randomWinner.username}!`,
-          });
-
-          fetchGiveaways();
-        } catch (error) {
-          console.error('Error updating winner:', error);
-        }
-      }, 4000);
 
     } catch (error) {
       console.error('Error fetching participants:', error);
@@ -442,6 +419,35 @@ export default function Dashboard() {
         description: "Failed to fetch participants",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleWinnerSelected = async (selectedWinner: DashboardParticipant, giveaway?: Giveaway) => {
+    setWinner({ ...selectedWinner, isWinner: true });
+    setIsSpinning(false);
+
+    // Find the active giveaway if not provided
+    const activeGiveaway = giveaway || giveaways.find(g => g.status === 'active');
+    
+    if (activeGiveaway) {
+      try {
+        await supabase
+          .from('giveaways')
+          .update({ 
+            winner_user_id: selectedWinner.username,
+            status: 'completed'
+          })
+          .eq('id', activeGiveaway.id);
+
+        toast({
+          title: "Winner Selected!",
+          description: `Congratulations to ${selectedWinner.username}!`,
+        });
+
+        fetchGiveaways();
+      } catch (error) {
+        console.error('Error updating winner:', error);
+      }
     }
   };
 
@@ -870,12 +876,16 @@ export default function Dashboard() {
             }))}
             isSpinning={isSpinning}
             onSpin={() => {}}
-            winner={winner ? {
-              id: 0,
-              username: winner.username,
-              avatar: winner.avatar || '/placeholder-avatar.jpg',
-              isWinner: winner.isWinner
-            } : undefined}
+            onWinnerSelected={(selectedWinner) => {
+              // Convert the selected winner back to DashboardParticipant format
+              const dashboardWinner: DashboardParticipant = {
+                id: selectedWinner.id.toString(),
+                username: selectedWinner.username,
+                avatar: selectedWinner.avatar,
+                isWinner: true
+              };
+              handleWinnerSelected(dashboardWinner);
+            }}
           />
         )}
 
