@@ -1,220 +1,448 @@
-import { LiveChatFeed } from "@/components/LiveChatFeed";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RouletteWheel } from "@/components/RouletteWheel";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
-  Users, 
-  MessageSquare, 
+  Plus, 
   Gift, 
-  TrendingUp,
-  Play,
-  Pause,
-  Eye,
-  Crown,
-  Zap
+  Users,
+  Trophy,
+  Zap,
+  Crown
 } from "lucide-react";
 
-const stats = [
-  {
-    title: "Active Viewers",
-    value: "1,247",
-    change: "+12%",
-    icon: Users,
-    color: "text-kick-green"
-  },
-  {
-    title: "Chat Messages",
-    value: "8,432",
-    change: "+24%",
-    icon: MessageSquare,
-    color: "text-kick-purple"
-  },
-  {
-    title: "Active Giveaways",
-    value: "3",
-    change: "0%",
-    icon: Gift,
-    color: "text-accent"
-  },
-  {
-    title: "Bot Commands",
-    value: "156",
-    change: "+8%",
-    icon: TrendingUp,
-    color: "text-primary"
-  }
-];
+interface DashboardParticipant {
+  id: string;
+  username: string;
+  avatar?: string;
+  isWinner?: boolean;
+}
 
-const recentActivity = [
-  { user: "GamerPro123", action: "entered giveaway", time: "2s ago", type: "giveaway" },
-  { user: "StreamFan", action: "used !discord command", time: "15s ago", type: "command" },
-  { user: "NightOwl99", action: "became a follower", time: "1m ago", type: "follow" },
-  { user: "ChatMaster", action: "entered giveaway", time: "2m ago", type: "giveaway" },
-  { user: "BotLover", action: "used !help command", time: "3m ago", type: "command" },
-];
+// Convert to RouletteWheel expected format
+interface RouletteParticipant {
+  id: number;
+  username: string;
+  avatar: string;
+  isWinner?: boolean;
+}
 
-const activeGiveaways = [
-  {
-    id: 1,
-    title: "Gaming Headset",
-    participants: 127,
-    maxParticipants: 200,
-    timeLeft: "5m 32s",
-    status: "active"
-  },
-  {
-    id: 2,
-    title: "Steam Gift Card",
-    participants: 89,
-    maxParticipants: 150,
-    timeLeft: "12m 18s",
-    status: "active"
-  },
-  {
-    id: 3,
-    title: "VIP Discord Role",
-    participants: 245,
-    maxParticipants: 300,
-    timeLeft: "25m 45s",
-    status: "active"
-  }
-];
+interface Giveaway {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  participants_count: number;
+  winner_user_id?: string;
+  created_at: string;
+}
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
+  const [participants, setParticipants] = useState<DashboardParticipant[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winner, setWinner] = useState<DashboardParticipant | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [channelName, setChannelName] = useState("");
+  const [keyword, setKeyword] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      fetchGiveaways();
+    }
+  }, [user]);
+
+  const fetchGiveaways = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('giveaways')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setGiveaways(data || []);
+    } catch (error) {
+      console.error('Error fetching giveaways:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch giveaways",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchParticipants = async (giveawayId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('giveaway_participants')
+        .select('*')
+        .eq('giveaway_id', giveawayId);
+
+      if (error) throw error;
+      
+      const formattedParticipants: DashboardParticipant[] = (data || []).map((p, index) => ({
+        id: index.toString(),
+        username: p.kick_username,
+        avatar: undefined
+      }));
+      
+      setParticipants(formattedParticipants);
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+    }
+  };
+
+  const createGiveaway = async () => {
+    if (!title.trim() || !channelName.trim() || !keyword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('giveaways')
+        .insert({
+          title: title.trim(),
+          channel_id: null, // We'll store channel name in description for now
+          description: `Channel: ${channelName.trim()}, Keyword: ${keyword.trim()}`,
+          user_id: user?.id,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Giveaway "${title}" created! Users can now type "${keyword}" in ${channelName} chat to enter.`,
+      });
+
+      setTitle("");
+      setChannelName("");
+      setKeyword("");
+      setIsCreateDialogOpen(false);
+      fetchGiveaways();
+    } catch (error) {
+      console.error('Error creating giveaway:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create giveaway",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const drawWinner = async (giveaway: Giveaway) => {
+    await fetchParticipants(giveaway.id);
+    
+    if (participants.length === 0) {
+      toast({
+        title: "No Participants",
+        description: "This giveaway has no participants yet",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSpinning(true);
+    setWinner(null);
+
+    // Simulate spinning duration
+    setTimeout(async () => {
+      const randomWinner = participants[Math.floor(Math.random() * participants.length)];
+      setWinner({ ...randomWinner, isWinner: true });
+      setIsSpinning(false);
+
+      // Update giveaway with winner
+      try {
+        await supabase
+          .from('giveaways')
+          .update({ 
+            winner_user_id: randomWinner.username,
+            status: 'completed'
+          })
+          .eq('id', giveaway.id);
+
+        toast({
+          title: "Winner Selected!",
+          description: `Congratulations to ${randomWinner.username}!`,
+        });
+
+        fetchGiveaways();
+      } catch (error) {
+        console.error('Error updating winner:', error);
+      }
+    }, 4000);
+  };
+
+  // Mock function to simulate adding participants (in real implementation, this would be done by chat bot)
+  const simulateParticipant = async (giveawayId: string) => {
+    const mockUsernames = ['StreamFan99', 'GamingQueen', 'BotLover', 'ChatMaster', 'NightOwl', 'ProGamer'];
+    const randomUsername = mockUsernames[Math.floor(Math.random() * mockUsernames.length)] + Math.floor(Math.random() * 1000);
+
+    try {
+      await supabase
+        .from('giveaway_participants')
+        .insert({
+          giveaway_id: giveawayId,
+          kick_username: randomUsername,
+          kick_user_id: randomUsername
+        });
+
+      // Update participant count
+      const { data: participants } = await supabase
+        .from('giveaway_participants')
+        .select('id')
+        .eq('giveaway_id', giveawayId);
+
+      await supabase
+        .from('giveaways')
+        .update({ participants_count: participants?.length || 0 })
+        .eq('id', giveawayId);
+
+      fetchGiveaways();
+      toast({
+        title: "New Participant",
+        description: `${randomUsername} joined the giveaway!`,
+      });
+    } catch (error) {
+      console.error('Error adding participant:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green" />
+      </div>
+    );
+  }
+
+  const activeGiveaways = giveaways.filter(g => g.status === 'active');
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Giveaways</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back! Here's what's happening with your stream.
+            Track chat messages and run giveaways for your Kick streams.
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button className="gaming-button">
-            <Play className="h-4 w-4 mr-2" />
-            Start Bot
-          </Button>
-          <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10">
-            <Pause className="h-4 w-4 mr-2" />
-            Stop Bot
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="gaming-card hover:scale-105 transition-transform duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <div className="flex items-center mt-1">
-                <Badge variant={stat.change.startsWith('+') ? 'default' : 'secondary'} className="text-xs">
-                  {stat.change}
-                </Badge>
-                <span className="text-xs text-muted-foreground ml-2">from last hour</span>
+        
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gaming-button">
+              <Plus className="h-4 w-4 mr-2" />
+              New Giveaway
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="gaming-card border-border/50 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Create New Giveaway</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Giveaway Title</Label>
+                <Input 
+                  id="title" 
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Gaming Headset Giveaway" 
+                  className="bg-secondary/30" 
+                />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="space-y-2">
+                <Label htmlFor="channel">Kick Channel Name</Label>
+                <Input 
+                  id="channel" 
+                  value={channelName}
+                  onChange={(e) => setChannelName(e.target.value)}
+                  placeholder="your-channel-name" 
+                  className="bg-secondary/30" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="keyword">Entry Keyword</Label>
+                <Input 
+                  id="keyword" 
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="!giveaway" 
+                  className="bg-secondary/30" 
+                />
+                <p className="text-xs text-muted-foreground">
+                  Viewers will type this in chat to enter
+                </p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button className="gaming-button flex-1" onClick={createGiveaway}>
+                  Create & Start
+                </Button>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Active Giveaways */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Roulette Wheel */}
+        <div className="lg:col-span-1">
           <Card className="gaming-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-accent" />
-                Active Giveaways
-              </CardTitle>
-              <Button size="sm" className="gaming-button">
-                <Gift className="h-4 w-4 mr-2" />
-                New Giveaway
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {activeGiveaways.map((giveaway) => (
-              <div key={giveaway.id} className="p-4 rounded-lg bg-secondary/30 border border-border/30">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold text-foreground">{giveaway.title}</h4>
-                  <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30">
-                    {giveaway.timeLeft}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Participants</span>
-                    <span className="text-foreground font-medium">
-                      {giveaway.participants}/{giveaway.maxParticipants}
-                    </span>
+            <CardContent className="p-6">
+              <RouletteWheel
+                participants={participants.map((p, index) => ({
+                  id: index,
+                  username: p.username,
+                  avatar: p.avatar || '/placeholder-avatar.jpg',
+                  isWinner: p.isWinner
+                }))}
+                isSpinning={isSpinning}
+                onSpin={() => {}}
+                winner={winner ? {
+                  id: 0,
+                  username: winner.username,
+                  avatar: winner.avatar || '/placeholder-avatar.jpg',
+                  isWinner: winner.isWinner
+                } : undefined}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Active Giveaways */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Crown className="h-5 w-5 text-accent" />
+            <h2 className="text-xl font-semibold text-foreground">Active Giveaways</h2>
+            <Badge variant="outline" className="text-kick-green border-kick-green/30">
+              {activeGiveaways.length} running
+            </Badge>
+          </div>
+
+          {activeGiveaways.length === 0 ? (
+            <Card className="gaming-card">
+              <CardContent className="p-8 text-center">
+                <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Active Giveaways</h3>
+                <p className="text-muted-foreground mb-4">Create your first giveaway to get started!</p>
+                <Button className="gaming-button" onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Giveaway
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            activeGiveaways.map((giveaway) => (
+              <Card key={giveaway.id} className="gaming-card hover:scale-[1.02] transition-transform duration-200">
+                <CardContent className="p-6">
+                  <div className="flex gap-4">
+                    <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center">
+                      <Gift className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground">{giveaway.title}</h3>
+                          <p className="text-sm text-muted-foreground">{giveaway.description}</p>
+                        </div>
+                        <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30">
+                          Active
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-foreground">{giveaway.participants_count || 0}</div>
+                          <div className="text-xs text-muted-foreground">Participants</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">Running</div>
+                          <div className="text-xs text-muted-foreground">Status</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="gaming-button" 
+                          onClick={() => drawWinner(giveaway)}
+                          disabled={isSpinning}
+                        >
+                          <Zap className="h-3 w-3 mr-2" />
+                          Pick Winner
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => simulateParticipant(giveaway.id)}
+                        >
+                          <Users className="h-3 w-3 mr-2" />
+                          + Test Participant
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <Progress 
-                    value={(giveaway.participants / giveaway.maxParticipants) * 100} 
-                    className="h-2"
-                  />
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Recent Participants */}
+      {participants.length > 0 && (
+        <Card className="gaming-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Recent Participants ({participants.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {participants.slice(0, 10).map((participant) => (
+              <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
+                    {participant.username.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{participant.username}</p>
+                  <p className="text-xs text-muted-foreground">Entered giveaway</p>
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Eye className="h-3 w-3 mr-2" />
-                    View
-                  </Button>
-                  <Button size="sm" className="gaming-button flex-1">
-                    <Zap className="h-3 w-3 mr-2" />
-                    Draw Winner
-                  </Button>
-                </div>
+                <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse" />
               </div>
             ))}
           </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="gaming-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
-                  <div className={`w-2 h-2 rounded-full ${
-                    activity.type === 'giveaway' ? 'bg-accent' :
-                    activity.type === 'command' ? 'bg-primary' :
-                    'bg-kick-green'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium text-foreground">{activity.user}</span>
-                      <span className="text-muted-foreground ml-1">{activity.action}</span>
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          </Card>
-        </div>
-
-        {/* Live Chat Feed */}
-        <div className="lg:col-span-1">
-          <LiveChatFeed />
-        </div>
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

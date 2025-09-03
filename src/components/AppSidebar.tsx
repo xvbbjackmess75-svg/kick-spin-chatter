@@ -20,15 +20,7 @@ import {
 } from "lucide-react";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Commands", url: "/commands", icon: MessageSquare },
-  { title: "Giveaways", url: "/giveaways", icon: Gift },
-  { title: "Chat Monitor", url: "/chat", icon: Users },
-];
-
-const botItems = [
-  { title: "Bot Settings", url: "/bot-settings", icon: Bot },
-  { title: "Kick Integration", url: "/kick-integration", icon: Zap },
+  { title: "Giveaways", url: "/", icon: Gift },
 ];
 
 export function AppSidebar() {
@@ -84,26 +76,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Bot Settings */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-accent font-semibold">
-            {!collapsed && "Bot"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {botItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavClass}>
-                      <item.icon className="h-5 w-5 mr-3" />
-                      {!collapsed && <span className="font-medium">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
