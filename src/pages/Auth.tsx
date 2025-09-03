@@ -59,39 +59,11 @@ export default function Auth() {
   };
 
   const handleKickAuth = async () => {
-    setLoading(true);
-    
-    try {
-      // Build the Kick OAuth URL with proper parameters
-      const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ';
-      const redirectUri = encodeURIComponent(`${window.location.origin}/kick-callback`);
-      const scope = encodeURIComponent('user:read');
-      
-      const kickAuthUrl = `https://kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=oauth_state`;
-      
-      console.log('Kick OAuth URL:', kickAuthUrl);
-      console.log('Client ID:', clientId);
-      console.log('Redirect URI:', `${window.location.origin}/kick-callback`);
-      
-      // Show the URL for debugging
-      toast({
-        title: "Debug Info",
-        description: `Redirecting to: ${kickAuthUrl}`,
-        variant: "default"
-      });
-      
-      // Small delay to see the toast, then redirect
-      setTimeout(() => {
-        window.location.href = kickAuthUrl;
-      }, 2000);
-    } catch (error) {
-      toast({
-        title: "Authentication Error", 
-        description: "Failed to connect with Kick. Please try again.",
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
+    toast({
+      title: "Kick OAuth Not Available",
+      description: "Kick's OAuth API is not publicly available yet. Please use email/password authentication.",
+      variant: "default"
+    });
   };
 
   return (
