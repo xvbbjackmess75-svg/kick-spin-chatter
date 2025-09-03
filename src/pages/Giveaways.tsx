@@ -26,7 +26,7 @@ import { GiveawayRoulette } from "@/components/GiveawayRoulette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { 
   Plus, 
   Gift, 
@@ -59,7 +59,7 @@ interface Giveaway {
 }
 
 export default function Giveaways() {
-  const { user } = useAuth();
+  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
   const { toast } = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
@@ -82,35 +82,35 @@ export default function Giveaways() {
   const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
-    // Check if in guest mode
-    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-    
-    if (isGuestMode) {
-      // For guest mode, don't fetch from database, just stop loading
-      setLoading(false);
-      return;
+    if (!authLoading) {
+      if (isAuthenticated) {
+        fetchGiveaways();
+        initializeWebSocket();
+      } else {
+        setLoading(false);
+      }
     }
-    
-    if (user) {
-      fetchGiveaways();
-      initializeWebSocket();
-    }
-  }, [user]);
+  }, [authLoading, isAuthenticated]);
 
   const fetchGiveaways = async () => {
-    // Don't fetch if in guest mode AND not authenticated
-    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-    if (isGuestMode && !user) {
+    if (!isAuthenticated) {
       setLoading(false);
       return;
     }
     
     try {
-      const { data, error } = await supabase
-        .from('giveaways')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+      let query = supabase.from('giveaways').select('*');
+      
+      // For Supabase users, use normal RLS
+      if (isSupabaseUser) {
+        query = query.eq('user_id', hybridUserId);
+      } else if (isKickUser) {
+        // For Kick users, we need to bypass RLS by using service role or create a different approach
+        // For now, let's fetch all and filter on the client side as a temporary solution
+        query = query.eq('user_id', hybridUserId);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setGiveaways(data || []);
@@ -201,10 +201,12 @@ export default function Giveaways() {
   const handleChatMessage = async (message: any) => {
     console.log('Processing chat message:', message);
     
+    if (!isAuthenticated) return;
+    
     const { data: currentGiveaways, error } = await supabase
       .from('giveaways')
       .select('*')
-      .eq('user_id', user?.id)
+      .eq('user_id', hybridUserId)
       .eq('status', 'active');
 
     if (error) {
@@ -319,7 +321,7 @@ export default function Giveaways() {
           title: title.trim(),
           channel_id: null,
           description: `Channel: ${channelName.trim()}, Keyword: ${keyword.trim()}`,
-          user_id: user?.id,
+          user_id: hybridUserId,
           status: 'active'
         })
         .select()
@@ -727,11 +729,8 @@ export default function Giveaways() {
     );
   }
 
-  // Check if in guest mode
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-
   // Guest mode - show demo/informational content (only if not authenticated)
-  if (isGuestMode && !user) {
+  if (isGuestMode && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">

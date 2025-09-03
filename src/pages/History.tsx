@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { 
   Trophy, 
   Calendar, 
@@ -38,7 +38,7 @@ interface Winner {
 }
 
 export default function History() {
-  const { user } = useAuth();
+  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
   const { toast } = useToast();
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,19 +46,15 @@ export default function History() {
   const [filteredWinners, setFilteredWinners] = useState<Winner[]>([]);
 
   useEffect(() => {
-    // Check if in guest mode
-    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-    
-    if (isGuestMode) {
-      setLoading(false);
-      return;
+    if (!authLoading) {
+      if (isAuthenticated) {
+        console.log("📚 HISTORY: Component mounted, fetching winners...");
+        fetchWinners();
+      } else {
+        setLoading(false);
+      }
     }
-    
-    if (user) {
-      console.log("📚 HISTORY: Component mounted, fetching winners...");
-      fetchWinners();
-    }
-  }, [user]);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     // Filter winners based on search term
@@ -76,10 +72,15 @@ export default function History() {
   }, [winners, searchTerm]);
 
   const fetchWinners = async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+    
     try {
-      console.log("📚 HISTORY: Fetching winners for user:", user?.id);
+      console.log("📚 HISTORY: Fetching winners for user:", hybridUserId);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('giveaways')
         .select(`
           *,
@@ -91,9 +92,17 @@ export default function History() {
             tickets_per_participant,
             won_at
           )
-        `)
-        .eq('user_id', user?.id)
-        .order('updated_at', { ascending: false });
+        `);
+      
+      // For Supabase users, use normal RLS
+      if (isSupabaseUser) {
+        query = query.eq('user_id', hybridUserId);
+      } else if (isKickUser) {
+        // For Kick users, we need to filter by their hybrid ID
+        query = query.eq('user_id', hybridUserId);
+      }
+      
+      const { data, error } = await query.order('updated_at', { ascending: false });
 
       console.log("📚 HISTORY: Database query result:", {
         error,
@@ -129,10 +138,7 @@ export default function History() {
     }
   };
 
-  // Check if in guest mode
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-4">
@@ -144,7 +150,7 @@ export default function History() {
   }
 
   // Guest mode - show login message (only if not authenticated)
-  if (isGuestMode && !user) {
+  if (isGuestMode && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto">
