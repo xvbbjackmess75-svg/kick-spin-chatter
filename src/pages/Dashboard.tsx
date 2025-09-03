@@ -111,12 +111,14 @@ export default function Dashboard() {
             setChatConnected(true);
             setConnectedChannel(data.channelName);
             toast({
-              title: "Chat Connected",
+              title: "✅ Chat Connected",
               description: `Now monitoring ${data.channelName} chat for keywords`,
             });
+            console.log(`Connected to chat for channel: ${data.channelName}`);
             break;
             
           case 'chat_message':
+            console.log('Received chat message:', data.data);
             handleChatMessage(data.data);
             break;
             
@@ -156,19 +158,52 @@ export default function Dashboard() {
   };
 
   const handleChatMessage = async (message: any) => {
-    const activeGiveaways = giveaways.filter(g => g.status === 'active');
+    console.log('Processing chat message:', message);
+    
+    // Get fresh giveaways data to ensure we have the latest state
+    const { data: currentGiveaways, error } = await supabase
+      .from('giveaways')
+      .select('*')
+      .eq('user_id', user?.id)
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('Error fetching current giveaways:', error);
+      return;
+    }
+
+    const activeGiveaways = currentGiveaways || [];
+    console.log('Active giveaways for keyword matching:', activeGiveaways);
     
     for (const giveaway of activeGiveaways) {
       const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
-      if (!keywordMatch) continue;
+      if (!keywordMatch) {
+        console.log('No keyword found in giveaway:', giveaway.description);
+        continue;
+      }
       
       const keyword = keywordMatch[1].trim();
+      console.log(`Checking keyword "${keyword}" against message: "${message.content}"`);
       
       if (message.content && message.content.toLowerCase().includes(keyword.toLowerCase())) {
-        console.log(`Keyword "${keyword}" detected from user: ${message.username}`);
+        console.log(`✅ Keyword "${keyword}" detected from user: ${message.username}`);
         
         try {
-          await supabase
+          // Check if user already participated
+          const { data: existingParticipant } = await supabase
+            .from('giveaway_participants')
+            .select('id')
+            .eq('giveaway_id', giveaway.id)
+            .eq('kick_username', message.username)
+            .single();
+
+          if (existingParticipant) {
+            console.log(`User ${message.username} already participated in giveaway ${giveaway.title}`);
+            continue;
+          }
+
+          // Add new participant
+          const { error: insertError } = await supabase
             .from('giveaway_participants')
             .insert({
               giveaway_id: giveaway.id,
@@ -176,6 +211,12 @@ export default function Dashboard() {
               kick_user_id: message.userId?.toString() || message.username
             });
 
+          if (insertError) {
+            console.error('Error inserting participant:', insertError);
+            continue;
+          }
+
+          // Update participant count
           const { data: participants } = await supabase
             .from('giveaway_participants')
             .select('id')
@@ -186,17 +227,20 @@ export default function Dashboard() {
             .update({ participants_count: participants?.length || 0 })
             .eq('id', giveaway.id);
 
+          // Refresh giveaways display
           fetchGiveaways();
           
           toast({
-            title: "New Participant",
+            title: "🎉 New Participant!",
             description: `${message.username} entered "${giveaway.title}" giveaway!`,
           });
+          
+          console.log(`✅ Successfully added ${message.username} to giveaway ${giveaway.title}`);
         } catch (error) {
-          if (!error.message?.includes('duplicate')) {
-            console.error('Error adding participant:', error);
-          }
+          console.error('Error adding participant:', error);
         }
+      } else {
+        console.log(`❌ Keyword "${keyword}" not found in message: "${message.content}"`);
       }
     }
   };
