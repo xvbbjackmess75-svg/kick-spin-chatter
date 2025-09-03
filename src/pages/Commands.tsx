@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useKickAccount } from "@/hooks/useKickAccount";
+import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { CommandTester } from "@/components/CommandTester";
 import { 
   Plus, 
@@ -46,6 +48,7 @@ interface KickUser {
 
 export default function Commands() {
   const { user } = useAuth();
+  const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
   const { toast } = useToast();
   const [commands, setCommands] = useState<Command[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,33 +141,28 @@ export default function Commands() {
     setTestingCommand(command.id);
     
     try {
-      // Get Kick user data and tokens
-      const kickUserData = localStorage.getItem('kick_user');
-      const kickTokenData = localStorage.getItem('kick_token');
+      const channelInfo = getChannelInfo();
       
-      if (!kickUserData) {
+      if (!channelInfo || !kickToken) {
         toast({
           title: "Error",
-          description: "Please link your Kick account first",
+          description: "Kick account not properly linked",
           variant: "destructive"
         });
         return;
       }
 
-      const kickUser: KickUser = JSON.parse(kickUserData);
-      const kickToken = kickTokenData ? JSON.parse(kickTokenData) : null;
-
-      // Test the command processing
+      // Test the command processing on the user's own channel
       const response = await supabase.functions.invoke('kick-chat-api', {
         body: {
           action: 'process_command',
           command: command.command,
           user: {
-            username: kickUser.username,
-            user_id: kickUser.id.toString(),
-            user_level: 'owner' // Test as owner to bypass permissions
+            username: kickUser?.username || 'test_user',
+            user_id: kickUser?.id?.toString() || 'test_id',
+            user_level: 'owner' // Test as owner since it's their own channel
           },
-          channel_id: 'test_channel',
+          channel_id: channelInfo.channelId,
           token_info: kickToken
         }
       });
@@ -254,7 +252,11 @@ export default function Commands() {
   };
 
   return (
-    <div className="space-y-6">
+    <KickAccountGuard 
+      feature="Chat Commands" 
+      description="Create and manage custom chat commands that respond automatically to your viewers. Commands work in real-time on your Kick channel."
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -460,6 +462,7 @@ export default function Commands() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </KickAccountGuard>
   );
 }

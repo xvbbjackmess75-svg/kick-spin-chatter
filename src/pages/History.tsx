@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHybridAuth } from "@/hooks/useHybridAuth";
+import { useKickAccount } from "@/hooks/useKickAccount";
+import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { 
   Trophy, 
   Calendar, 
@@ -39,6 +41,7 @@ interface Winner {
 
 export default function History() {
   const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
+  const { canUseChatbot } = useKickAccount();
   const { toast } = useToast();
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,15 +49,13 @@ export default function History() {
   const [filteredWinners, setFilteredWinners] = useState<Winner[]>([]);
 
   useEffect(() => {
-    if (!authLoading) {
-      if (isSupabaseUser) {
-        console.log("📚 HISTORY: Component mounted, fetching winners...");
-        fetchWinners();
-      } else {
-        setLoading(false);
-      }
+    if (!authLoading && canUseChatbot) {
+      console.log("📚 HISTORY: Component mounted, fetching winners...");
+      fetchWinners();
+    } else if (!authLoading) {
+      setLoading(false);
     }
-  }, [authLoading, isSupabaseUser]);
+  }, [authLoading, canUseChatbot]);
 
   useEffect(() => {
     // Filter winners based on search term
@@ -169,7 +170,11 @@ export default function History() {
   // Keeping this comment for reference, but the security barrier is removed
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-6">
+    <KickAccountGuard 
+      feature="Giveaway History" 
+      description="View complete history of all your giveaway winners and results. Track your past giveaways and winner statistics."
+    >
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header Section */}
@@ -397,6 +402,7 @@ export default function History() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </KickAccountGuard>
   );
 }

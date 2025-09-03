@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useKickAccount } from "@/hooks/useKickAccount";
+import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { 
   Plus, 
   Gift, 
@@ -62,6 +64,7 @@ interface Giveaway {
 export default function Giveaways() {
   const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
   const { user } = useAuth();
+  const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
   const { toast } = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
@@ -83,16 +86,22 @@ export default function Giveaways() {
   const [channelName, setChannelName] = useState("");
   const [keyword, setKeyword] = useState("");
 
+  // Auto-populate user's channel when available
   useEffect(() => {
-    if (!authLoading) {
-      if (isSupabaseUser) {
-        fetchGiveaways();
-        initializeWebSocket();
-      } else {
-        setLoading(false);
-      }
+    const channelInfo = getChannelInfo();
+    if (channelInfo && !channelName) {
+      setChannelName(channelInfo.channelName);
     }
-  }, [authLoading, isSupabaseUser]);
+  }, [getChannelInfo, channelName]);
+
+  useEffect(() => {
+    if (!authLoading && canUseChatbot) {
+      fetchGiveaways();
+      initializeWebSocket();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [authLoading, canUseChatbot]);
 
   const fetchGiveaways = async () => {
     if (!isSupabaseUser) {
@@ -291,9 +300,12 @@ export default function Giveaways() {
       const userLevel = message.badges?.includes('moderator') ? 'moderator' : 
                        message.badges?.includes('subscriber') ? 'subscriber' : 'viewer';
 
-      // Get Kick token for sending responses
-      const kickTokenData = localStorage.getItem('kick_token');
-      const kickToken = kickTokenData ? JSON.parse(kickTokenData) : null;
+      const channelInfo = getChannelInfo();
+      
+      if (!channelInfo || !kickToken) {
+        console.log('❌ No channel info or token available for command processing');
+        return;
+      }
 
       const response = await supabase.functions.invoke('kick-chat-api', {
         body: {
@@ -304,7 +316,7 @@ export default function Giveaways() {
             user_id: message.userId?.toString() || message.username,
             user_level: userLevel
           },
-          channel_id: message.channelId || connectedChannel,
+          channel_id: channelInfo.channelId,
           token_info: kickToken
         }
       });
@@ -327,11 +339,23 @@ export default function Giveaways() {
     }
   };
 
-  const joinChatChannel = (channelName: string) => {
+  const joinChatChannel = (channelName?: string) => {
+    const channelInfo = getChannelInfo();
+    const targetChannel = channelName || channelInfo?.channelName;
+    
+    if (!targetChannel) {
+      toast({
+        title: "Error",
+        description: "No channel information available",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
         type: 'join_channel',
-        channelName: channelName
+        channelName: targetChannel
       }));
     }
   };
@@ -349,10 +373,24 @@ export default function Giveaways() {
   };
 
   const createGiveaway = async () => {
+    const channelInfo = getChannelInfo();
+    
     if (!title.trim() || !channelName.trim() || !keyword.trim()) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Use the user's own channel if no channel specified, or validate they own the specified channel
+    const targetChannel = channelInfo?.channelName || channelName.trim();
+    
+    if (channelInfo && channelName.trim() !== channelInfo.channelName) {
+      toast({
+        title: "Error",
+        description: `You can only create giveaways for your own channel (@${channelInfo.channelName})`,
         variant: "destructive"
       });
       return;
@@ -363,8 +401,8 @@ export default function Giveaways() {
         .from('giveaways')
         .insert({
           title: title.trim(),
-          channel_id: null,
-          description: `Channel: ${channelName.trim()}, Keyword: ${keyword.trim()}`,
+          channel_id: channelInfo?.channelId || null,
+          description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
           user_id: user?.id, // Use the current authenticated user ID
           status: 'active'
         })
@@ -375,7 +413,7 @@ export default function Giveaways() {
 
       toast({
         title: "Success",
-        description: `Giveaway "${title}" created! Click "Start Monitoring" to track chat.`,
+        description: `Giveaway "${title}" created for your channel! Click "Start Monitoring" to track chat.`,
       });
 
       setTitle("");
@@ -839,7 +877,11 @@ export default function Giveaways() {
   // Keeping this comment for reference, but the security barrier is removed
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <KickAccountGuard 
+      feature="Giveaway Manager" 
+      description="Create and manage giveaways with real-time chat integration. Monitor your Kick channel for keywords and automatically add participants."
+    >
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -876,8 +918,14 @@ export default function Giveaways() {
                 <DialogHeader>
                   <DialogTitle className="text-foreground">Create New Giveaway</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
+              <div className="space-y-4">
+                <div className="p-3 bg-kick-green/10 rounded-lg border border-kick-green/30">
+                  <p className="text-sm text-kick-green font-medium">
+                    🎯 This giveaway will run on your channel: @{getChannelInfo()?.channelName}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
                     <Label htmlFor="title">Giveaway Title</Label>
                     <Input
                       id="title"
@@ -888,14 +936,18 @@ export default function Giveaways() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="channelName">Kick Channel Name</Label>
+                    <Label htmlFor="channel">Channel Name</Label>
                     <Input
-                      id="channelName"
+                      id="channel"
                       value={channelName}
                       onChange={(e) => setChannelName(e.target.value)}
-                      placeholder="mychannel"
+                      placeholder="Your channel name"
                       className="bg-secondary/30"
+                      disabled // User can only create giveaways for their own channel
                     />
+                    <p className="text-xs text-muted-foreground">
+                      You can only create giveaways for your own channel
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="keyword">Entry Keyword</Label>
@@ -1197,6 +1249,7 @@ export default function Giveaways() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
+      </div>
+    </KickAccountGuard>
   );
 }

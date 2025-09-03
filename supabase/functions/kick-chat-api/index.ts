@@ -74,39 +74,61 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
 
   console.log(`📤 Sending message to channel ${channel_id}: ${message.substring(0, 50)}...`);
 
-  // Send message using Kick Chat API
-  const response = await fetch(`https://api.kick.com/public/v1/channels/${channel_id}/chatroom/messages`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token_info.access_token}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
-      content: message
-    })
-  });
+  // Validate the user has permission to send messages to this channel
+  // by checking if they own it via the token
+  try {
+    // First verify the token by getting user info
+    const userResponse = await fetch('https://api.kick.com/public/v1/users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token_info.access_token}`,
+        'Accept': 'application/json',
+      }
+    });
 
-  console.log(`🔍 Kick API response status: ${response.status}`);
-  const responseText = await response.text();
-  console.log(`🔍 Kick API response body: ${responseText.substring(0, 200)}...`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to send message: ${response.status} - ${responseText}`);
-  }
-
-  const data = JSON.parse(responseText);
-  
-  return new Response(
-    JSON.stringify({ 
-      success: true, 
-      message_id: data.id,
-      content: data.content
-    }),
-    {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!userResponse.ok) {
+      throw new Error(`Token validation failed: ${userResponse.status}`);
     }
-  );
+
+    const userData = await userResponse.json();
+    console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
+    
+    // Send message using Kick Chat API
+    const response = await fetch(`https://api.kick.com/public/v1/channels/${channel_id}/chatroom/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token_info.access_token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        content: message
+      })
+    });
+
+    console.log(`🔍 Kick API response status: ${response.status}`);
+    const responseText = await response.text();
+    console.log(`🔍 Kick API response body: ${responseText.substring(0, 200)}...`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.status} - ${responseText}`);
+    }
+
+    const data = JSON.parse(responseText);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message_id: data.id,
+        content: data.content
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error: any) {
+    throw new Error(`Failed to send message: ${error.message}`);
+  }
 }
 
 async function processCommand(body: KickChatRequest, supabase: any): Promise<Response> {

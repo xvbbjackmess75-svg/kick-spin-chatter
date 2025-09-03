@@ -5,18 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useKickAccount } from "@/hooks/useKickAccount";
 import { Send, MessageSquare, Bot } from "lucide-react";
-
-interface KickUser {
-  id: number;
-  username: string;
-  display_name: string;
-  avatar: string;
-  authenticated: boolean;
-}
 
 export function CommandTester() {
   const { toast } = useToast();
+  const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
   const [testMessage, setTestMessage] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -25,28 +19,23 @@ export function CommandTester() {
 
     setSending(true);
     try {
-      // Get Kick user data and tokens
-      const kickUserData = localStorage.getItem('kick_user');
-      const kickTokenData = localStorage.getItem('kick_token');
+      const channelInfo = getChannelInfo();
       
-      if (!kickUserData) {
+      if (!channelInfo || !kickToken) {
         toast({
           title: "Error",
-          description: "Please link your Kick account first",
+          description: "Kick account not properly linked",
           variant: "destructive"
         });
         return;
       }
 
-      const kickUser: KickUser = JSON.parse(kickUserData);
-      const kickToken = kickTokenData ? JSON.parse(kickTokenData) : null;
-
-      console.log('📤 Sending test message via Kick API:', testMessage);
+      console.log('📤 Sending test message to your channel:', testMessage);
 
       const response = await supabase.functions.invoke('kick-chat-api', {
         body: {
           action: 'send_message',
-          channel_id: 'test_channel', // You can make this configurable
+          channel_id: channelInfo.channelId,
           message: testMessage,
           token_info: kickToken
         }
@@ -80,9 +69,7 @@ export function CommandTester() {
     }
   };
 
-  const kickUserData = localStorage.getItem('kick_user');
-  const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
-  const isConnected = kickUser?.authenticated;
+  const isConnected = canUseChatbot;
 
   return (
     <Card className="gaming-card">
