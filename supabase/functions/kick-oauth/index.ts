@@ -177,7 +177,18 @@ Deno.serve(async (req) => {
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text()
         console.error('❌ Token exchange failed:', errorText)
-        throw new Error(`Token exchange failed: ${tokenResponse.status} - ${errorText}`)
+        console.error('❌ Token response status:', tokenResponse.status)
+        console.error('❌ Token response headers:', Object.fromEntries(tokenResponse.headers.entries()))
+        return new Response(JSON.stringify({ 
+          error: `Token exchange failed: ${tokenResponse.status} - ${errorText}`,
+          details: {
+            status: tokenResponse.status,
+            error: errorText
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       }
 
       const tokenData: KickTokenResponse = await tokenResponse.json()
@@ -302,8 +313,19 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('🚨 OAuth error:', error)
+    console.error('🚨 Error stack:', error.stack)
+    console.error('🚨 Error details:', {
+      name: error.name,
+      message: error.message,
+      cause: error.cause
+    })
+    
     return new Response(JSON.stringify({ 
-      error: error.message || 'OAuth flow failed' 
+      error: error.message || 'OAuth flow failed',
+      details: {
+        name: error.name,
+        stack: error.stack
+      }
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
