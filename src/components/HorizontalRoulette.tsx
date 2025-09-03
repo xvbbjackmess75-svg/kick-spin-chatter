@@ -38,7 +38,6 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   const [showWinner, setShowWinner] = useState(false);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
 
   // Provably fair system functions
   const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
@@ -90,19 +89,19 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     };
   };
 
-  // Create simple extended participants array for infinite scrolling
+  // Create simple extended participants array - just repeat participants in order
   const extendedParticipants = useMemo(() => {
     if (participants.length === 0) return [];
     
-    // Create enough repetitions to handle any scroll distance
-    const repetitions = 200; // Simple approach: repeat participants 200 times
+    // Repeat participants 100 times for smooth scrolling
+    const repetitions = 100;
     const extended = [];
     
     for (let i = 0; i < repetitions; i++) {
       participants.forEach((participant, index) => {
         extended.push({
           ...participant,
-          uniqueKey: `${participant.id}-cycle-${i}-${index}`
+          uniqueKey: `cycle-${i}-participant-${index}`
         });
       });
     }
@@ -111,104 +110,75 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   }, [participants]);
 
   useEffect(() => {
-    if (isSpinning && participants.length > 0 && !isAnimating) {
+    if (isSpinning && participants.length > 0 && winner && !isAnimating) {
       setIsAnimating(true);
       setShowWinner(false);
       
-      // ALWAYS reset to start position for consistent behavior
-      console.log("Resetting roulette to start position");
+      // Reset to start
       setScrollPosition(0);
       
       const participantWidth = 80;
       const containerWidth = 800;
       const centerLinePosition = containerWidth / 2;
       
-      // Generate provably fair result to determine the winner
+      // Generate provably fair result for the dialog
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Use the provably fair winner
-      const targetWinner = participants[result.winnerTicket];
-      setSelectedWinner(targetWinner); // Store the selected winner
-      console.log("Provably fair winner:", targetWinner.username, "Ticket:", result.winningTicketNumber, "Tickets per participant:", result.ticketsPerParticipant);
+      console.log("Selected winner:", winner.username);
       
-      // Find ALL positions where this winner appears in the extended array
-      const winnerPositions = [];
-      extendedParticipants.forEach((participant, index) => {
-        if (participant.id === targetWinner.id) {
-          winnerPositions.push(index);
-        }
-      });
-      
-      console.log("Winner appears at positions:", winnerPositions.slice(0, 10));
-      
-      if (winnerPositions.length === 0) {
-        console.error("Winner not found in extended array");
+      // Find where the winner appears in the original participants array
+      const winnerIndexInOriginal = participants.findIndex(p => p.id === winner.id);
+      if (winnerIndexInOriginal === -1) {
+        console.error("Winner not found in participants");
         setIsAnimating(false);
         return;
       }
       
-      // Choose a position that gives us a good spin effect (at least 20 full cycles)
-      const minScrollDistance = 20 * participants.length * participantWidth; // 20 complete cycles minimum
-      const minPosition = Math.ceil(minScrollDistance / participantWidth);
+      console.log("Winner index in original array:", winnerIndexInOriginal);
       
-      const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
+      // Calculate how many complete cycles to scroll through (for good effect)
+      const cycles = 20; // 20 complete cycles through all participants
+      const participantsInOneCycle = participants.length;
       
-      if (suitablePositions.length === 0) {
-        console.error("No suitable positions for winner, using closest available");
-        // Fallback to the first available position that's reasonably far
-        const fallbackMinPosition = Math.ceil((5 * participants.length * participantWidth) / participantWidth);
-        const fallbackPositions = winnerPositions.filter(pos => pos >= fallbackMinPosition);
-        if (fallbackPositions.length === 0) {
-          setIsAnimating(false);
-          return;
-        }
-        var chosenPosition = fallbackPositions[0];
-      } else {
-        // Choose the first suitable position for consistency
-        var chosenPosition = suitablePositions[0];
-      }
+      // Position where we want to land (after X cycles + winner position)
+      const targetCycle = cycles;
+      const targetIndex = (targetCycle * participantsInOneCycle) + winnerIndexInOriginal;
       
-      console.log("Chosen position:", chosenPosition, "for winner:", targetWinner.username);
+      console.log("Target index in extended array:", targetIndex);
       
-      // Calculate the exact scroll position needed
-      const avatarLeftEdge = chosenPosition * participantWidth;
+      // Calculate scroll position to center this avatar
+      const avatarLeftEdge = targetIndex * participantWidth;
       const avatarCenter = avatarLeftEdge + (participantWidth / 2);
+      const finalScrollPosition = avatarCenter - centerLinePosition;
       
-      // Calculate scroll to center the avatar on the center line
-      let finalScrollPosition = avatarCenter - centerLinePosition;
-      
-      // Add the provably fair landing offset for slight randomness
-      finalScrollPosition += result.landingOffset;
-      
-      console.log("Final scroll calculation:", {
-        winner: targetWinner.username,
-        chosenPosition,
+      console.log("Scroll calculation:", {
+        winnerUsername: winner.username,
+        winnerIndexInOriginal,
+        targetIndex,
         avatarLeftEdge,
         avatarCenter,
         centerLinePosition,
-        landingOffset: result.landingOffset,
         finalScrollPosition
       });
       
-      // Apply the scroll with a slight delay to ensure reset is processed
+      // Apply scroll with small delay to ensure reset
       setTimeout(() => {
-        console.log("Setting final scroll position for:", targetWinner.username, "at position:", finalScrollPosition);
         setScrollPosition(finalScrollPosition);
       }, 100);
       
-      // Animation complete handler
-      const animationDuration = 5000;
+      // Animation complete
+      const animationDuration = 4000;
       setTimeout(() => {
         setIsAnimating(false);
       }, animationDuration + 100);
       
-      // Show winner announcement - show the provably fair winner
+      // Show winner
       setTimeout(() => {
         setShowWinner(true);
-      }, animationDuration + 1500);
+      }, animationDuration + 1000);
     }
-  }, [isSpinning, participants, isAnimating, extendedParticipants]);
+  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
 
   return (
     <Card className="gaming-card w-full">
@@ -241,7 +211,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               style={{ 
                 transform: `translateX(-${scrollPosition}px)`,
                 width: `${extendedParticipants.length * 80}px`,
-                transition: isAnimating ? 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none'
+                transition: isAnimating ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none'
               }}
             >
               {extendedParticipants.map((participant) => (
@@ -276,7 +246,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         </div>
 
         {/* Winner Display */}
-        {selectedWinner && showWinner && (
+        {winner && showWinner && (
           <div className="space-y-4 animate-fade-in">
             <div className="p-4 sm:p-6 rounded-xl bg-kick-green/10 border border-kick-green/30">
               <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
@@ -288,18 +258,18 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               <div className="flex items-center justify-center gap-4">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-kick-green pulse-glow">
                   <AvatarImage 
-                    src={`https://files.kick.com/images/user/${selectedWinner.username}/profile_image/conversion/300x300-medium.webp`}
-                    alt={selectedWinner.username}
+                    src={`https://files.kick.com/images/user/${winner.username}/profile_image/conversion/300x300-medium.webp`}
+                    alt={winner.username}
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-avatar.jpg';
                     }}
                   />
                   <AvatarFallback className="bg-kick-green text-kick-dark font-bold text-lg">
-                    {selectedWinner.username.slice(0, 2).toUpperCase()}
+                    {winner.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{selectedWinner.username}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{winner.username}</p>
                   <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30 mt-1">
                     <Crown className="h-3 w-3 mr-1" />
                     Winner
