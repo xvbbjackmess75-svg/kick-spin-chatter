@@ -108,9 +108,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       
       const targetPosition = targetParticipantIndex * participantWidth;
       
-      // Add random offset for landing position within avatar bounds
+      // Add random offset for landing position within the winner's avatar bounds (not outside)
       const centerOffset = containerWidth / 2 - participantWidth / 2;
-      const randomOffset = result.landingOffset;
+      // Limit random offset to stay within the avatar bounds (±20px max to stay in avatar area)
+      const randomOffset = (result.landingOffset / 30) * 20; // Scale down from ±30 to ±20
       
       const finalScrollPosition = baseCycles + targetPosition - centerOffset + randomOffset;
       setScrollPosition(finalScrollPosition);
