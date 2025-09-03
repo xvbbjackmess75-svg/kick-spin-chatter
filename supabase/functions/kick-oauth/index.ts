@@ -124,6 +124,9 @@ Deno.serve(async (req) => {
       } else {
         // Use the correct Kick API endpoint for authenticated user
         try {
+          console.log('🔧 Attempting API call to: https://kick.com/api/v1/user')
+          console.log('🔧 Using access token:', tokenData.access_token ? `${tokenData.access_token.substring(0, 10)}...` : 'NO TOKEN')
+          
           const userResponse = await fetch('https://kick.com/api/v1/user', {
             headers: {
               'Authorization': `Bearer ${tokenData.access_token}`,
@@ -134,12 +137,15 @@ Deno.serve(async (req) => {
           })
           
           console.log('🔧 User API response status:', userResponse.status)
+          console.log('🔧 User API response statusText:', userResponse.statusText)
           console.log('🔧 User API response headers:', JSON.stringify(Object.fromEntries(userResponse.headers.entries())))
           
+          const responseText = await userResponse.text()
+          console.log('🔧 User API raw response length:', responseText.length)
+          console.log('🔧 User API response body (first 500 chars):', responseText.substring(0, 500))
+          console.log('🔧 Response starts with JSON?', responseText.trim().startsWith('{'))
+          
           if (userResponse.ok) {
-            const responseText = await userResponse.text()
-            console.log('🔧 User API response body (first 300 chars):', responseText.substring(0, 300))
-            
             if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
               const userData = JSON.parse(responseText)
               console.log('✅ User data retrieved successfully')
@@ -156,14 +162,14 @@ Deno.serve(async (req) => {
               
               console.log('✅ Extracted user info:', JSON.stringify(kickUser, null, 2))
             } else {
-              console.error('❌ Response is not JSON:', responseText.substring(0, 100))
-              throw new Error('API returned non-JSON response')
+              console.error('❌ Response is not JSON. Response type might be HTML or other format')
+              console.error('❌ Full response:', responseText)
+              throw new Error('API returned non-JSON response - likely HTML error page')
             }
           } else {
-            const errorText = await userResponse.text()
-            console.error('❌ User API failed with status:', userResponse.status)
-            console.error('❌ Error response:', errorText.substring(0, 200))
-            throw new Error(`User API failed with status ${userResponse.status}`)
+            console.error('❌ User API failed with status:', userResponse.status, userResponse.statusText)
+            console.error('❌ Error response body:', responseText)
+            throw new Error(`User API failed with status ${userResponse.status}: ${userResponse.statusText}`)
           }
         } catch (error) {
           console.error('❌ User info fetch failed:', error.message)
