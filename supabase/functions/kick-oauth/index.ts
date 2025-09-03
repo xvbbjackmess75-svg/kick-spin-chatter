@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (action === 'authorize') {
       // Generate authorization URL
       const clientId = Deno.env.get('KICK_CLIENT_ID')!
-      const frontendUrl = url.searchParams.get('origin') || 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.sandbox.lovable.dev'
+      const frontendUrl = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
       console.log('🔧 OAuth Debug - Client ID exists:', !!clientId)
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     if (action === 'exchange') {
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
-      const origin = url.searchParams.get('origin') || 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.sandbox.lovable.dev'
+      const origin = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       
       if (!code) {
         throw new Error('No authorization code received')
