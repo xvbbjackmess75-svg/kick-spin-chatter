@@ -90,8 +90,25 @@ export default function Dashboard() {
     if (user) {
       fetchGiveaways();
       initializeWebSocket();
+      loadActiveGiveawayParticipants();
     }
   }, [user]);
+
+  // Load participants for active giveaways automatically
+  const loadActiveGiveawayParticipants = async () => {
+    const activeGiveaways = giveaways.filter(g => g.status === 'active');
+    if (activeGiveaways.length > 0) {
+      // Load participants from the first active giveaway for display
+      await fetchParticipants(activeGiveaways[0].id);
+    }
+  };
+
+  // Reload participants when giveaways change
+  useEffect(() => {
+    if (giveaways.length > 0) {
+      loadActiveGiveawayParticipants();
+    }
+  }, [giveaways]);
 
   const fetchGiveaways = async () => {
     try {
@@ -168,10 +185,22 @@ export default function Dashboard() {
         });
       };
 
-      socketRef.current.onclose = () => {
-        console.log('WebSocket disconnected');
-        setChatConnected(false);
-        setConnectedChannel("");
+      socketRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected', event);
+        // Only reset state if this was a manual disconnect (code 1000) or specific errors
+        if (event.code === 1000) {
+          // Manual close
+          setChatConnected(false);
+          setConnectedChannel("");
+        } else {
+          // Unexpected disconnect - attempt to reconnect
+          console.log('Unexpected disconnect, attempting to reconnect...');
+          setTimeout(() => {
+            if (socketRef.current?.readyState !== WebSocket.OPEN) {
+              initializeWebSocket();
+            }
+          }, 3000);
+        }
       };
     } catch (error) {
       console.error('Error initializing WebSocket:', error);
@@ -354,44 +383,66 @@ export default function Dashboard() {
   };
 
   const drawWinner = async (giveaway: Giveaway) => {
-    await fetchParticipants(giveaway.id);
-    
-    if (participants.length === 0) {
+    // First fetch participants for this specific giveaway
+    try {
+      const { data, error } = await supabase
+        .from('giveaway_participants')
+        .select('*')
+        .eq('giveaway_id', giveaway.id);
+
+      if (error) throw error;
+      
+      const giveawayParticipants: DashboardParticipant[] = (data || []).map((p, index) => ({
+        id: index.toString(),
+        username: p.kick_username,
+        avatar: undefined
+      }));
+      
+      if (giveawayParticipants.length === 0) {
+        toast({
+          title: "No Participants",
+          description: "This giveaway has no participants yet",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setIsSpinning(true);
+      setWinner(null);
+
+      setTimeout(async () => {
+        const randomWinner = giveawayParticipants[Math.floor(Math.random() * giveawayParticipants.length)];
+        setWinner({ ...randomWinner, isWinner: true });
+        setIsSpinning(false);
+
+        try {
+          await supabase
+            .from('giveaways')
+            .update({ 
+              winner_user_id: randomWinner.username,
+              status: 'completed'
+            })
+            .eq('id', giveaway.id);
+
+          toast({
+            title: "Winner Selected!",
+            description: `Congratulations to ${randomWinner.username}!`,
+          });
+
+          fetchGiveaways();
+        } catch (error) {
+          console.error('Error updating winner:', error);
+        }
+      }, 4000);
+
+    } catch (error) {
+      console.error('Error fetching participants:', error);
       toast({
-        title: "No Participants",
-        description: "This giveaway has no participants yet",
+        title: "Error",
+        description: "Failed to fetch participants",
         variant: "destructive"
       });
-      return;
     }
-
-    setIsSpinning(true);
-    setWinner(null);
-
-    setTimeout(async () => {
-      const randomWinner = participants[Math.floor(Math.random() * participants.length)];
-      setWinner({ ...randomWinner, isWinner: true });
-      setIsSpinning(false);
-
-      try {
-        await supabase
-          .from('giveaways')
-          .update({ 
-            winner_user_id: randomWinner.username,
-            status: 'completed'
-          })
-          .eq('id', giveaway.id);
-
-        toast({
-          title: "Winner Selected!",
-          description: `Congratulations to ${randomWinner.username}!`,
-        });
-
-        fetchGiveaways();
-      } catch (error) {
-        console.error('Error updating winner:', error);
-      }
-    }, 4000);
   };
 
   const simulateParticipant = async (giveawayId: string) => {

@@ -101,11 +101,11 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                 >
                   <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-background shadow-lg">
                     <AvatarImage 
-                      src={`https://kick.com/api/v2/channels/${participant.username}/avatar`} 
+                      src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
                       alt={participant.username}
                       onError={(e) => {
-                        // Fallback to placeholder if Kick avatar fails
-                        e.currentTarget.src = participant.avatar;
+                        // Fallback to default if Kick avatar fails
+                        e.currentTarget.src = '/placeholder-avatar.jpg';
                       }}
                     />
                     <AvatarFallback className="bg-kick-green text-kick-dark text-xs font-bold">
@@ -138,10 +138,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               <div className="flex items-center justify-center gap-4">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-kick-green pulse-glow">
                   <AvatarImage 
-                    src={`https://kick.com/api/v2/channels/${winner.username}/avatar`}
+                    src={`https://files.kick.com/images/user/${winner.username}/profile_image/conversion/300x300-medium.webp`}
                     alt={winner.username}
                     onError={(e) => {
-                      e.currentTarget.src = winner.avatar;
+                      e.currentTarget.src = '/placeholder-avatar.jpg';
                     }}
                   />
                   <AvatarFallback className="bg-kick-green text-kick-dark font-bold text-lg">
@@ -205,10 +205,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                   >
                     <Avatar className="w-5 h-5">
                       <AvatarImage 
-                        src={`https://kick.com/api/v2/channels/${participant.username}/avatar`}
+                        src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
                         alt={participant.username}
                         onError={(e) => {
-                          e.currentTarget.src = participant.avatar;
+                          e.currentTarget.src = '/placeholder-avatar.jpg';
                         }}
                       />
                       <AvatarFallback className="bg-kick-green text-kick-dark text-xs">

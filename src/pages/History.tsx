@@ -217,7 +217,7 @@ export default function History() {
                         <div className="flex items-center gap-4">
                           <Avatar className="w-16 h-16 border-4 border-kick-green/30">
                             <AvatarImage 
-                              src={`https://kick.com/api/v2/channels/${winner.winner_user_id}/avatar`}
+                              src={`https://files.kick.com/images/user/${winner.winner_user_id}/profile_image/conversion/300x300-medium.webp`}
                               alt={winner.winner_user_id}
                               onError={(e) => {
                                 e.currentTarget.src = '/placeholder-avatar.jpg';
