@@ -141,9 +141,20 @@ Deno.serve(async (req) => {
             console.log('🔧 User API response body (first 300 chars):', responseText.substring(0, 300))
             
             if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
-              kickUser = JSON.parse(responseText)
-              console.log('✅ User info retrieved successfully:', kickUser.username || kickUser.name || 'no_username_field')
-              console.log('🔧 Available user fields:', Object.keys(kickUser))
+              const userData = JSON.parse(responseText)
+              console.log('✅ User data retrieved successfully')
+              console.log('🔧 Full user data structure:', JSON.stringify(userData, null, 2))
+              console.log('🔧 Available user fields:', Object.keys(userData))
+              
+              // Extract user info - handle different possible field names
+              kickUser = {
+                id: userData.id || userData.user_id || userData.userId || `kick_${Date.now()}`,
+                username: userData.username || userData.name || userData.display_name || userData.slug || `user_${Date.now()}`,
+                display_name: userData.display_name || userData.name || userData.username || userData.full_name || 'Kick User',
+                avatar: userData.avatar || userData.avatar_url || userData.profile_picture || userData.profile_pic || null
+              }
+              
+              console.log('✅ Extracted user info:', JSON.stringify(kickUser, null, 2))
             } else {
               console.error('❌ Response is not JSON:', responseText.substring(0, 100))
               throw new Error('API returned non-JSON response')
