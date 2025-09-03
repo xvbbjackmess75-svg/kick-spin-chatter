@@ -32,11 +32,12 @@ export default function AuthCallback() {
           
           // Get stored code verifier
           const codeVerifier = sessionStorage.getItem('kick_code_verifier');
-          console.log('🔄 Callback Debug - Code verifier from storage:', !!codeVerifier)
+          console.log('🔄 Callback Debug - Code verifier from storage:', codeVerifier ? codeVerifier.substring(0, 10) + '...' : 'NOT FOUND')
           sessionStorage.removeItem('kick_code_verifier'); // Clean up
           
           if (!codeVerifier) {
             console.error('❌ No code verifier found in sessionStorage')
+            console.error('❌ SessionStorage contents:', Object.keys(sessionStorage))
             throw new Error('No code verifier found. Please try logging in again.')
           }
           
