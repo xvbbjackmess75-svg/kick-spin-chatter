@@ -98,9 +98,9 @@ export default function Giveaways() {
   }, [user]);
 
   const fetchGiveaways = async () => {
-    // Don't fetch if in guest mode
+    // Don't fetch if in guest mode AND not authenticated
     const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-    if (isGuestMode) {
+    if (isGuestMode && !user) {
       setLoading(false);
       return;
     }
