@@ -73,6 +73,8 @@ export default function Auth() {
   const handleKickOAuth = async () => {
     setLoading(true);
     try {
+      console.log('🚀 Starting Kick OAuth flow...');
+      
       const response = await supabase.functions.invoke('kick-oauth', {
         body: { 
           action: 'authorize',
@@ -80,12 +82,18 @@ export default function Auth() {
         }
       });
 
+      console.log('📥 OAuth response:', response);
+
       if (response.error) {
+        console.error('❌ OAuth response error:', response.error);
         throw response.error;
       }
 
       const { authUrl } = response.data;
+      console.log('🔗 Auth URL received:', authUrl);
+      
       if (authUrl) {
+        console.log('🚀 Redirecting to:', authUrl);
         window.location.href = authUrl;
       } else {
         throw new Error('No authorization URL received');
