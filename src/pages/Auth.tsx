@@ -58,74 +58,15 @@ export default function Auth() {
     setLoading(false);
   };
 
-  const generatePKCE = () => {
-    console.log('Generating PKCE parameters...');
-    // Generate a random code verifier
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    const codeVerifier = btoa(String.fromCharCode.apply(null, Array.from(array)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    
-    console.log('Code verifier generated:', codeVerifier);
-    
-    // Generate code challenge
-    const encoder = new TextEncoder();
-    const data = encoder.encode(codeVerifier);
-    return crypto.subtle.digest('SHA-256', data).then(hash => {
-      const codeChallenge = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(hash))))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-      
-      console.log('Code challenge generated:', codeChallenge);
-      return { codeVerifier, codeChallenge };
+  const handleContinueAsGuest = () => {
+    // Set a guest flag in localStorage
+    localStorage.setItem('guest_mode', 'true');
+    toast({
+      title: "Guest Mode",
+      description: "You're now accessing the dashboard as a guest.",
+      variant: "default"
     });
-  };
-
-  const handleKickAuth = async () => {
-    console.log('Starting Kick OAuth...');
-    setLoading(true);
-    
-    try {
-      // Generate PKCE parameters
-      console.log('About to generate PKCE...');
-      const { codeVerifier, codeChallenge } = await generatePKCE();
-      console.log('PKCE generated successfully');
-      
-      // Store code verifier for later use in token exchange
-      localStorage.setItem('kick_code_verifier', codeVerifier);
-      console.log('Stored code verifier in localStorage');
-      
-      // Build the Kick OAuth URL with proper parameters including PKCE
-      const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ';
-      const redirectUri = encodeURIComponent(`${window.location.origin}/kick-callback`);
-      const scope = encodeURIComponent('user:read');
-      const state = crypto.randomUUID();
-      
-      console.log('OAuth parameters:', { clientId, redirectUri, scope, state });
-      
-      // Store state for validation
-      localStorage.setItem('kick_oauth_state', state);
-      console.log('Stored state in localStorage');
-      
-      const kickAuthUrl = `https://id.kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
-      
-      console.log('Final OAuth URL:', kickAuthUrl);
-      console.log('About to redirect to Kick...');
-      
-      // Redirect to Kick OAuth
-      window.location.href = kickAuthUrl;
-    } catch (error) {
-      console.error('Kick OAuth error:', error);
-      toast({
-        title: "Authentication Error",
-        description: `Failed to connect with Kick: ${error.message}`,
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
+    navigate('/dashboard');
   };
 
   return (
@@ -141,16 +82,29 @@ export default function Auth() {
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Kick OAuth Button - Featured */}
+          {/* Kick OAuth Button - Disabled */}
+          <Button 
+            type="button"
+            className="w-full mb-4"
+            variant="outline"
+            disabled={true}
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-muted-foreground" />
+              Kick Integration Not Available
+            </div>
+          </Button>
+
+          {/* Continue as Guest Button */}
           <Button 
             type="button"
             className="w-full gaming-button mb-6"
-            onClick={handleKickAuth}
-            disabled={loading}
+            onClick={handleContinueAsGuest}
           >
             <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              {loading ? "Connecting..." : "Continue with Kick"}
+              <User className="h-5 w-5" />
+              Continue as Guest
+              <ArrowRight className="h-4 w-4" />
             </div>
           </Button>
 
