@@ -31,7 +31,13 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url)
-    const action = url.searchParams.get('action')
+    let action = url.searchParams.get('action')
+    
+    // If no action in URL, check request body for POST requests
+    if (!action && req.method === 'POST') {
+      const body = await req.json()
+      action = body.action
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
