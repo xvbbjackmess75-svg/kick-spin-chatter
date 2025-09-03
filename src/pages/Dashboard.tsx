@@ -16,21 +16,18 @@ import {
   Users,
   Trophy,
   Zap,
-  Crown
+  Crown,
+  Monitor,
+  MonitorX,
+  Play,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 
 interface DashboardParticipant {
   id: string;
   username: string;
   avatar?: string;
-  isWinner?: boolean;
-}
-
-// Convert to RouletteWheel expected format
-interface RouletteParticipant {
-  id: number;
-  username: string;
-  avatar: string;
   isWinner?: boolean;
 }
 
@@ -159,11 +156,9 @@ export default function Dashboard() {
   };
 
   const handleChatMessage = async (message: any) => {
-    // Check if message matches any active giveaway keywords
     const activeGiveaways = giveaways.filter(g => g.status === 'active');
     
     for (const giveaway of activeGiveaways) {
-      // Extract keyword from description (format: "Channel: x, Keyword: y")
       const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
       if (!keywordMatch) continue;
       
@@ -172,7 +167,6 @@ export default function Dashboard() {
       if (message.content && message.content.toLowerCase().includes(keyword.toLowerCase())) {
         console.log(`Keyword "${keyword}" detected from user: ${message.username}`);
         
-        // Add participant to giveaway
         try {
           await supabase
             .from('giveaway_participants')
@@ -182,7 +176,6 @@ export default function Dashboard() {
               kick_user_id: message.userId?.toString() || message.username
             });
 
-          // Update participant count
           const { data: participants } = await supabase
             .from('giveaway_participants')
             .select('id')
@@ -200,7 +193,6 @@ export default function Dashboard() {
             description: `${message.username} entered "${giveaway.title}" giveaway!`,
           });
         } catch (error) {
-          // Ignore duplicate participant errors
           if (!error.message?.includes('duplicate')) {
             console.error('Error adding participant:', error);
           }
@@ -254,7 +246,7 @@ export default function Dashboard() {
         .from('giveaways')
         .insert({
           title: title.trim(),
-          channel_id: null, // We'll store channel name in description for now
+          channel_id: null,
           description: `Channel: ${channelName.trim()}, Keyword: ${keyword.trim()}`,
           user_id: user?.id,
           status: 'active'
@@ -299,13 +291,11 @@ export default function Dashboard() {
     setIsSpinning(true);
     setWinner(null);
 
-    // Simulate spinning duration
     setTimeout(async () => {
       const randomWinner = participants[Math.floor(Math.random() * participants.length)];
       setWinner({ ...randomWinner, isWinner: true });
       setIsSpinning(false);
 
-      // Update giveaway with winner
       try {
         await supabase
           .from('giveaways')
@@ -327,7 +317,6 @@ export default function Dashboard() {
     }, 4000);
   };
 
-  // Mock function to simulate adding participants (in real implementation, this would be done by chat bot)
   const simulateParticipant = async (giveawayId: string) => {
     const mockUsernames = ['StreamFan99', 'GamingQueen', 'BotLover', 'ChatMaster', 'NightOwl', 'ProGamer'];
     const randomUsername = mockUsernames[Math.floor(Math.random() * mockUsernames.length)] + Math.floor(Math.random() * 1000);
@@ -341,7 +330,6 @@ export default function Dashboard() {
           kick_user_id: randomUsername
         });
 
-      // Update participant count
       const { data: participants } = await supabase
         .from('giveaway_participants')
         .select('id')
@@ -354,7 +342,7 @@ export default function Dashboard() {
 
       fetchGiveaways();
       toast({
-        title: "New Participant",
+        title: "Test Participant Added",
         description: `${randomUsername} joined the giveaway!`,
       });
     } catch (error) {
@@ -364,8 +352,11 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -373,246 +364,289 @@ export default function Dashboard() {
   const activeGiveaways = giveaways.filter(g => g.status === 'active');
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Giveaways</h1>
-          <p className="text-muted-foreground mt-1">
-            Track chat messages and run giveaways for your Kick streams.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gaming-button">
-              <Plus className="h-4 w-4 mr-2" />
-              New Giveaway
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="gaming-card border-border/50 max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">Create New Giveaway</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Giveaway Title</Label>
-                <Input 
-                  id="title" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Gaming Headset Giveaway" 
-                  className="bg-secondary/30" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="channel">Kick Channel Name</Label>
-                <Input 
-                  id="channel" 
-                  value={channelName}
-                  onChange={(e) => setChannelName(e.target.value)}
-                  placeholder="your-channel-name" 
-                  className="bg-secondary/30" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="keyword">Entry Keyword</Label>
-                <Input 
-                  id="keyword" 
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="!giveaway" 
-                  className="bg-secondary/30" 
-                />
-                <p className="text-xs text-muted-foreground">
-                  Viewers will type this in chat to enter
-                </p>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button className="gaming-button flex-1" onClick={createGiveaway}>
-                  Create & Start
-                </Button>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="flex-1">
-                  Cancel
-                </Button>
-              </div>
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Kick Giveaways
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Monitor Kick chat and run automated giveaways with real-time participant tracking
+            </p>
+          </div>
+          
+          {/* Connection Status */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
+              {chatConnected ? (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-medium">Monitoring: {connectedChannel}</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                  <span className="text-sm text-muted-foreground">Not monitoring chat</span>
+                </>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Roulette Wheel */}
-        <div className="lg:col-span-1">
-          <Card className="gaming-card">
-            <CardContent className="p-6">
-              <RouletteWheel
-                participants={participants.map((p, index) => ({
-                  id: index,
-                  username: p.username,
-                  avatar: p.avatar || '/placeholder-avatar.jpg',
-                  isWinner: p.isWinner
-                }))}
-                isSpinning={isSpinning}
-                onSpin={() => {}}
-                winner={winner ? {
-                  id: 0,
-                  username: winner.username,
-                  avatar: winner.avatar || '/placeholder-avatar.jpg',
-                  isWinner: winner.isWinner
-                } : undefined}
-              />
-            </CardContent>
-          </Card>
+            
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+                  <Plus className="h-5 w-5 mr-2" />
+                  New Giveaway
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl">Create New Giveaway</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Giveaway Title</Label>
+                    <Input 
+                      id="title" 
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g., Gaming Headset Giveaway" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="channel">Kick Channel Name</Label>
+                    <Input 
+                      id="channel" 
+                      value={channelName}
+                      onChange={(e) => setChannelName(e.target.value)}
+                      placeholder="e.g., robertgamba" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="keyword">Entry Keyword</Label>
+                    <Input 
+                      id="keyword" 
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      placeholder="e.g., juice" 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Viewers will type this keyword in chat to enter
+                    </p>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={createGiveaway} className="flex-1">
+                      Create Giveaway
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {/* Active Giveaways */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Crown className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-semibold text-foreground">Active Giveaways</h2>
-            <Badge variant="outline" className="text-kick-green border-kick-green/30">
-              {activeGiveaways.length} running
-            </Badge>
-          </div>
-
-          {activeGiveaways.length === 0 ? (
-            <Card className="gaming-card">
-              <CardContent className="p-8 text-center">
-                <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No Active Giveaways</h3>
-                <p className="text-muted-foreground mb-4">Create your first giveaway to get started!</p>
-                <Button className="gaming-button" onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Giveaway
-                </Button>
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          
+          {/* Roulette Wheel */}
+          <div className="lg:col-span-1">
+            <Card className="border-2 border-dashed border-primary/20 bg-gradient-to-br from-card to-card/80">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" />
+                  Winner Selection
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center space-y-6">
+                <RouletteWheel
+                  participants={participants.map((p, index) => ({
+                    id: index,
+                    username: p.username,
+                    avatar: p.avatar || '/placeholder-avatar.jpg',
+                    isWinner: p.isWinner
+                  }))}
+                  isSpinning={isSpinning}
+                  onSpin={() => {}}
+                  winner={winner ? {
+                    id: 0,
+                    username: winner.username,
+                    avatar: winner.avatar || '/placeholder-avatar.jpg',
+                    isWinner: winner.isWinner
+                  } : undefined}
+                />
+                
+                {participants.length > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {participants.length} participant{participants.length !== 1 ? 's' : ''} ready for drawing
+                  </p>
+                )}
               </CardContent>
             </Card>
-          ) : (
-            activeGiveaways.map((giveaway) => (
-              <Card key={giveaway.id} className="gaming-card hover:scale-[1.02] transition-transform duration-200">
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center">
-                      <Gift className="h-8 w-8 text-primary-foreground" />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground">{giveaway.title}</h3>
-                          <p className="text-sm text-muted-foreground">{giveaway.description}</p>
-                        </div>
-                        <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30">
-                          Active
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-foreground">{giveaway.participants_count || 0}</div>
-                          <div className="text-xs text-muted-foreground">Participants</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-primary">Running</div>
-                          <div className="text-xs text-muted-foreground">Status</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          className="gaming-button" 
-                          onClick={() => drawWinner(giveaway)}
-                          disabled={isSpinning}
-                        >
-                          <Zap className="h-3 w-3 mr-2" />
-                          Pick Winner
-                        </Button>
-                        {!chatConnected ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
-                              if (channelMatch) {
-                                joinChatChannel(channelMatch[1].trim());
-                              }
-                            }}
-                          >
-                            <Users className="h-3 w-3 mr-2" />
-                            Start Monitoring
-                          </Button>
-                        ) : connectedChannel === giveaway.description?.match(/Channel: ([^,]+)/)?.[1]?.trim() ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="bg-kick-green/20 text-kick-green border-kick-green/30"
-                            disabled
-                          >
-                            <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse mr-2" />
-                            Monitoring Chat
-                          </Button>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
-                              if (channelMatch) {
-                                joinChatChannel(channelMatch[1].trim());
-                              }
-                            }}
-                          >
-                            <Users className="h-3 w-3 mr-2" />
-                            Monitor This Channel
-                          </Button>
-                        )}
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => simulateParticipant(giveaway.id)}
-                        >
-                          <Users className="h-3 w-3 mr-2" />
-                          + Test Participant
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+          </div>
+
+          {/* Active Giveaways */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center gap-3">
+              <Gift className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-semibold">Active Giveaways</h2>
+              <Badge variant="outline" className="text-primary border-primary/30">
+                {activeGiveaways.length} running
+              </Badge>
+            </div>
+
+            {activeGiveaways.length === 0 ? (
+              <Card className="border-dashed border-muted-foreground/30">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <Gift className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Active Giveaways</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Create your first giveaway to start engaging with your Kick audience!
+                  </p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Giveaway
+                  </Button>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
-      </div>
+            ) : (
+              <div className="space-y-4">
+                {activeGiveaways.map((giveaway) => {
+                  const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
+                  const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
+                  const channel = channelMatch?.[1]?.trim();
+                  const keyword = keywordMatch?.[1]?.trim();
+                  const isMonitoring = chatConnected && connectedChannel === channel;
 
-      {/* Recent Participants */}
-      {participants.length > 0 && (
-        <Card className="gaming-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Recent Participants ({participants.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {participants.slice(0, 10).map((participant) => (
-              <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
-                    {participant.username.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{participant.username}</p>
-                  <p className="text-xs text-muted-foreground">Entered giveaway</p>
-                </div>
-                <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse" />
+                  return (
+                    <Card key={giveaway.id} className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                          
+                          {/* Giveaway Info */}
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-start justify-between">
+                              <h3 className="text-xl font-semibold">{giveaway.title}</h3>
+                              <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                                Active
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Channel:</span>
+                                <span className="font-medium ml-2">{channel}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Keyword:</span>
+                                <code className="font-mono bg-secondary px-2 py-1 rounded ml-2">{keyword}</code>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Participants:</span>
+                                <span className="font-bold text-primary ml-2">{giveaway.participants_count || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Status:</span>
+                                <div className="flex items-center gap-2 ml-2">
+                                  {isMonitoring ? (
+                                    <>
+                                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                      <span className="text-green-600 font-medium">Monitoring</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                                      <span className="text-orange-600 font-medium">Waiting</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex flex-col gap-2 min-w-[200px]">
+                            {!isMonitoring ? (
+                              <Button 
+                                onClick={() => joinChatChannel(channel || '')}
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Monitor className="h-4 w-4 mr-2" />
+                                Start Monitoring
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant="outline"
+                                className="w-full border-green-500/30 text-green-600 hover:bg-green-500/10"
+                                disabled
+                              >
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                                Monitoring Chat
+                              </Button>
+                            )}
+                            
+                            <Button 
+                              onClick={() => drawWinner(giveaway)}
+                              disabled={isSpinning || (giveaway.participants_count || 0) === 0}
+                              className="w-full bg-gradient-to-r from-primary to-primary/80"
+                            >
+                              <Trophy className="h-4 w-4 mr-2" />
+                              {isSpinning ? 'Drawing...' : 'Pick Winner'}
+                            </Button>
+                            
+                            <Button 
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => simulateParticipant(giveaway.id)}
+                              className="w-full"
+                            >
+                              <Users className="h-3 w-3 mr-2" />
+                              Add Test Participant
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            )}
+          </div>
+        </div>
+
+        {/* Recent Participants */}
+        {participants.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Recent Participants ({participants.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {participants.slice(0, 8).map((participant) => (
+                  <div key={participant.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card/50 hover:bg-card transition-colors">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {participant.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{participant.username}</p>
+                      <p className="text-xs text-muted-foreground">Participant</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
