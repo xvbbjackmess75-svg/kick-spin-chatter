@@ -71,8 +71,18 @@ export default function AuthCallback() {
           }
 
           const { success, user, token_info, message } = response.data;
+          
+          console.log('🔍 DEBUG: Full response data:', JSON.stringify(response.data, null, 2));
+          console.log('🔍 DEBUG: User object:', JSON.stringify(user, null, 2));
 
           if (success && user) {
+            console.log('🔍 DEBUG: About to store user data:', {
+              id: user.id,
+              username: user.username,
+              display_name: user.display_name,
+              avatar: user.avatar
+            });
+            
             // Store Kick user info in localStorage since we're not using Supabase auth for Kick
             localStorage.setItem('kick_user', JSON.stringify({
               id: user.id,
