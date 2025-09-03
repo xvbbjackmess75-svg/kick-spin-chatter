@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -81,6 +81,29 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     };
   };
 
+  // Create randomized infinite participants array for seamless infinite scrolling
+  // This allows participants to appear multiple times and next to each other
+  const extendedParticipants = useMemo(() => {
+    if (participants.length === 0) return [];
+    
+    const participantWidth = 80;
+    const maxCycles = 100; // Increased for truly infinite feeling
+    const maxScrollDistance = maxCycles * participants.length * participantWidth;
+    const totalAvatarsNeeded = Math.ceil(maxScrollDistance / participantWidth) + 100; // Extra buffer
+    
+    const randomizedParticipants = [];
+    for (let i = 0; i < totalAvatarsNeeded; i++) {
+      // Random selection allowing duplicates and adjacent participants
+      const randomIndex = Math.floor(Math.random() * participants.length);
+      randomizedParticipants.push({
+        ...participants[randomIndex],
+        uniqueKey: `${participants[randomIndex].id}-${i}` // Unique key for React
+      });
+    }
+    
+    return randomizedParticipants;
+  }, [participants]);
+
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
       setAnimationClass("roulette-scroll");
@@ -93,37 +116,52 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Use winner from props or provably fair selection
+      // Find the winner in the randomized array
       let targetParticipantIndex;
       if (winner) {
-        targetParticipantIndex = participants.findIndex(p => p.id === winner.id);
-        if (targetParticipantIndex === -1) targetParticipantIndex = 0;
+        // Find a position in the extended array where this winner appears
+        // Start from a reasonable position (not too early in the scroll)
+        const minStartPosition = 500; // Start searching after position 500
+        targetParticipantIndex = extendedParticipants.findIndex((p, index) => 
+          p.id === winner.id && index >= minStartPosition
+        );
+        if (targetParticipantIndex === -1) {
+          // Fallback: find any occurrence of this winner
+          targetParticipantIndex = extendedParticipants.findIndex(p => p.id === winner.id);
+        }
+        if (targetParticipantIndex === -1) targetParticipantIndex = minStartPosition;
       } else {
-        targetParticipantIndex = result.winnerTicket;
+        // For provably fair selection, find the original participant in the randomized array
+        const originalWinner = participants[result.winnerTicket];
+        const minStartPosition = 500;
+        targetParticipantIndex = extendedParticipants.findIndex((p, index) => 
+          p.id === originalWinner.id && index >= minStartPosition
+        );
+        if (targetParticipantIndex === -1) {
+          targetParticipantIndex = extendedParticipants.findIndex(p => p.id === originalWinner.id);
+        }
+        if (targetParticipantIndex === -1) targetParticipantIndex = minStartPosition;
       }
       
       // Calculate minimum cycles needed to ensure forward movement
-      const cycleDistance = participants.length * participantWidth;
-      const currentCyclePosition = scrollPosition % cycleDistance;
+      const currentPosition = scrollPosition;
       const targetPosition = targetParticipantIndex * participantWidth;
       
-      // Ensure we move forward by at least 15 full cycles
-      let additionalCycles = 15 + Math.random() * 20; // 15-35 cycles
+      // Ensure we move forward significantly
+      let additionalDistance = 8000 + Math.random() * 4000; // 8000-12000px minimum scroll
       
-      // If we have multiple winners being selected, ensure we move forward
+      // If we have multiple winners being selected, ensure we move forward more
       if (winner && lastWinnerId !== null && winner.id !== lastWinnerId) {
-        additionalCycles = Math.max(20, additionalCycles); // Minimum 20 cycles for multiple winners
+        additionalDistance = Math.max(10000, additionalDistance); // Minimum 10000px for multiple winners
       }
-      
-      const baseCycles = Math.floor(additionalCycles) * cycleDistance;
       
       // Add random offset for landing position within the winner's avatar bounds
       const centerOffset = containerWidth / 2 - participantWidth / 2;
       // Limit random offset to stay within the avatar bounds (±20px max to stay in avatar area)
       const randomOffset = (result.landingOffset / 30) * 20; // Scale down from ±30 to ±20
       
-      // Calculate final position: current position + additional cycles + target position
-      const finalScrollPosition = scrollPosition + baseCycles + (targetPosition - currentCyclePosition) + randomOffset;
+      // Calculate final position: current position + additional distance + target position
+      const finalScrollPosition = currentPosition + additionalDistance + targetPosition - currentPosition + randomOffset;
       setScrollPosition(finalScrollPosition);
       
       // Track the current winner
@@ -143,15 +181,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }, 11000); // 8000ms animation + 3000ms delay
       }
     }
-  }, [isSpinning, participants.length, winner, scrollPosition, lastWinnerId]);
-
-  // Create extended participants array for seamless infinite scrolling
-  // Calculate based on maximum possible scroll distance to ensure we always have enough participants
-  const maxCycles = 50; // Maximum cycles we might use
-  const participantWidth = 80;
-  const maxScrollDistance = maxCycles * participants.length * participantWidth;
-  const repeats = Math.max(50, Math.ceil(maxScrollDistance / (participants.length * participantWidth)) + 20);
-  const extendedParticipants = Array(repeats).fill(participants).flat();
+  }, [isSpinning, participants.length, winner, scrollPosition, lastWinnerId, extendedParticipants]);
 
   return (
     <Card className="gaming-card w-full">
@@ -191,7 +221,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
             >
               {extendedParticipants.map((participant, index) => (
                 <div
-                  key={`${participant.id}-${index}`}
+                  key={participant.uniqueKey || `${participant.id}-${index}`}
                   className="flex-shrink-0 w-20 h-full flex flex-col items-center justify-center p-2 border-r border-kick-green/20"
                 >
                   <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-background shadow-lg">
