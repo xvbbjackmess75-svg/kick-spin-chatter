@@ -10,6 +10,9 @@ export default function KickCallback() {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('KickCallback component mounted');
+    console.log('Current URL:', window.location.href);
+    console.log('Search params:', window.location.search);
     const handleKickCallback = async () => {
       const code = searchParams.get('code');
       const error = searchParams.get('error');
