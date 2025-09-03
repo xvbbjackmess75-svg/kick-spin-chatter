@@ -383,6 +383,52 @@ export default function Dashboard() {
     }
   };
 
+  // Provably fair system functions
+  const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
+  
+  const generateServerSeed = () => Math.random().toString(36).substring(2, 15);
+  
+  const hashSeeds = (clientSeed: string, serverSeed: string, nonce: number) => {
+    const data = `${clientSeed}:${serverSeed}:${nonce}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+  };
+
+  const selectWinnerTicket = (participants: DashboardParticipant[]) => {
+    const clientSeed = generateClientSeed();
+    const serverSeed = generateServerSeed();
+    const nonce = Date.now();
+    const hash = hashSeeds(clientSeed, serverSeed, nonce);
+    
+    // Fixed 1000 tickets distributed equally among participants
+    const totalTickets = 1000;
+    const ticketsPerParticipant = Math.floor(totalTickets / participants.length);
+    
+    // Use hash to determine winning ticket number (1-1000)
+    const hashInt = parseInt(hash.substring(0, 8), 16);
+    const winningTicketNumber = (hashInt % totalTickets) + 1; // 1-1000
+    
+    // Determine which participant owns this ticket
+    const winnerIndex = Math.floor((winningTicketNumber - 1) / ticketsPerParticipant);
+    const actualWinnerIndex = Math.min(winnerIndex, participants.length - 1); // Ensure within bounds
+    
+    return {
+      clientSeed,
+      serverSeed,
+      nonce,
+      hash,
+      winnerIndex: actualWinnerIndex,
+      winningTicketNumber,
+      ticketsPerParticipant,
+      totalTickets
+    };
+  };
+
   const drawWinner = async (giveaway: Giveaway) => {
     // First fetch participants for this specific giveaway
     try {
@@ -408,12 +454,50 @@ export default function Dashboard() {
         return;
       }
 
-      // Set participants for the roulette and start spinning
-      // Store the current giveaway for the callback
+      console.log("🎰 DASHBOARD: Starting winner selection with participants:", giveawayParticipants.map(p => p.username));
+
+      // STEP 1: Use provably fair system to select winner
+      const result = selectWinnerTicket(giveawayParticipants);
+      const selectedWinner = giveawayParticipants[result.winnerIndex];
+      
+      console.log("🎯 PROVABLY FAIR RESULT:", {
+        winner: selectedWinner.username,
+        winnerIndex: result.winnerIndex,
+        winningTicket: result.winningTicketNumber,
+        ticketsPerParticipant: result.ticketsPerParticipant,
+        totalTickets: result.totalTickets
+      });
+
+      // STEP 2: Set up roulette animation
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
-      setIsSpinning(true);
-      setWinner(null);
+      setWinner(selectedWinner); // Set the provably fair winner
+      setIsSpinning(true); // Start the roulette animation
+
+      // STEP 3: After 4 seconds, complete the process
+      setTimeout(async () => {
+        setIsSpinning(false);
+        
+        try {
+          await supabase
+            .from('giveaways')
+            .update({ 
+              winner_user_id: selectedWinner.username,
+              status: 'completed'
+            })
+            .eq('id', giveaway.id);
+
+          toast({
+            title: "Winner Selected!",
+            description: `Congratulations to ${selectedWinner.username}!`,
+          });
+
+          fetchGiveaways();
+          setCurrentGiveaway(null);
+        } catch (error) {
+          console.error('Error updating winner:', error);
+        }
+      }, 4500); // 4.5 seconds to let animation complete
 
     } catch (error) {
       console.error('Error fetching participants:', error);
@@ -426,32 +510,8 @@ export default function Dashboard() {
   };
 
   const handleWinnerSelected = async (selectedWinner: DashboardParticipant) => {
-    console.log("🏆 Winner selected by roulette:", selectedWinner.username);
-    
-    setWinner({ ...selectedWinner, isWinner: true });
-    setIsSpinning(false);
-
-    if (currentGiveaway) {
-      try {
-        await supabase
-          .from('giveaways')
-          .update({ 
-            winner_user_id: selectedWinner.username,
-            status: 'completed'
-          })
-          .eq('id', currentGiveaway.id);
-
-        toast({
-          title: "Winner Selected!",
-          description: `Congratulations to ${selectedWinner.username}!`,
-        });
-
-        fetchGiveaways();
-        setCurrentGiveaway(null);
-      } catch (error) {
-        console.error('Error updating winner:', error);
-      }
-    }
+    // This function is no longer needed since we determine winner in drawWinner
+    console.log("🏆 Winner animation completed:", selectedWinner.username);
   };
 
   const simulateParticipant = async (giveawayId: string) => {
@@ -879,16 +939,12 @@ export default function Dashboard() {
             }))}
             isSpinning={isSpinning}
             onSpin={() => {}}
-            onWinnerSelected={(selectedWinner) => {
-              // Convert the selected winner back to DashboardParticipant format
-              const dashboardWinner: DashboardParticipant = {
-                id: selectedWinner.id.toString(),
-                username: selectedWinner.username,
-                avatar: selectedWinner.avatar,
-                isWinner: true
-              };
-              handleWinnerSelected(dashboardWinner);
-            }}
+            winner={winner ? {
+              id: 0,
+              username: winner.username,
+              avatar: winner.avatar || '/placeholder-avatar.jpg',
+              isWinner: winner.isWinner
+            } : undefined}
           />
         )}
 
