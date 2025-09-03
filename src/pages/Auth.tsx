@@ -59,6 +59,7 @@ export default function Auth() {
   };
 
   const generatePKCE = () => {
+    console.log('Generating PKCE parameters...');
     // Generate a random code verifier
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
@@ -66,6 +67,8 @@ export default function Auth() {
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
+    
+    console.log('Code verifier generated:', codeVerifier);
     
     // Generate code challenge
     const encoder = new TextEncoder();
@@ -76,19 +79,24 @@ export default function Auth() {
         .replace(/\//g, '_')
         .replace(/=/g, '');
       
+      console.log('Code challenge generated:', codeChallenge);
       return { codeVerifier, codeChallenge };
     });
   };
 
   const handleKickAuth = async () => {
+    console.log('Starting Kick OAuth...');
     setLoading(true);
     
     try {
       // Generate PKCE parameters
+      console.log('About to generate PKCE...');
       const { codeVerifier, codeChallenge } = await generatePKCE();
+      console.log('PKCE generated successfully');
       
       // Store code verifier for later use in token exchange
       localStorage.setItem('kick_code_verifier', codeVerifier);
+      console.log('Stored code verifier in localStorage');
       
       // Build the Kick OAuth URL with proper parameters including PKCE
       const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ';
@@ -96,17 +104,24 @@ export default function Auth() {
       const scope = encodeURIComponent('user:read');
       const state = crypto.randomUUID();
       
+      console.log('OAuth parameters:', { clientId, redirectUri, scope, state });
+      
       // Store state for validation
       localStorage.setItem('kick_oauth_state', state);
+      console.log('Stored state in localStorage');
       
       const kickAuthUrl = `https://id.kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+      
+      console.log('Final OAuth URL:', kickAuthUrl);
+      console.log('About to redirect to Kick...');
       
       // Redirect to Kick OAuth
       window.location.href = kickAuthUrl;
     } catch (error) {
+      console.error('Kick OAuth error:', error);
       toast({
         title: "Authentication Error",
-        description: "Failed to connect with Kick. Please try again.",
+        description: `Failed to connect with Kick: ${error.message}`,
         variant: "destructive"
       });
       setLoading(false);
