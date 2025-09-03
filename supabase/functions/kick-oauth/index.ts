@@ -1,6 +1,27 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface KickUserInfo {
+  id: number
+  username: string
+  display_name: string
+  avatar?: string
+  verified: boolean
+  follower_badges: any[]
+  subscriber_badges: any[]
+  bio?: string
+}
+
+interface KickTokenResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+  refresh_token: string
+  scope: string
 }
 
 Deno.serve(async (req) => {
@@ -15,10 +36,9 @@ Deno.serve(async (req) => {
     
     // Read request body
     const body = await req.json()
-    console.log('🔧 Request body:', body)
+    console.log('🔧 Request body action:', body.action)
     
     const action = body.action
-    console.log('🔧 Action:', action)
 
     if (action === 'authorize') {
       console.log('🔧 Creating authorization URL...')
@@ -60,7 +80,7 @@ Deno.serve(async (req) => {
       authUrl.searchParams.set('code_challenge', codeChallenge)
       authUrl.searchParams.set('code_challenge_method', 'S256')
 
-      console.log('🔗 Authorization URL:', authUrl.toString())
+      console.log('🔗 Authorization URL created')
 
       return new Response(JSON.stringify({ 
         authUrl: authUrl.toString(),
@@ -119,12 +139,127 @@ Deno.serve(async (req) => {
         })
       }
 
-      const tokenData = await tokenResponse.json()
+      const tokenData: KickTokenResponse = await tokenResponse.json()
       console.log('✅ Token exchange successful')
+
+      // Get user info from Kick API
+      console.log('🔧 Fetching user info from Kick...')
+      const userResponse = await fetch('https://kick.com/api/v2/user', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Accept': 'application/json',
+        },
+      })
+
+      if (!userResponse.ok) {
+        const errorText = await userResponse.text()
+        console.error('❌ Failed to fetch user info:', errorText)
+        throw new Error(`Failed to fetch user info: ${userResponse.status}`)
+      }
+
+      const kickUser: KickUserInfo = await userResponse.json()
+      console.log('👤 Retrieved user info for:', kickUser.username)
+
+      // Initialize Supabase client
+      console.log('🔧 Initializing Supabase...')
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+      // Create or update user in Supabase Auth
+      console.log('🔧 Creating/updating Supabase user...')
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: `${kickUser.username}@kick.placeholder`,
+        email_confirm: true,
+        user_metadata: {
+          kick_id: kickUser.id,
+          kick_username: kickUser.username,
+          display_name: kickUser.display_name,
+          avatar_url: kickUser.avatar,
+          verified: kickUser.verified,
+          provider: 'kick',
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+        }
+      })
+
+      if (authError && !authError.message.includes('already been registered')) {
+        console.error('❌ Failed to create user:', authError)
+        throw authError
+      }
+
+      // If user already exists, update their metadata
+      let userId = authData?.user?.id
+      if (authError?.message.includes('already been registered')) {
+        console.log('🔧 User exists, updating metadata...')
+        const { data: existingUsers } = await supabase.auth.admin.listUsers()
+        const existingUser = existingUsers.users.find(u => 
+          u.user_metadata?.kick_id === kickUser.id
+        )
+        if (existingUser) {
+          userId = existingUser.id
+          await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              kick_id: kickUser.id,
+              kick_username: kickUser.username,
+              display_name: kickUser.display_name,
+              avatar_url: kickUser.avatar,
+              verified: kickUser.verified,
+              provider: 'kick',
+              access_token: tokenData.access_token,
+              refresh_token: tokenData.refresh_token,
+            }
+          })
+        }
+      }
+
+      if (!userId) {
+        throw new Error('Failed to get or create user ID')
+      }
+
+      // Update or create profile
+      console.log('🔧 Creating/updating profile...')
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: userId,
+          display_name: kickUser.display_name || kickUser.username,
+          kick_user_id: kickUser.id.toString(),
+          kick_username: kickUser.username,
+          avatar_url: kickUser.avatar,
+          is_streamer: true,
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (profileError) {
+        console.error('❌ Failed to update profile:', profileError)
+        // Don't throw - profile update is not critical
+      }
+
+      // Generate session for the user
+      console.log('🔧 Generating session...')
+      const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: `${kickUser.username}@kick.placeholder`,
+      })
+
+      if (sessionError) {
+        console.error('❌ Failed to generate session:', sessionError)
+        throw sessionError
+      }
+
+      console.log('🎉 OAuth flow completed for user:', kickUser.username)
 
       return new Response(JSON.stringify({
         success: true,
-        message: 'OAuth exchange completed (simplified version)'
+        user: {
+          id: kickUser.id,
+          username: kickUser.username,
+          display_name: kickUser.display_name,
+          avatar: kickUser.avatar
+        },
+        session_data: sessionData
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
