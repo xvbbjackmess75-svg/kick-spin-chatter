@@ -182,16 +182,17 @@ Deno.serve(async (req) => {
       }
 
       console.log('🎉 Exchange completed successfully')
+      console.log('🔍 FINAL USER DATA BEING RETURNED:', JSON.stringify(kickUser, null, 2))
 
       return new Response(JSON.stringify({
         success: true,
-        user: {
-          id: kickUser.id,
-          username: kickUser.username,
-          display_name: kickUser.display_name,
-          avatar: kickUser.avatar
-        },
-        message: 'Kick OAuth completed successfully'
+        user: kickUser,
+        message: 'Kick OAuth completed successfully',
+        debug_info: {
+          api_called: 'https://kick.com/api/v1/user',
+          user_fields_available: Object.keys(kickUser),
+          fallback_used: kickUser.username?.includes('user_') || kickUser.username?.includes('kick_user_')
+        }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
