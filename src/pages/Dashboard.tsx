@@ -22,7 +22,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
-import { HorizontalRoulette } from "@/components/HorizontalRoulette";
+import { GiveawayRoulette } from "@/components/GiveawayRoulette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,11 +32,8 @@ import {
   Gift, 
   Users,
   Trophy,
-  Zap,
-  Crown,
   Monitor,
   MonitorX,
-  Play,
   AlertCircle,
   CheckCircle2,
   Trash2,
@@ -45,11 +42,10 @@ import {
   MoreVertical
 } from "lucide-react";
 
-interface DashboardParticipant {
-  id: string;
+interface RouletteParticipant {
+  id: number;
   username: string;
   avatar?: string;
-  isWinner?: boolean;
 }
 
 interface Giveaway {
@@ -66,9 +62,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
-  const [participants, setParticipants] = useState<DashboardParticipant[]>([]);
+  const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatConnected, setChatConnected] = useState(false);
@@ -90,25 +85,8 @@ export default function Dashboard() {
     if (user) {
       fetchGiveaways();
       initializeWebSocket();
-      loadActiveGiveawayParticipants();
     }
   }, [user]);
-
-  // Load participants for active giveaways automatically
-  const loadActiveGiveawayParticipants = async () => {
-    const activeGiveaways = giveaways.filter(g => g.status === 'active');
-    if (activeGiveaways.length > 0) {
-      // Load participants from the first active giveaway for display
-      await fetchParticipants(activeGiveaways[0].id);
-    }
-  };
-
-  // Reload participants when giveaways change
-  useEffect(() => {
-    if (giveaways.length > 0) {
-      loadActiveGiveawayParticipants();
-    }
-  }, [giveaways]);
 
   const fetchGiveaways = async () => {
     try {
@@ -187,13 +165,10 @@ export default function Dashboard() {
 
       socketRef.current.onclose = (event) => {
         console.log('WebSocket disconnected', event);
-        // Only reset state if this was a manual disconnect (code 1000) or specific errors
         if (event.code === 1000) {
-          // Manual close
           setChatConnected(false);
           setConnectedChannel("");
         } else {
-          // Unexpected disconnect - attempt to reconnect
           console.log('Unexpected disconnect, attempting to reconnect...');
           setTimeout(() => {
             if (socketRef.current?.readyState !== WebSocket.OPEN) {
@@ -210,7 +185,6 @@ export default function Dashboard() {
   const handleChatMessage = async (message: any) => {
     console.log('Processing chat message:', message);
     
-    // Get fresh giveaways data to ensure we have the latest state
     const { data: currentGiveaways, error } = await supabase
       .from('giveaways')
       .select('*')
@@ -239,7 +213,6 @@ export default function Dashboard() {
         console.log(`✅ Keyword "${keyword}" detected from user: ${message.username}`);
         
         try {
-          // Check if user already participated
           const { data: existingParticipant } = await supabase
             .from('giveaway_participants')
             .select('id')
@@ -252,7 +225,6 @@ export default function Dashboard() {
             continue;
           }
 
-          // Add new participant
           const { error: insertError } = await supabase
             .from('giveaway_participants')
             .insert({
@@ -266,7 +238,6 @@ export default function Dashboard() {
             continue;
           }
 
-          // Update participant count
           const { data: participants } = await supabase
             .from('giveaway_participants')
             .select('id')
@@ -277,7 +248,6 @@ export default function Dashboard() {
             .update({ participants_count: participants?.length || 0 })
             .eq('id', giveaway.id);
 
-          // Refresh giveaways display
           fetchGiveaways();
           
           toast({
@@ -313,27 +283,6 @@ export default function Dashboard() {
         title: "🛑 Chat Monitoring Stopped",
         description: "Chat monitoring has been manually stopped",
       });
-    }
-  };
-
-  const fetchParticipants = async (giveawayId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('giveaway_participants')
-        .select('*')
-        .eq('giveaway_id', giveawayId);
-
-      if (error) throw error;
-      
-      const formattedParticipants: DashboardParticipant[] = (data || []).map((p, index) => ({
-        id: index.toString(),
-        username: p.kick_username,
-        avatar: undefined
-      }));
-      
-      setParticipants(formattedParticipants);
-    } catch (error) {
-      console.error('Error fetching participants:', error);
     }
   };
 
@@ -382,44 +331,8 @@ export default function Dashboard() {
     }
   };
 
-  // Winner selection states
-  const [selectedWinner, setSelectedWinner] = useState<DashboardParticipant | null>(null);
-  const [isWinnerPending, setIsWinnerPending] = useState(false);
-  const [fairnessData, setFairnessData] = useState<any>(null);
-
-  // Provably fair system - pick random number 1-1000, distribute tickets equally
-  const selectWinnerUsingProvablyFair = (participants: DashboardParticipant[]) => {
-    const totalTickets = 1000;
-    const ticketsPerParticipant = Math.floor(totalTickets / participants.length);
-    
-    // Generate random number between 1 and 1000
-    const winningTicketNumber = Math.floor(Math.random() * totalTickets) + 1;
-    
-    // Determine which participant owns this ticket
-    const winnerIndex = Math.floor((winningTicketNumber - 1) / ticketsPerParticipant);
-    const actualWinnerIndex = Math.min(winnerIndex, participants.length - 1);
-    
-    const fairnessData = {
-      winningTicketNumber,
-      ticketsPerParticipant,
-      totalTickets,
-      winnerIndex: actualWinnerIndex,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("🎲 PROVABLY FAIR RESULT:", {
-      participantsList: participants.map(p => p.username),
-      winningTicket: winningTicketNumber,
-      ticketsPerParticipant,
-      winnerIndex: actualWinnerIndex,
-      winner: participants[actualWinnerIndex]?.username,
-      calculation: `Ticket ${winningTicketNumber} → Index ${actualWinnerIndex} (${winningTicketNumber-1}/${ticketsPerParticipant} = ${(winningTicketNumber-1)/ticketsPerParticipant})`
-    });
-    
-    return { winner: participants[actualWinnerIndex], fairnessData };
-  };
-
-  const drawWinner = async (giveaway: Giveaway) => {
+  // Start winner selection for a giveaway
+  const startWinnerSelection = async (giveaway: Giveaway) => {
     try {
       const { data, error } = await supabase
         .from('giveaway_participants')
@@ -428,8 +341,8 @@ export default function Dashboard() {
 
       if (error) throw error;
       
-      const giveawayParticipants: DashboardParticipant[] = (data || []).map((p, index) => ({
-        id: index.toString(),
+      const giveawayParticipants: RouletteParticipant[] = (data || []).map((p, index) => ({
+        id: index,
         username: p.kick_username,
         avatar: undefined
       }));
@@ -443,62 +356,49 @@ export default function Dashboard() {
         return;
       }
 
-      console.log("🎰 DASHBOARD: Participants array for selection:", giveawayParticipants.map((p, i) => `${i}: ${p.username}`));
-
-      // Use provably fair system to select winner
-      const { winner: provablyFairWinner, fairnessData } = selectWinnerUsingProvablyFair(giveawayParticipants);
+      console.log("🎰 Starting winner selection for giveaway:", giveaway.title);
+      console.log("👥 Participants:", giveawayParticipants.map(p => p.username));
       
-      console.log("🏆 DASHBOARD: Selected winner details:", {
-        selectedWinner: provablyFairWinner?.username,
-        selectedIndex: giveawayParticipants.findIndex(p => p.username === provablyFairWinner?.username)
-      });
-      
-      // Set states for pending winner
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
-      setSelectedWinner(provablyFairWinner);
-      setFairnessData(fairnessData);
-      setIsWinnerPending(true);
-      setIsSpinning(true);
-
-      // Start roulette animation - it will land on the predetermined winner
-      setTimeout(() => {
-        setIsSpinning(false);
-      }, 4000);
-
+      
     } catch (error) {
-      console.error('Error drawing winner:', error);
+      console.error('Error starting winner selection:', error);
       toast({
         title: "Error",
-        description: "Failed to draw winner",
+        description: "Failed to start winner selection",
         variant: "destructive"
       });
     }
   };
 
-  const acceptWinner = async () => {
-    if (!selectedWinner || !currentGiveaway) return;
+  // Handle winner acceptance
+  const handleAcceptWinner = async (winner: RouletteParticipant, result: any) => {
+    if (!currentGiveaway) return;
 
     try {
-      // Update giveaway with winner
       await supabase
         .from('giveaways')
         .update({ 
-          winner_user_id: selectedWinner.username,
+          winner_user_id: winner.username,
           status: 'completed'
         })
         .eq('id', currentGiveaway.id);
 
       toast({
         title: "Winner Accepted!",
-        description: `${selectedWinner.username} has been confirmed as the winner!`,
+        description: `${winner.username} has been confirmed as the winner!`,
+      });
+
+      console.log("🏆 Winner accepted and saved to history:", {
+        giveaway: currentGiveaway.title,
+        winner: winner.username,
+        winningTicket: result.winningTicket
       });
 
       // Reset states
-      setIsWinnerPending(false);
-      setSelectedWinner(null);
       setCurrentGiveaway(null);
-      setFairnessData(null);
+      setParticipants([]);
       fetchGiveaways();
       
     } catch (error) {
@@ -511,22 +411,10 @@ export default function Dashboard() {
     }
   };
 
-  const rerollWinner = () => {
-    if (!currentGiveaway) return;
-    
-    console.log("🔄 REROLL: Resetting all states");
-    
-    // Reset ALL animation states
-    setIsWinnerPending(false);
-    setSelectedWinner(null);
-    setFairnessData(null);
-    setIsSpinning(false);
-    
-    // Small delay to ensure states are reset before drawing new winner
-    setTimeout(() => {
-      console.log("🎲 REROLL: Drawing new winner");
-      drawWinner(currentGiveaway);
-    }, 100);
+  // Handle winner reroll
+  const handleRerollWinner = () => {
+    console.log("🔄 Rerolling winner...");
+    // The roulette component will handle the reroll internally
   };
 
   const simulateParticipant = async (giveawayId: string) => {
@@ -572,8 +460,6 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Clear all winner states if the deleted giveaway had the current winner
-      setSelectedWinner(null);
       setParticipants([]);
 
       toast({
@@ -643,7 +529,6 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Update participant count
       await supabase
         .from('giveaways')
         .update({ participants_count: 0 })
@@ -880,12 +765,12 @@ export default function Dashboard() {
                             )}
                             
                             <Button 
-                              onClick={() => drawWinner(giveaway)}
-                              disabled={isSpinning || (giveaway.participants_count || 0) === 0}
+                              onClick={() => startWinnerSelection(giveaway)}
+                              disabled={(giveaway.participants_count || 0) === 0}
                               className="w-full bg-gradient-to-r from-primary to-primary/80"
                             >
                               <Trophy className="h-4 w-4 mr-2" />
-                              {isSpinning ? 'Drawing...' : 'Pick Winner'}
+                              Pick Winner
                             </Button>
                             
                             <Button 
@@ -943,25 +828,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Horizontal Roulette - Below Giveaways */}
-        {participants.length > 0 && (
-          <HorizontalRoulette
-            participants={participants.map((p, index) => ({
-              id: index,
-              username: p.username,
-              avatar: p.avatar || '/placeholder-avatar.jpg',
-              isWinner: p.isWinner
-            }))}
-            isSpinning={isSpinning}
-            winner={selectedWinner ? {
-              id: 0,
-              username: selectedWinner.username,
-              avatar: selectedWinner.avatar || '/placeholder-avatar.jpg',
-              isWinner: selectedWinner.isWinner
-            } : undefined}
-            isWinnerPending={isWinnerPending}
-            onAcceptWinner={acceptWinner}
-            onRerollWinner={rerollWinner}
+        {/* Giveaway Roulette */}
+        {participants.length > 0 && currentGiveaway && (
+          <GiveawayRoulette
+            participants={participants}
+            onAcceptWinner={handleAcceptWinner}
+            onRerollWinner={handleRerollWinner}
           />
         )}
 
