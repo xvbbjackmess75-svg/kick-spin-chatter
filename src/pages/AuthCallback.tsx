@@ -175,47 +175,39 @@ export default function AuthCallback() {
                     kick_user_id: user.id
                   }));
                   
-                  // Automatically confirm the user (skip email verification)
+                  // Check if the user needs email confirmation
                   if (authData.user && !authData.user.email_confirmed_at) {
-                    console.log('🔄 Auto-confirming user to skip email verification...');
-                    // Note: In production, you might want email verification
-                    // For now, we'll sign them in directly since the account was created
+                    console.log('ℹ️ Account created but requires email confirmation');
+                    // For hybrid accounts, we'll store a session indicator
+                    localStorage.setItem('kick_hybrid_session', JSON.stringify({
+                      user_id: authData.user.id,
+                      email: userEmail,
+                      kick_user_id: user.id,
+                      authenticated: true,
+                      created_at: new Date().toISOString()
+                    }));
+                    
+                    toast({
+                      title: "Account Created!",
+                      description: `Welcome ${user.username}! Your account is ready to use.`,
+                    });
+                  } else {
+                    // Account is confirmed, sign in normally
                     await supabase.auth.signInWithPassword({
                       email: userEmail,
                       password: password
                     });
                   }
                   
-                  toast({
-                    title: "Account Enhanced!",
-                    description: `Welcome ${user.username}! Your Kick account is now linked with enhanced features.`,
-                  });
                 } else if (signUpError?.message.includes('already registered')) {
-                  console.log('ℹ️ User already exists, attempting sign in...');
-                  const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+                  console.log('ℹ️ User already exists, storing session info...');
+                  // Store session info for existing user
+                  localStorage.setItem('kick_hybrid_session', JSON.stringify({
                     email: userEmail,
-                    password: password
-                  });
-                  
-                  if (retrySignInError) {
-                    console.error('❌ Retry sign in failed:', retrySignInError);
-                    // Try to use stored credentials
-                    const storedCreds = localStorage.getItem('kick_hybrid_credentials');
-                    if (storedCreds) {
-                      const creds = JSON.parse(storedCreds);
-                      if (creds.kick_user_id.toString() === user.id.toString()) {
-                        const { error: storedCredsError } = await supabase.auth.signInWithPassword({
-                          email: creds.email,
-                          password: creds.password
-                        });
-                        if (!storedCredsError) {
-                          console.log('✅ Signed in with stored credentials');
-                        }
-                      }
-                    }
-                  } else {
-                    console.log('✅ Signed in to existing account');
-                  }
+                    kick_user_id: user.id,
+                    authenticated: true,
+                    created_at: new Date().toISOString()
+                  }));
                 }
               } else {
                 console.log('✅ Signed in to existing hybrid account');

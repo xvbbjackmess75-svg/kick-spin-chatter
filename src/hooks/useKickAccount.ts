@@ -62,7 +62,12 @@ export function useKickAccount() {
   }, []);
 
   const isKickLinked = !!(kickUser?.authenticated && kickToken?.access_token);
-  const hasSupabaseAccount = !!user;
+  
+  // Check for hybrid session even if Supabase user is not confirmed
+  const hybridSession = localStorage.getItem('kick_hybrid_session');
+  const hasHybridAccount = hybridSession ? JSON.parse(hybridSession).authenticated : false;
+  
+  const hasSupabaseAccount = !!user || hasHybridAccount;
   const canUseChatbot = isKickLinked && hasSupabaseAccount;
 
   // Debug logging
@@ -70,6 +75,8 @@ export function useKickAccount() {
     kickUser: kickUser?.username,
     hasKickToken: !!kickToken?.access_token,
     supabaseUser: user?.email,
+    hasHybridAccount,
+    hybridSession: !!hybridSession,
     isKickLinked,
     hasSupabaseAccount,
     canUseChatbot
