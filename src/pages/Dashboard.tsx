@@ -64,12 +64,6 @@ export default function Dashboard() {
       fetchGiveaways();
       initializeWebSocket();
     }
-    
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
   }, [user]);
 
   const fetchGiveaways = async () => {
@@ -251,6 +245,18 @@ export default function Dashboard() {
         type: 'join_channel',
         channelName: channelName
       }));
+    }
+  };
+
+  const stopChatMonitoring = () => {
+    if (socketRef.current) {
+      socketRef.current.close();
+      setChatConnected(false);
+      setConnectedChannel("");
+      toast({
+        title: "🛑 Chat Monitoring Stopped",
+        description: "Chat monitoring has been manually stopped",
+      });
     }
   };
 
@@ -438,6 +444,18 @@ export default function Dashboard() {
               )}
             </div>
             
+            {chatConnected && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={stopChatMonitoring}
+                className="border-red-500/30 text-red-600 hover:bg-red-500/10"
+              >
+                <MonitorX className="h-4 w-4 mr-2" />
+                Stop Monitoring
+              </Button>
+            )}
+            
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
@@ -624,12 +642,12 @@ export default function Dashboard() {
                               </Button>
                             ) : (
                               <Button 
+                                onClick={stopChatMonitoring}
                                 variant="outline"
-                                className="w-full border-green-500/30 text-green-600 hover:bg-green-500/10"
-                                disabled
+                                className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10"
                               >
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                                Monitoring Chat
+                                <MonitorX className="h-4 w-4 mr-2" />
+                                Stop Monitoring
                               </Button>
                             )}
                             
