@@ -209,10 +209,13 @@ export type Database = {
           max_participants: number | null
           participants_count: number | null
           status: string | null
+          tickets_per_participant: number | null
           title: string
+          total_tickets: number | null
           updated_at: string
           user_id: string
           winner_user_id: string | null
+          winning_ticket: number | null
         }
         Insert: {
           channel_id?: string | null
@@ -223,10 +226,13 @@ export type Database = {
           max_participants?: number | null
           participants_count?: number | null
           status?: string | null
+          tickets_per_participant?: number | null
           title: string
+          total_tickets?: number | null
           updated_at?: string
           user_id: string
           winner_user_id?: string | null
+          winning_ticket?: number | null
         }
         Update: {
           channel_id?: string | null
@@ -237,10 +243,13 @@ export type Database = {
           max_participants?: number | null
           participants_count?: number | null
           status?: string | null
+          tickets_per_participant?: number | null
           title?: string
+          total_tickets?: number | null
           updated_at?: string
           user_id?: string
           winner_user_id?: string | null
+          winning_ticket?: number | null
         }
         Relationships: [
           {

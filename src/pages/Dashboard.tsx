@@ -385,12 +385,15 @@ export default function Dashboard() {
     });
 
     try {
-      // Update giveaway with winner and completed status
+      // Update giveaway with winner and completed status including provably fair data
       const { data, error } = await supabase
         .from('giveaways')
         .update({ 
           winner_user_id: winner.username,
-          status: 'completed'
+          status: 'completed',
+          winning_ticket: result.winningTicket,
+          total_tickets: result.totalTickets,
+          tickets_per_participant: result.ticketsPerParticipant
         })
         .eq('id', currentGiveaway.id)
         .select(); // Return updated data to verify

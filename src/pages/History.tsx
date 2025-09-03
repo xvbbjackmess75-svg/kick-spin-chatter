@@ -27,6 +27,9 @@ interface Winner {
   created_at: string;
   updated_at: string;
   description?: string;
+  winning_ticket?: number;
+  total_tickets?: number;
+  tickets_per_participant?: number;
 }
 
 export default function History() {
@@ -275,6 +278,30 @@ export default function History() {
                                 <span>{winner.participants_count || 0} participants</span>
                               </div>
                             </div>
+                            
+                            {/* Provably Fair Information */}
+                            {winner.winning_ticket && (
+                              <div className="mt-3 p-3 bg-secondary/50 rounded-lg border">
+                                <h5 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                                  <Trophy className="h-4 w-4 text-kick-green" />
+                                  Provably Fair Results
+                                </h5>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                  <div className="text-center">
+                                    <div className="text-lg font-bold text-kick-green">#{winner.winning_ticket}</div>
+                                    <div className="text-muted-foreground">Winning Ticket</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-lg font-bold text-foreground">{winner.total_tickets}</div>
+                                    <div className="text-muted-foreground">Total Tickets</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-lg font-bold text-foreground">{winner.tickets_per_participant}</div>
+                                    <div className="text-muted-foreground">Per Participant</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
