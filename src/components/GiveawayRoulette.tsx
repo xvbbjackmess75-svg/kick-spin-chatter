@@ -59,13 +59,15 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     
     const winner = participants[actualWinnerIndex];
     
-    console.log("🎲 PROVABLY FAIR SELECTION:", {
-      participants: participants.map((p, i) => `${i}: ${p.username}`),
-      winningTicket,
+    console.log("🎲 ROULETTE SELECTION DEBUG:", {
+      participantsReceived: participants.map((p, i) => `${i}: ${p.username}`),
+      totalTickets,
       ticketsPerParticipant,
+      winningTicket,
       calculatedIndex: winnerIndex,
       actualWinnerIndex,
-      selectedWinner: winner.username
+      selectedWinner: winner.username,
+      calculation: `Ticket ${winningTicket} → (${winningTicket}-1)/${ticketsPerParticipant} = ${(winningTicket-1)/ticketsPerParticipant} → Index ${actualWinnerIndex}`
     });
     
     return {
@@ -100,21 +102,53 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     // Find winner's index in original participants array
     const winnerIndex = participants.findIndex(p => p.username === result.winner.username);
     
+    console.log("🎯 ANIMATION SETUP:", {
+      winnerToFind: result.winner.username,
+      winnerIndex,
+      participantsOrder: participants.map((p, i) => `${i}: ${p.username}`),
+      extendedParticipantsCheck: extendedParticipants.slice(0, participants.length).map((p, i) => `${i}: ${p.username}`)
+    });
+    
+    if (winnerIndex === -1) {
+      console.error("❌ CRITICAL ERROR: Winner not found in participants array!", {
+        winnerToFind: result.winner.username,
+        availableParticipants: participants.map(p => p.username)
+      });
+      return;
+    }
+    
     // Calculate target position (after several cycles)
     const cycles = 25;
     const targetIndex = (cycles * participants.length) + winnerIndex;
     const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
     
-    console.log("🎯 ANIMATION TARGET:", {
+    console.log("🎯 ANIMATION CALCULATION:", {
       winnerUsername: result.winner.username,
       winnerIndex,
+      cycles,
+      participantsLength: participants.length,
       targetIndex,
+      participantWidth,
+      centerPosition,
       targetPosition,
-      participantAtTarget: extendedParticipants[targetIndex]?.username
+      participantAtTargetIndex: extendedParticipants[targetIndex]?.username,
+      participantAtTargetOriginalIndex: extendedParticipants[targetIndex]?.originalIndex
     });
+    
+    // VERIFICATION: Check if the participant at target index matches our winner
+    const participantAtTarget = extendedParticipants[targetIndex];
+    if (participantAtTarget?.username !== result.winner.username) {
+      console.error("❌ ANIMATION MISMATCH DETECTED!", {
+        expectedWinner: result.winner.username,
+        participantAtTarget: participantAtTarget?.username,
+        targetIndex,
+        extendedArraySlice: extendedParticipants.slice(targetIndex-2, targetIndex+3).map((p, i) => `${targetIndex-2+i}: ${p.username}`)
+      });
+    }
     
     // Step 4: Animate to winner
     setTimeout(() => {
+      console.log("🚀 STARTING ANIMATION to position:", targetPosition);
       setScrollPosition(targetPosition);
     }, 100);
     
@@ -122,7 +156,15 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     setTimeout(() => {
       setIsSpinning(false);
       setShowResult(true);
-      console.log("✅ Animation complete, landed on:", result.winner.username);
+      console.log("✅ ANIMATION COMPLETE - Expected:", result.winner.username);
+      
+      // Final verification of landing position
+      const finalTargetParticipant = extendedParticipants[targetIndex];
+      console.log("🏁 FINAL VERIFICATION:", {
+        expectedWinner: result.winner.username,
+        participantAtLandingPosition: finalTargetParticipant?.username,
+        match: finalTargetParticipant?.username === result.winner.username
+      });
     }, 4000);
   };
 
