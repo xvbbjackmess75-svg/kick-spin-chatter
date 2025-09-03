@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { CommandTester } from "@/components/CommandTester";
@@ -48,6 +49,7 @@ interface KickUser {
 
 export default function Commands() {
   const { user } = useAuth();
+  const { hybridUserId, isAuthenticated, loading: hybridLoading } = useHybridAuth();
   const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
   const { toast } = useToast();
   const [commands, setCommands] = useState<Command[]>([]);
@@ -64,19 +66,20 @@ export default function Commands() {
   const [newEnabled, setNewEnabled] = useState(true);
 
   useEffect(() => {
-    console.log('🔧 Commands useEffect - user:', user?.email, 'loading:', loading);
+    console.log('🔧 Commands useEffect - user:', user?.email, 'hybridUserId:', hybridUserId, 'isAuthenticated:', isAuthenticated, 'loading:', loading, 'hybridLoading:', hybridLoading);
     
-    if (user) {
-      console.log('🔧 User exists, fetching commands...');
+    // Use hybrid auth for determining if we should fetch commands
+    if ((user || hybridUserId) && isAuthenticated) {
+      console.log('🔧 User authenticated (hybrid or regular), fetching commands...');
       fetchCommands();
-    } else if (!loading) {
-      // If no user and not loading, stop loading immediately
-      console.log('🔧 No user and not loading, stopping loader...');
+    } else if (!loading && !hybridLoading) {
+      // If neither auth system is loading and no authentication, stop loading
+      console.log('🔧 No authentication and not loading, stopping loader...');
       setLoading(false);
     } else {
       console.log('🔧 Still loading auth state...');
     }
-  }, [user, loading]);
+  }, [user, hybridUserId, isAuthenticated, loading, hybridLoading]);
 
   const fetchCommands = async () => {
     console.log('🔧 fetchCommands called, user:', user?.email);
@@ -125,7 +128,7 @@ export default function Commands() {
           cooldown: newCooldown,
           user_level: newUserLevel,
           enabled: newEnabled,
-          user_id: user?.id
+          user_id: user?.id || hybridUserId // Use hybrid user ID if no Supabase user
         })
         .select()
         .single();
