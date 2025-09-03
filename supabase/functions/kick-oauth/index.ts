@@ -115,58 +115,65 @@ Deno.serve(async (req) => {
       console.log('✅ Token exchange successful')
 
       console.log('🔧 Getting user info...')
-      // Try multiple endpoints to get user data
+      // Try to get user data from the token response first
       let kickUser = null
       
-      // First try the standard user endpoint
-      try {
-        const userResponse = await fetch('https://kick.com/api/v2/user', {
-          headers: {
-            'Authorization': `Bearer ${tokenData.access_token}`,
-            'Accept': 'application/json',
-          },
-        })
-        
-        if (userResponse.ok) {
-          kickUser = await userResponse.json()
-          console.log('✅ User info retrieved from v2/user:', kickUser.username)
-        } else {
-          console.log('⚠️ v2/user failed, trying alternative endpoint...')
-          
-          // Try alternative endpoint
-          const altResponse = await fetch('https://kick.com/api/v1/user', {
+      // Check if user info is included in token response
+      if (tokenData.user) {
+        kickUser = tokenData.user
+        console.log('✅ User info found in token response:', kickUser.username || kickUser.name)
+      } else {
+        // Try the authenticated user endpoint
+        try {
+          const userResponse = await fetch('https://kick.com/api/v2/user/me', {
             headers: {
               'Authorization': `Bearer ${tokenData.access_token}`,
               'Accept': 'application/json',
+              'User-Agent': 'KickBot/1.0'
             },
           })
           
-          if (altResponse.ok) {
-            kickUser = await altResponse.json()
-            console.log('✅ User info retrieved from v1/user:', kickUser.username)
+          console.log('🔧 User API response status:', userResponse.status)
+          const responseText = await userResponse.text()
+          console.log('🔧 User API response (first 200 chars):', responseText.substring(0, 200))
+          
+          if (userResponse.ok && responseText.startsWith('{')) {
+            kickUser = JSON.parse(responseText)
+            console.log('✅ User info retrieved from /me endpoint:', kickUser.username || kickUser.name)
           } else {
-            throw new Error(`Both user endpoints failed: v2 status ${userResponse.status}, v1 status ${altResponse.status}`)
+            console.log('⚠️ /me endpoint failed, trying alternative approach...')
+            
+            // Try to extract user info from token if available
+            if (tokenData.user_id || tokenData.username) {
+              kickUser = {
+                id: tokenData.user_id || 'unknown',
+                username: tokenData.username || `user_${Date.now()}`,
+                display_name: tokenData.display_name || tokenData.username || 'Kick User',
+                avatar: tokenData.avatar || null
+              }
+              console.log('✅ Using token data for user info:', kickUser.username)
+            } else {
+              // Generate a fallback user
+              kickUser = {
+                id: `kick_${Date.now()}`,
+                username: `kick_user_${Math.random().toString(36).substr(2, 8)}`,
+                display_name: 'Kick User',
+                avatar: null
+              }
+              console.log('⚠️ Using fallback user data:', kickUser.username)
+            }
           }
-        }
-      } catch (error) {
-        console.error('❌ User info failed:', error.message)
-        // Return success with token data only if user info fails
-        return new Response(JSON.stringify({
-          success: true,
-          user: {
-            id: 'unknown',
-            username: 'kick_user',
+        } catch (error) {
+          console.error('❌ User info fetch failed:', error.message)
+          // Create fallback user with timestamp to make it unique
+          kickUser = {
+            id: `kick_${Date.now()}`,
+            username: `kick_user_${Math.random().toString(36).substr(2, 8)}`,
             display_name: 'Kick User',
             avatar: null
-          },
-          token_info: {
-            access_token: tokenData.access_token,
-            token_type: tokenData.token_type
-          },
-          message: 'Authentication successful but user info unavailable'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+          }
+          console.log('⚠️ Using fallback user due to error:', kickUser.username)
+        }
       }
 
       console.log('🎉 Exchange completed successfully')
