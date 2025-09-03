@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Zap, Crown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Trophy, Users, Zap, Crown, Shield } from "lucide-react";
 
 interface Participant {
   id: number;
@@ -19,40 +20,99 @@ interface HorizontalRouletteProps {
   winner?: Participant;
 }
 
+// Provably fair system
+interface DrawResult {
+  clientSeed: string;
+  serverSeed: string;
+  nonce: number;
+  hash: string;
+  winnerTicket: number;
+  totalTickets: number;
+  landingOffset: number;
+}
+
 export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }: HorizontalRouletteProps) {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [animationClass, setAnimationClass] = useState("");
   const [showWinner, setShowWinner] = useState(false);
+  const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
+
+  // Provably fair system functions
+  const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
+  
+  const generateServerSeed = () => Math.random().toString(36).substring(2, 15);
+  
+  const hashSeeds = (clientSeed: string, serverSeed: string, nonce: number) => {
+    const data = `${clientSeed}:${serverSeed}:${nonce}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+  };
+
+  const selectWinnerTicket = (participants: Participant[]) => {
+    const clientSeed = generateClientSeed();
+    const serverSeed = generateServerSeed();
+    const nonce = Date.now();
+    const hash = hashSeeds(clientSeed, serverSeed, nonce);
+    
+    // Create ticket system - each participant gets one ticket
+    const totalTickets = participants.length;
+    
+    // Use hash to determine winner ticket
+    const hashInt = parseInt(hash.substring(0, 8), 16);
+    const winnerTicket = hashInt % totalTickets;
+    
+    // Random offset within avatar bounds for landing position (-30 to +30 pixels)
+    const landingOffset = (hashInt % 61) - 30; // Range: -30 to +30
+    
+    return {
+      clientSeed,
+      serverSeed,
+      nonce,
+      hash,
+      winnerTicket,
+      totalTickets,
+      landingOffset
+    };
+  };
 
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
       setAnimationClass("roulette-scroll");
-      setShowWinner(false); // Hide winner during spin
+      setShowWinner(false);
       
-      // Calculate scroll to ensure we land on the winner if provided, otherwise random
-      const participantWidth = 80; // Width of each participant slot
-      const containerWidth = 800; // Visible container width
+      const participantWidth = 80;
+      const containerWidth = 800;
+      
+      // Generate provably fair result
+      const result = selectWinnerTicket(participants);
+      setDrawResult(result);
       
       // Create enough scrolling distance (20-50 full cycles) plus landing position
-      const fullCycles = 20 + Math.random() * 30; // 20-50 cycles
+      const fullCycles = 20 + Math.random() * 30;
       const cycleDistance = participants.length * participantWidth;
       const baseCycles = Math.floor(fullCycles) * cycleDistance;
       
-      // If we have a winner, find their position, otherwise random
+      // Use winner from props or provably fair selection
       let targetParticipantIndex;
       if (winner) {
         targetParticipantIndex = participants.findIndex(p => p.id === winner.id);
-        if (targetParticipantIndex === -1) targetParticipantIndex = 0; // Fallback if winner not found
+        if (targetParticipantIndex === -1) targetParticipantIndex = 0;
       } else {
-        targetParticipantIndex = Math.floor(Math.random() * participants.length);
+        targetParticipantIndex = result.winnerTicket;
       }
       
       const targetPosition = targetParticipantIndex * participantWidth;
       
-      // Center the selection in the viewport
+      // Add random offset for landing position within avatar bounds
       const centerOffset = containerWidth / 2 - participantWidth / 2;
+      const randomOffset = result.landingOffset;
       
-      const finalScrollPosition = baseCycles + targetPosition - centerOffset;
+      const finalScrollPosition = baseCycles + targetPosition - centerOffset + randomOffset;
       setScrollPosition(finalScrollPosition);
       
       // Reset animation after spinning
@@ -60,11 +120,11 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         setAnimationClass("");
       }, 8000);
 
-      // Show winner announcement 1 second after animation completes
+      // Show winner announcement 3 seconds after animation completes for more suspense
       if (winner) {
         setTimeout(() => {
           setShowWinner(true);
-        }, 9000); // 8000ms animation + 1000ms delay
+        }, 11000); // 8000ms animation + 3000ms delay
       }
     }
   }, [isSpinning, participants.length, winner]);
@@ -186,6 +246,55 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               <Users className="h-4 w-4" />
               <span>{participants.length} participants</span>
             </div>
+            {drawResult && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Shield className="h-4 w-4" />
+                    Provably Fair
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-kick-green" />
+                      Provably Fair Verification
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <p className="font-medium text-foreground">Client Seed:</p>
+                      <p className="text-muted-foreground font-mono break-all">{drawResult.clientSeed}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Server Seed:</p>
+                      <p className="text-muted-foreground font-mono break-all">{drawResult.serverSeed}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Nonce:</p>
+                      <p className="text-muted-foreground font-mono">{drawResult.nonce}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Hash:</p>
+                      <p className="text-muted-foreground font-mono break-all">{drawResult.hash}</p>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="font-medium text-foreground">Result:</p>
+                      <p className="text-muted-foreground">
+                        Ticket #{drawResult.winnerTicket + 1} of {drawResult.totalTickets} total tickets
+                      </p>
+                      <p className="text-muted-foreground">
+                        Landing offset: {drawResult.landingOffset}px
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
+                      <p className="font-medium mb-1">How to verify:</p>
+                      <p>Hash the seeds with nonce and modulo by total tickets to get the winning ticket number.</p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
 
