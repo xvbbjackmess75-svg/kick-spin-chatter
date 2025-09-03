@@ -1,10 +1,19 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings, LogOut } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { 
+  Settings, 
+  LogOut, 
+  Home, 
+  History, 
+  Gift, 
+  Settings as SettingsIcon,
+  Bot,
+  MonitorPlay,
+  Trophy
+} from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,64 +21,116 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
+  const navItems = [
+    { path: "/", label: "Dashboard", icon: Home },
+    { path: "/giveaways", label: "Giveaways", icon: Gift },
+    { path: "/commands", label: "Commands", icon: Bot },
+    { path: "/chat-monitor", label: "Chat Monitor", icon: MonitorPlay },
+    { path: "/bot-settings", label: "Bot Settings", icon: SettingsIcon },
+    { path: "/history", label: "History", icon: Trophy },
+  ];
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-foreground hover:text-primary" />
-              <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Kick Bot Dashboard
-              </h1>
+    <div className="min-h-screen bg-background">
+      {/* Top Navigation Header */}
+      <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="h-full max-w-7xl mx-auto px-6 flex items-center justify-between">
+          {/* Logo and Navigation */}
+          <div className="flex items-center gap-8">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
+              Kick Bot Dashboard
+            </h1>
+            
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(item.path)
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          
+          {/* Right Side - Status and User */}
+          <div className="flex items-center gap-4">
+            <Badge variant="outline" className="text-kick-green border-kick-green/30">
+              <div className="w-2 h-2 bg-kick-green rounded-full mr-2 animate-pulse" />
+              Bot Online
+            </Badge>
+            
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
+                  {user?.email?.slice(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium hidden sm:block">
+                {user?.email?.split('@')[0] || 'User'}
+              </span>
             </div>
             
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="text-kick-green border-kick-green/30">
-                <div className="w-2 h-2 bg-kick-green rounded-full mr-2 animate-pulse" />
-                Bot Online
-              </Badge>
-              
-              <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
-                    {user?.email?.slice(0, 2).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">
-                  {user?.email?.split('@')[0] || 'User'}
-                </span>
-              </div>
-              
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                <Settings className="h-4 w-4" />
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-muted-foreground hover:text-destructive"
-                onClick={handleSignOut}
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </header>
-          
-          {/* Main Content */}
-          <main className="flex-1 p-6 bg-gradient-gaming">
-            {children}
-          </main>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-destructive"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline ml-2">Sign Out</span>
+            </Button>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+        
+        {/* Mobile Navigation */}
+        <div className="md:hidden border-t border-border/30">
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                      isActive(item.path)
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <Icon className="h-3 w-3" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      {/* Main Content */}
+      <main className="flex-1">
+        {children}
+      </main>
+    </div>
   );
 }

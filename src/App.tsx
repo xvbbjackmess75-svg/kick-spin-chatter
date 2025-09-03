@@ -12,6 +12,10 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import KickCallback from "./pages/KickCallback";
 import NotFound from "./pages/NotFound";
+import Giveaways from "./pages/Giveaways";
+import Commands from "./pages/Commands";
+import ChatMonitor from "./pages/ChatMonitor";
+import BotSettings from "./pages/BotSettings";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +36,46 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/giveaways"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Giveaways />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commands"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Commands />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat-monitor"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ChatMonitor />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bot-settings"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <BotSettings />
                   </Layout>
                 </ProtectedRoute>
               }
