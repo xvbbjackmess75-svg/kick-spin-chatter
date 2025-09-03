@@ -54,8 +54,11 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   }, [isSpinning, participants.length]);
 
   // Create extended participants array for seamless infinite scrolling
-  // Repeat participants enough times to fill scroll distance + visible area
-  const repeats = Math.max(8, Math.ceil(2400 / (participants.length * 80))); // Ensure enough length
+  // Calculate based on maximum possible scroll distance to ensure we always have enough participants
+  const maxCycles = 50; // Maximum cycles we might use
+  const participantWidth = 80;
+  const maxScrollDistance = maxCycles * participants.length * participantWidth;
+  const repeats = Math.max(50, Math.ceil(maxScrollDistance / (participants.length * participantWidth)) + 20);
   const extendedParticipants = Array(repeats).fill(participants).flat();
 
   return (
