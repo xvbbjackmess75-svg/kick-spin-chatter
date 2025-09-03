@@ -210,6 +210,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         user: kickUser,
+        token_info: {
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          expires_in: tokenData.expires_in,
+          scope: tokenData.scope,
+          token_type: tokenData.token_type || 'Bearer'
+        },
         message: 'Kick OAuth completed successfully',
         debug_info: {
           api_called: 'https://api.kick.com/public/v1/users',
