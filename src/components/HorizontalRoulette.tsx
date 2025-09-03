@@ -106,8 +106,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setShowWinner(false);
       
       const participantWidth = 80;
-      const containerWidth = 800; // Container width
-      const centerLinePosition = containerWidth / 2; // Center line at 400px
+      const containerWidth = 800;
+      const centerLinePosition = containerWidth / 2;
       
       // Generate provably fair result
       const result = selectWinnerTicket(participants);
@@ -121,50 +121,57 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         targetWinner = participants[result.winnerTicket];
       }
       
-      // Find the winner's position in the original participants array
-      const winnerIndexInOriginal = participants.findIndex(p => p.id === targetWinner.id);
-      if (winnerIndexInOriginal === -1) {
-        console.error("Winner not found in participants");
+      console.log("Target winner:", targetWinner.username);
+      
+      // Find ALL positions where this winner appears in the extended array
+      const winnerPositions = [];
+      extendedParticipants.forEach((participant, index) => {
+        if (participant.id === targetWinner.id) {
+          winnerPositions.push(index);
+        }
+      });
+      
+      console.log("Winner appears at positions:", winnerPositions.slice(0, 10)); // Log first 10 positions
+      
+      // Choose a position that's far enough for a good spin effect
+      // We want at least 1500px of scrolling (about 18-19 participants)
+      const minScrollDistance = 1500;
+      const minPosition = Math.ceil(minScrollDistance / participantWidth);
+      
+      const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
+      
+      if (suitablePositions.length === 0) {
+        console.error("No suitable winner positions found");
         setIsAnimating(false);
         return;
       }
       
-      // Calculate how many complete cycles we want to go through
-      const minCycles = 20; // More cycles for better effect
-      const maxCycles = 30;
-      const cycles = minCycles + Math.random() * (maxCycles - minCycles);
+      // Add some randomness by choosing from the first several suitable positions
+      const maxPositionsToConsider = Math.min(10, suitablePositions.length);
+      const randomIndex = Math.floor(Math.random() * maxPositionsToConsider);
+      const chosenPosition = suitablePositions[randomIndex];
       
-      // Calculate the total distance to scroll
-      const participantsPerCycle = participants.length;
-      const cycleWidth = participantsPerCycle * participantWidth;
-      const completeCyclesDistance = Math.floor(cycles) * cycleWidth;
+      console.log("Chosen position:", chosenPosition);
       
-      // Position of winner within one cycle (from left edge of container)
-      const winnerPositionInCycle = winnerIndexInOriginal * participantWidth;
+      // Calculate the exact scroll position needed
+      // We want the center of the chosen avatar to align with the center line
+      const avatarLeftEdge = chosenPosition * participantWidth;
+      const avatarCenter = avatarLeftEdge + (participantWidth / 2);
       
-      // Calculate where the winner's center will be
-      const winnerCenterPosition = winnerPositionInCycle + (participantWidth / 2);
+      // To center the avatar, we need to scroll so that:
+      // avatarCenter - scrollPosition = centerLinePosition
+      // Therefore: scrollPosition = avatarCenter - centerLinePosition
+      let finalScrollPosition = avatarCenter - centerLinePosition;
       
-      // Calculate how much we need to scroll so the winner's center aligns with the center line
-      // We want: winnerCenterPosition - scrollPosition = centerLinePosition
-      // So: scrollPosition = winnerCenterPosition - centerLinePosition
-      const baseScrollForAlignment = winnerCenterPosition - centerLinePosition;
+      // Add the landing offset for slight randomness within the avatar
+      finalScrollPosition += result.landingOffset;
       
-      // Add random offset within avatar bounds
-      const landingOffset = result.landingOffset;
-      
-      // Final scroll position
-      const finalScrollPosition = completeCyclesDistance + baseScrollForAlignment + landingOffset;
-      
-      console.log("Debug info:", {
-        winnerUsername: targetWinner.username,
-        winnerIndexInOriginal,
-        winnerPositionInCycle,
-        winnerCenterPosition,
+      console.log("Scroll calculation:", {
+        chosenPosition,
+        avatarLeftEdge,
+        avatarCenter,
         centerLinePosition,
-        baseScrollForAlignment,
-        completeCyclesDistance,
-        landingOffset,
+        landingOffset: result.landingOffset,
         finalScrollPosition
       });
       
@@ -172,7 +179,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setScrollPosition(finalScrollPosition);
       
       // Animation complete handler
-      const animationDuration = 5000; // 5 seconds
+      const animationDuration = 5000;
       setTimeout(() => {
         setIsAnimating(false);
       }, animationDuration);
@@ -181,10 +188,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       if (winner) {
         setTimeout(() => {
           setShowWinner(true);
-        }, animationDuration + 1000); // 1 second after animation
+        }, animationDuration + 1000);
       }
     }
-  }, [isSpinning, participants, winner, isAnimating]);
+  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
 
   return (
     <Card className="gaming-card w-full">
