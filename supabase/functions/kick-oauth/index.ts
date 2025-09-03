@@ -37,6 +37,11 @@ Deno.serve(async (req) => {
     if (!action && req.method === 'POST') {
       const body = await req.json()
       action = body.action
+      
+      // For authorize action, also get the origin from body
+      if (action === 'authorize' && body.origin) {
+        url.searchParams.set('origin', body.origin)
+      }
     }
 
     // Initialize Supabase client
@@ -49,6 +54,10 @@ Deno.serve(async (req) => {
       const clientId = Deno.env.get('KICK_CLIENT_ID')!
       const frontendUrl = url.searchParams.get('origin') || 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.sandbox.lovable.dev'
       const redirectUri = `${frontendUrl}/auth/callback`
+      
+      console.log('🔧 OAuth Debug - Client ID exists:', !!clientId)
+      console.log('🔧 OAuth Debug - Frontend URL:', frontendUrl)
+      console.log('🔧 OAuth Debug - Redirect URI:', redirectUri)
       
       const state = crypto.randomUUID()
       const scopes = ['user:read'].join(' ')
