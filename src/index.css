@@ -38,6 +38,21 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Kick-specific colors */
+    --kick-green: 120 73% 45%;
+    --kick-purple: 270 95% 60%;
+    --kick-dark: 222 47% 11%;
+    
+    /* Gaming gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--kick-green)), hsl(var(--kick-purple)));
+    --gradient-gaming: linear-gradient(45deg, hsl(var(--kick-dark)), hsl(var(--kick-purple)));
+    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary)));
+    
+    /* Gaming shadows and glows */
+    --shadow-gaming: 0 4px 20px -2px hsl(var(--kick-green) / 0.1);
+    --glow-green: 0 0 20px hsl(var(--kick-green) / 0.4);
+    --glow-purple: 0 0 20px hsl(var(--kick-purple) / 0.4);
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -83,6 +98,12 @@ All colors MUST be HSL.
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Dark mode Kick colors */
+    --kick-green: 120 73% 55%;
+    --kick-purple: 270 95% 70%;
+    --kick-dark: 222 84% 4.9%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

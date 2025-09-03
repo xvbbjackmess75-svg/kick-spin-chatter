@@ -14,7 +14,316 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bot_settings: {
+        Row: {
+          api_rate_limit: number | null
+          auto_moderation: boolean | null
+          banned_words: string[] | null
+          bot_enabled: boolean | null
+          bot_username: string | null
+          channel_id: string | null
+          command_prefix: string | null
+          created_at: string
+          default_cooldown: number | null
+          id: string
+          max_message_length: number | null
+          timeout_duration: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_rate_limit?: number | null
+          auto_moderation?: boolean | null
+          banned_words?: string[] | null
+          bot_enabled?: boolean | null
+          bot_username?: string | null
+          channel_id?: string | null
+          command_prefix?: string | null
+          created_at?: string
+          default_cooldown?: number | null
+          id?: string
+          max_message_length?: number | null
+          timeout_duration?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_rate_limit?: number | null
+          auto_moderation?: boolean | null
+          banned_words?: string[] | null
+          bot_enabled?: boolean | null
+          bot_username?: string | null
+          channel_id?: string | null
+          command_prefix?: string | null
+          created_at?: string
+          default_cooldown?: number | null
+          id?: string
+          max_message_length?: number | null
+          timeout_duration?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_settings_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "kick_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          channel_id: string
+          command_name: string | null
+          id: string
+          is_command: boolean | null
+          kick_user_id: string | null
+          kick_username: string
+          message: string
+          timestamp: string
+          user_type: string | null
+        }
+        Insert: {
+          channel_id: string
+          command_name?: string | null
+          id?: string
+          is_command?: boolean | null
+          kick_user_id?: string | null
+          kick_username: string
+          message: string
+          timestamp?: string
+          user_type?: string | null
+        }
+        Update: {
+          channel_id?: string
+          command_name?: string | null
+          id?: string
+          is_command?: boolean | null
+          kick_user_id?: string | null
+          kick_username?: string
+          message?: string
+          timestamp?: string
+          user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "kick_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commands: {
+        Row: {
+          channel_id: string | null
+          command: string
+          cooldown: number | null
+          created_at: string
+          enabled: boolean | null
+          id: string
+          response: string
+          updated_at: string
+          user_id: string
+          user_level: string | null
+          uses: number | null
+        }
+        Insert: {
+          channel_id?: string | null
+          command: string
+          cooldown?: number | null
+          created_at?: string
+          enabled?: boolean | null
+          id?: string
+          response: string
+          updated_at?: string
+          user_id: string
+          user_level?: string | null
+          uses?: number | null
+        }
+        Update: {
+          channel_id?: string | null
+          command?: string
+          cooldown?: number | null
+          created_at?: string
+          enabled?: boolean | null
+          id?: string
+          response?: string
+          updated_at?: string
+          user_id?: string
+          user_level?: string | null
+          uses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commands_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "kick_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      giveaway_participants: {
+        Row: {
+          entered_at: string
+          giveaway_id: string
+          id: string
+          kick_user_id: string
+          kick_username: string
+        }
+        Insert: {
+          entered_at?: string
+          giveaway_id: string
+          id?: string
+          kick_user_id: string
+          kick_username: string
+        }
+        Update: {
+          entered_at?: string
+          giveaway_id?: string
+          id?: string
+          kick_user_id?: string
+          kick_username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giveaway_participants_giveaway_id_fkey"
+            columns: ["giveaway_id"]
+            isOneToOne: false
+            referencedRelation: "giveaways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      giveaways: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          max_participants: number | null
+          participants_count: number | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          winner_user_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          max_participants?: number | null
+          participants_count?: number | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          winner_user_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          max_participants?: number | null
+          participants_count?: number | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giveaways_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "kick_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kick_channels: {
+        Row: {
+          bot_enabled: boolean | null
+          channel_id: string
+          channel_name: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_enabled?: boolean | null
+          channel_id: string
+          channel_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_enabled?: boolean | null
+          channel_id?: string
+          channel_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_streamer: boolean | null
+          kick_channel_id: string | null
+          kick_user_id: string | null
+          kick_username: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_streamer?: boolean | null
+          kick_channel_id?: string | null
+          kick_user_id?: string | null
+          kick_username?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_streamer?: boolean | null
+          kick_channel_id?: string | null
+          kick_user_id?: string | null
+          kick_username?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

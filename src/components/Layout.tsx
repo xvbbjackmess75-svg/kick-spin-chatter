@@ -3,6 +3,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useProfile } from "@/hooks/useProfile";
 import { Settings, LogOut } from "lucide-react";
 
 interface LayoutProps {
@@ -10,6 +12,13 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { signOut, user } = useAuth();
+  const { profile } = useProfile();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -33,19 +42,26 @@ export function Layout({ children }: LayoutProps) {
               
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-avatar.jpg" />
+                  <AvatarImage src={profile?.avatar_url} />
                   <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
-                    ST
+                    {profile?.display_name?.slice(0, 2).toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium">StreamerName</span>
+                <span className="text-sm font-medium">
+                  {profile?.display_name || profile?.kick_username || user?.email?.split('@')[0] || 'User'}
+                </span>
               </div>
               
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 <Settings className="h-4 w-4" />
               </Button>
               
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-destructive"
+                onClick={handleSignOut}
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
