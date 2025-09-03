@@ -7,6 +7,7 @@ import { AuthProvider } from "./components/auth/AuthProvider";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import History from "./pages/History";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import KickCallback from "./pages/KickCallback";
@@ -31,6 +32,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <History />
                   </Layout>
                 </ProtectedRoute>
               }

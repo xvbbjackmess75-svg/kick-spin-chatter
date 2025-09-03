@@ -437,6 +437,10 @@ export default function Dashboard() {
 
       if (error) throw error;
 
+      // Clear winner state if the deleted giveaway had the current winner
+      setWinner(null);
+      setParticipants([]);
+
       toast({
         title: "Giveaway Deleted",
         description: "The giveaway has been permanently deleted",

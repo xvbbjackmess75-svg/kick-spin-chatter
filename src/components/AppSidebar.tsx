@@ -16,11 +16,14 @@ import {
   Gift, 
   Bot,
   Users,
-  Zap
+  Zap,
+  Trophy,
+  History
 } from "lucide-react";
 
 const mainItems = [
   { title: "Giveaways", url: "/", icon: Gift },
+  { title: "History", url: "/history", icon: Trophy },
 ];
 
 export function AppSidebar() {
