@@ -56,7 +56,8 @@ export default function AuthCallback() {
           console.log('🔄 Exchange response:', response)
 
           if (response.error) {
-            throw response.error;
+            console.error('❌ Exchange failed with error:', response.error)
+            throw new Error(response.error.error || response.error.message || 'OAuth exchange failed')
           }
 
           const { success, user, session_data } = response.data;
