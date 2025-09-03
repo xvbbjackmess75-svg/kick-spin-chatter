@@ -58,6 +58,33 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const handleKickAuth = async () => {
+    setLoading(true);
+    
+    try {
+      // Since Kick doesn't have public OAuth yet, we'll simulate the flow
+      // In production, this would redirect to Kick's OAuth endpoint
+      const kickAuthUrl = `https://kick.com/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=user:read`;
+      
+      toast({
+        title: "Kick OAuth Coming Soon",
+        description: "Kick OAuth integration will be available when their public API launches. For now, please use email/password.",
+        variant: "default"
+      });
+      
+      // For now, we'll just show the message
+      // window.location.href = kickAuthUrl;
+    } catch (error) {
+      toast({
+        title: "Authentication Error",
+        description: "Failed to connect with Kick",
+        variant: "destructive"
+      });
+    }
+    
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="gaming-card w-full max-w-md">
@@ -71,6 +98,28 @@ export default function Auth() {
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Kick OAuth Button - Featured */}
+          <Button 
+            type="button"
+            className="w-full gaming-button mb-6"
+            onClick={handleKickAuth}
+            disabled={loading}
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              {loading ? "Connecting..." : "Continue with Kick"}
+            </div>
+          </Button>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border/50" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or use email</span>
+            </div>
+          </div>
+
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -99,7 +148,7 @@ export default function Auth() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full gaming-button" disabled={loading}>
+                <Button type="submit" className="w-full" variant="outline" disabled={loading}>
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
@@ -128,12 +177,18 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full gaming-button" disabled={loading}>
+                <Button type="submit" className="w-full" variant="outline" disabled={loading}>
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              By continuing, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

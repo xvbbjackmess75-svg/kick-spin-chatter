@@ -13,6 +13,7 @@ import BotSettings from "./pages/BotSettings";
 import KickIntegration from "./pages/KickIntegration";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import KickCallback from "./pages/KickCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/callback" element={<KickCallback />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Layout>
