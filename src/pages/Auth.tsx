@@ -74,7 +74,10 @@ export default function Auth() {
     setLoading(true);
     try {
       const response = await supabase.functions.invoke('kick-oauth', {
-        body: { action: 'authorize' }
+        body: { 
+          action: 'authorize',
+          origin: window.location.origin
+        }
       });
 
       if (response.error) {

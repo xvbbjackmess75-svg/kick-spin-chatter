@@ -11,9 +11,8 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const success = searchParams.get('success');
-      const username = searchParams.get('username');
-      const sessionUrl = searchParams.get('session_url');
+      const code = searchParams.get('code');
+      const state = searchParams.get('state');
       const error = searchParams.get('error');
 
       if (error) {
@@ -26,37 +25,57 @@ export default function AuthCallback() {
         return;
       }
 
-      if (success === 'true' && sessionUrl) {
+      if (code) {
         try {
-          // Extract the token from the session URL
-          const url = new URL(sessionUrl);
-          const token = url.searchParams.get('token');
-          
-          if (token) {
-            const { error: sessionError } = await supabase.auth.verifyOtp({
-              token_hash: token,
-              type: 'magiclink'
-            });
-
-            if (sessionError) {
-              console.error('Session verification error:', sessionError);
-              throw sessionError;
+          // Exchange the code for tokens via our edge function
+          const response = await supabase.functions.invoke('kick-oauth', {
+            body: { 
+              action: 'exchange',
+              code: code,
+              state: state,
+              origin: window.location.origin
             }
+          });
 
-            toast({
-              title: "Welcome!",
-              description: `Successfully signed in with Kick as ${username}`,
-            });
+          if (response.error) {
+            throw response.error;
+          }
+
+          const { success, user, session_data } = response.data;
+
+          if (success && session_data?.properties?.action_link) {
+            // Extract the token from the session URL
+            const url = new URL(session_data.properties.action_link);
+            const token = url.searchParams.get('token');
             
-            navigate('/');
+            if (token) {
+              const { error: sessionError } = await supabase.auth.verifyOtp({
+                token_hash: token,
+                type: 'magiclink'
+              });
+
+              if (sessionError) {
+                console.error('Session verification error:', sessionError);
+                throw sessionError;
+              }
+
+              toast({
+                title: "Welcome!",
+                description: `Successfully signed in with Kick as ${user.username}`,
+              });
+              
+              navigate('/');
+            } else {
+              throw new Error('No session token received');
+            }
           } else {
-            throw new Error('No session token received');
+            throw new Error('OAuth exchange failed');
           }
         } catch (error) {
-          console.error('Session handling error:', error);
+          console.error('OAuth exchange error:', error);
           toast({
-            title: "Session error",
-            description: "Failed to establish session. Please try again.",
+            title: "Authentication failed",
+            description: "Failed to complete authentication. Please try again.",
             variant: "destructive"
           });
           navigate('/auth');

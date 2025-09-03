@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
     if (action === 'authorize') {
       // Generate authorization URL
       const clientId = Deno.env.get('KICK_CLIENT_ID')!
-      const redirectUri = `${url.origin}/supabase/functions/v1/kick-oauth?action=callback`
+      const frontendUrl = url.searchParams.get('origin') || 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.sandbox.lovable.dev'
+      const redirectUri = `${frontendUrl}/auth/callback`
       
       const state = crypto.randomUUID()
       const scopes = ['user:read'].join(' ')
@@ -69,9 +70,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (action === 'callback') {
+    if (action === 'exchange') {
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
+      const origin = url.searchParams.get('origin') || 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.sandbox.lovable.dev'
       
       if (!code) {
         throw new Error('No authorization code received')
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
       // Exchange code for access token
       const clientId = Deno.env.get('KICK_CLIENT_ID')!
       const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')!
-      const redirectUri = `${url.origin}/supabase/functions/v1/kick-oauth?action=callback`
+      const redirectUri = `${origin}/auth/callback`
 
       const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
         method: 'POST',
@@ -204,17 +206,19 @@ Deno.serve(async (req) => {
 
       console.log('🎉 OAuth flow completed for user:', kickUser.username)
 
-      // Redirect to frontend with success
-      const frontendUrl = url.origin
-      const redirectUrl = new URL(`${frontendUrl}/auth/callback`)
-      redirectUrl.searchParams.set('success', 'true')
-      redirectUrl.searchParams.set('username', kickUser.username)
-      
-      if (sessionData.properties?.action_link) {
-        redirectUrl.searchParams.set('session_url', sessionData.properties.action_link)
-      }
-
-      return Response.redirect(redirectUrl.toString())
+      // Return success data instead of redirecting
+      return new Response(JSON.stringify({
+        success: true,
+        user: {
+          id: kickUser.id,
+          username: kickUser.username,
+          display_name: kickUser.display_name,
+          avatar: kickUser.avatar
+        },
+        session_data: sessionData
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
