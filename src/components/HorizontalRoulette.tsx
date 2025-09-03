@@ -22,10 +22,12 @@ interface HorizontalRouletteProps {
 export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }: HorizontalRouletteProps) {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [animationClass, setAnimationClass] = useState("");
+  const [showWinner, setShowWinner] = useState(false);
 
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
       setAnimationClass("roulette-scroll");
+      setShowWinner(false); // Hide winner during spin
       
       // Calculate scroll to ensure we land on the winner if provided, otherwise random
       const participantWidth = 80; // Width of each participant slot
@@ -57,6 +59,13 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setTimeout(() => {
         setAnimationClass("");
       }, 8000);
+
+      // Show winner announcement 1 second after animation completes
+      if (winner) {
+        setTimeout(() => {
+          setShowWinner(true);
+        }, 9000); // 8000ms animation + 1000ms delay
+      }
     }
   }, [isSpinning, participants.length, winner]);
 
@@ -100,7 +109,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                 transform: `translateX(-${scrollPosition}px)`,
                 width: `${extendedParticipants.length * 80}px`,
                 ...(isSpinning && {
-                  transition: 'transform 8s cubic-bezier(0.17, 0.67, 0.12, 0.99)'
+                  transition: 'transform 8s cubic-bezier(0.25, 0.1, 0.25, 1)' // Fast start, slow end
                 })
               }}
             >
@@ -136,7 +145,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         </div>
 
         {/* Winner Display */}
-        {winner && !isSpinning && (
+        {winner && showWinner && (
           <div className="space-y-4 animate-fade-in">
             <div className="p-4 sm:p-6 rounded-xl bg-kick-green/10 border border-kick-green/30">
               <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
