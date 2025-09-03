@@ -70,32 +70,46 @@ export default function AuthCallback() {
             throw new Error(`OAuth exchange failed: ${response.data.error}`)
           }
 
-          const { success, user, session_data } = response.data;
+          const { success, user, session_data, message } = response.data;
 
-          if (success && session_data?.properties?.action_link) {
-            // Extract the token from the session URL
-            const url = new URL(session_data.properties.action_link);
-            const token = url.searchParams.get('token');
-            
-            if (token) {
-              const { error: sessionError } = await supabase.auth.verifyOtp({
-                token_hash: token,
-                type: 'magiclink'
-              });
-
-              if (sessionError) {
-                console.error('Session verification error:', sessionError);
-                throw sessionError;
-              }
-
+          if (success) {
+            if (message && message.includes('simplified version')) {
+              // Simplified version - just show success and redirect
               toast({
-                title: "Welcome!",
-                description: `Successfully signed in with Kick as ${user.username}`,
+                title: "Authentication successful!",
+                description: "Kick OAuth flow completed (simplified test version)",
               });
-              
               navigate('/');
+              return;
+            }
+
+            if (session_data?.properties?.action_link) {
+              // Full version with session data
+              const url = new URL(session_data.properties.action_link);
+              const token = url.searchParams.get('token');
+              
+              if (token) {
+                const { error: sessionError } = await supabase.auth.verifyOtp({
+                  token_hash: token,
+                  type: 'magiclink'
+                });
+
+                if (sessionError) {
+                  console.error('Session verification error:', sessionError);
+                  throw sessionError;
+                }
+
+                toast({
+                  title: "Welcome!",
+                  description: `Successfully signed in with Kick as ${user.username}`,
+                });
+                
+                navigate('/');
+              } else {
+                throw new Error('No session token received');
+              }
             } else {
-              throw new Error('No session token received');
+              throw new Error('No session data received');
             }
           } else {
             throw new Error('OAuth exchange failed');
