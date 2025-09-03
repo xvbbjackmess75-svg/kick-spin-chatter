@@ -408,10 +408,12 @@ export default function Dashboard() {
     };
     
     console.log("🎲 PROVABLY FAIR RESULT:", {
+      participantsList: participants.map(p => p.username),
       winningTicket: winningTicketNumber,
       ticketsPerParticipant,
       winnerIndex: actualWinnerIndex,
-      winner: participants[actualWinnerIndex]?.username
+      winner: participants[actualWinnerIndex]?.username,
+      calculation: `Ticket ${winningTicketNumber} → Index ${actualWinnerIndex} (${winningTicketNumber-1}/${ticketsPerParticipant} = ${(winningTicketNumber-1)/ticketsPerParticipant})`
     });
     
     return { winner: participants[actualWinnerIndex], fairnessData };
@@ -441,8 +443,15 @@ export default function Dashboard() {
         return;
       }
 
+      console.log("🎰 DASHBOARD: Participants array for selection:", giveawayParticipants.map((p, i) => `${i}: ${p.username}`));
+
       // Use provably fair system to select winner
       const { winner: provablyFairWinner, fairnessData } = selectWinnerUsingProvablyFair(giveawayParticipants);
+      
+      console.log("🏆 DASHBOARD: Selected winner details:", {
+        selectedWinner: provablyFairWinner?.username,
+        selectedIndex: giveawayParticipants.findIndex(p => p.username === provablyFairWinner?.username)
+      });
       
       // Set states for pending winner
       setCurrentGiveaway(giveaway);

@@ -66,6 +66,7 @@ export function HorizontalRoulette({
   useEffect(() => {
     if (isSpinning && participants.length > 0 && winner && !isAnimating) {
       console.log("🎰 ROULETTE: Starting animation to land on winner:", winner.username);
+      console.log("🔍 ROULETTE: Participants array received:", participants.map((p, i) => `${i}: ${p.username}`));
       setIsAnimating(true);
       setShowWinner(false);
       
@@ -87,7 +88,7 @@ export function HorizontalRoulette({
         return;
       }
       
-      console.log("🎯 Winner index in participants array:", winnerIndexInOriginal);
+      console.log("🎯 ROULETTE: Found winner at index:", winnerIndexInOriginal, "for user:", winner.username);
       
       // Calculate target position after 25 cycles for dramatic effect
       const cycles = 25;
@@ -99,15 +100,17 @@ export function HorizontalRoulette({
       const avatarCenter = avatarLeftEdge + (participantWidth / 2);
       const finalScrollPosition = avatarCenter - centerLinePosition;
       
-      console.log("🎯 ANIMATION TARGET:", {
+      console.log("🎯 ROULETTE: Animation calculation:", {
         winnerUsername: winner.username,
         winnerIndexInOriginal,
         cycles,
+        participantsInOneCycle,
         targetIndex,
         avatarLeftEdge,
         avatarCenter,
         centerLinePosition,
-        finalScrollPosition
+        finalScrollPosition,
+        participantAtTargetIndex: extendedParticipants[targetIndex]?.username
       });
       
       // Start animation to land on this exact winner
