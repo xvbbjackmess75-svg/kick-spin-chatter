@@ -775,17 +775,34 @@ export default function Giveaways() {
 
         {/* Roulette Modal */}
         {currentGiveaway && participants.length > 0 && (
-          <GiveawayRoulette
-            participants={participants}
-            onAcceptWinner={handleAcceptWinner}
-            onRerollWinner={handleRerollWinner}
-            onAddAnotherWinner={handleAddAnotherWinner}
-            onEndGiveaway={handleEndGiveaway}
-            onClose={() => {
-              setCurrentGiveaway(null);
-              setParticipants([]);
-            }}
-          />
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-foreground">{currentGiveaway.title}</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setCurrentGiveaway(null);
+                      setParticipants([]);
+                    }}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+              <div className="p-4">
+                <GiveawayRoulette
+                  participants={participants}
+                  onAcceptWinner={handleAcceptWinner}
+                  onRerollWinner={handleRerollWinner}
+                  onAddAnotherWinner={handleAddAnotherWinner}
+                  onEndGiveaway={handleEndGiveaway}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Giveaways Grid */}
