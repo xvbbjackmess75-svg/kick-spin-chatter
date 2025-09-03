@@ -133,17 +133,16 @@ Deno.serve(async (req) => {
       } else {
         console.log('🔧 No user data in token, trying API call...')
         
-        // Use the correct Kick API endpoint for authenticated user
+        // Use the official Kick API endpoint for authenticated user
         try {
-          console.log('🔧 Attempting API call to: https://kick.com/api/v1/user')
+          console.log('🔧 Attempting API call to: https://api.kick.com/public/v1/users')
           console.log('🔧 Using access token:', tokenData.access_token ? `${tokenData.access_token.substring(0, 10)}...` : 'NO TOKEN')
           
-          const userResponse = await fetch('https://kick.com/api/v1/user', {
+          const userResponse = await fetch('https://api.kick.com/public/v1/users', {
             headers: {
               'Authorization': `Bearer ${tokenData.access_token}`,
               'Accept': 'application/json',
-              'User-Agent': 'KickBot/1.0',
-              'Content-Type': 'application/json'
+              'User-Agent': 'KickBot/1.0'
             },
           })
           
@@ -154,33 +153,40 @@ Deno.serve(async (req) => {
           const responseText = await userResponse.text()
           console.log('🔧 User API raw response length:', responseText.length)
           console.log('🔧 User API response body (first 500 chars):', responseText.substring(0, 500))
-          console.log('🔧 Response starts with JSON?', responseText.trim().startsWith('{'))
           
           if (userResponse.ok) {
-            if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
-              const userData = JSON.parse(responseText)
-              console.log('✅ User data retrieved successfully')
-              console.log('🔧 Full user data structure:', JSON.stringify(userData, null, 2))
-              console.log('🔧 Available user fields:', Object.keys(userData))
+            if (responseText.trim().startsWith('{')) {
+              const apiResponse = JSON.parse(responseText)
+              console.log('✅ API response parsed successfully')
+              console.log('🔧 Full API response structure:', JSON.stringify(apiResponse, null, 2))
               
-              // Extract user info - handle different possible field names
-              kickUser = {
-                id: userData.id || userData.user_id || userData.userId || `kick_${Date.now()}`,
-                username: userData.username || userData.name || userData.display_name || userData.slug || `user_${Date.now()}`,
-                display_name: userData.display_name || userData.name || userData.username || userData.full_name || 'Kick User',
-                avatar: userData.avatar || userData.avatar_url || userData.profile_picture || userData.profile_pic || null
+              // According to docs, user data is in the 'data' array
+              if (apiResponse.data && Array.isArray(apiResponse.data) && apiResponse.data.length > 0) {
+                const userData = apiResponse.data[0] // First user is the authenticated user
+                console.log('✅ User data found in response:', JSON.stringify(userData, null, 2))
+                
+                // Extract user info using the documented field names
+                kickUser = {
+                  id: userData.user_id || userData.id || `kick_${Date.now()}`,
+                  username: userData.name || userData.username || userData.email?.split('@')[0] || `user_${Date.now()}`,
+                  display_name: userData.name || userData.display_name || userData.username || 'Kick User',
+                  avatar: userData.profile_picture || userData.avatar || userData.avatar_url || null
+                }
+                
+                console.log('✅ Extracted user info from official API:', JSON.stringify(kickUser, null, 2))
+              } else {
+                console.error('❌ No user data found in API response data array')
+                console.error('❌ API response structure:', JSON.stringify(apiResponse, null, 2))
+                throw new Error('No user data found in API response')
               }
-              
-              console.log('✅ Extracted user info:', JSON.stringify(kickUser, null, 2))
             } else {
-              console.error('❌ Response is not JSON. Response type might be HTML or other format')
-              console.error('❌ Full response:', responseText)
-              throw new Error('API returned non-JSON response - likely HTML error page')
+              console.error('❌ Response is not JSON:', responseText.substring(0, 200))
+              throw new Error('API returned non-JSON response')
             }
           } else {
-            console.error('❌ User API failed with status:', userResponse.status, userResponse.statusText)
+            console.error('❌ Official API failed with status:', userResponse.status, userResponse.statusText)
             console.error('❌ Error response body:', responseText)
-            throw new Error(`User API failed with status ${userResponse.status}: ${userResponse.statusText}`)
+            throw new Error(`Official API failed with status ${userResponse.status}: ${userResponse.statusText}`)
           }
         } catch (error) {
           console.error('❌ User info fetch failed:', error.message)
@@ -206,7 +212,7 @@ Deno.serve(async (req) => {
         user: kickUser,
         message: 'Kick OAuth completed successfully',
         debug_info: {
-          api_called: 'https://kick.com/api/v1/user',
+          api_called: 'https://api.kick.com/public/v1/users',
           user_fields_available: kickUser ? Object.keys(kickUser) : [],
           fallback_used: kickUser ? (kickUser.username?.includes('user_') || kickUser.username?.includes('kick_user_')) : true,
           token_has_user_data: !!(tokenData.user || tokenData.userinfo || tokenData.profile)
