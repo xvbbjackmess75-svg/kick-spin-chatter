@@ -40,56 +40,57 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
   const segmentAngle = totalParticipants > 0 ? 360 / totalParticipants : 0;
 
   return (
-    <Card className="gaming-card">
-      <CardContent className="p-8">
-        <div className="text-center space-y-6">
+    <Card className="gaming-card w-full">
+      <CardContent className="p-4 sm:p-6 lg:p-8">
+        <div className="text-center space-y-4 sm:space-y-6">
           {/* Header */}
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
-              <Crown className="h-6 w-6 text-accent" />
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground flex items-center justify-center gap-2">
+              <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-kick-green" />
               Giveaway Roulette
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               {totalParticipants} participants ready to win!
             </p>
           </div>
 
           {/* Roulette Wheel Container */}
-          <div className="relative">
+          <div className="relative flex justify-center">
             {/* Pointer */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-10">
-              <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-accent drop-shadow-lg" />
+            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1 sm:-translate-y-2 z-10">
+              <div className="w-0 h-0 border-l-3 border-r-3 border-b-6 sm:border-l-4 sm:border-r-4 sm:border-b-8 border-transparent border-b-kick-green drop-shadow-lg" />
             </div>
 
-            {/* Wheel */}
-            <div className="relative w-80 h-80 mx-auto">
+            {/* Wheel - Responsive sizes */}
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 mx-auto">
               <div 
-                className={`w-full h-full rounded-full border-4 border-accent/30 overflow-hidden relative ${animationClass}`}
+                className={`w-full h-full rounded-full border-2 sm:border-4 border-kick-green/30 overflow-hidden relative ${animationClass}`}
                 style={{ 
                   transform: `rotate(${currentRotation}deg)`,
-                  background: 'conic-gradient(from 0deg, var(--gradient-primary), var(--kick-purple), var(--accent), var(--primary))'
+                  background: 'conic-gradient(from 0deg, hsl(var(--kick-green)), hsl(var(--kick-dark)), hsl(var(--kick-purple)), hsl(var(--kick-green)))'
                 }}
               >
                 {/* Participant Avatars */}
                 {participants.slice(0, 12).map((participant, index) => {
                   const angle = (index * segmentAngle) - 90; // Start from top
-                  const radius = 120; // Distance from center
+                  // Fixed responsive radius based on breakpoints
+                  const radius = 75; // Base radius that works across all sizes
                   const x = Math.cos((angle * Math.PI) / 180) * radius;
                   const y = Math.sin((angle * Math.PI) / 180) * radius;
                   
                   return (
                     <div
                       key={participant.id}
-                      className="absolute w-12 h-12 transform -translate-x-1/2 -translate-y-1/2 floating-element"
+                      className="absolute w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 transform -translate-x-1/2 -translate-y-1/2 floating-element"
                       style={{
                         left: `calc(50% + ${x}px)`,
                         top: `calc(50% + ${y}px)`,
                         animationDelay: `${index * 0.1}s`
                       }}
                     >
-                      <Avatar className="w-12 h-12 border-2 border-background shadow-lg">
+                      <Avatar className="w-full h-full border-2 border-background shadow-lg">
                         <AvatarImage src={participant.avatar} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
+                        <AvatarFallback className="bg-kick-green text-kick-dark text-xs font-bold">
                           {participant.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -99,8 +100,8 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
 
                 {/* Center Logo */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center border-4 border-background shadow-xl">
-                    <Trophy className="h-8 w-8 text-primary-foreground" />
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-kick-green rounded-full flex items-center justify-center border-2 sm:border-4 border-background shadow-xl">
+                    <Trophy className="h-4 w-4 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-kick-dark" />
                   </div>
                 </div>
               </div>
@@ -110,23 +111,23 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
           {/* Winner Display */}
           {winner && !isSpinning && (
             <div className="space-y-4 animate-fade-in">
-              <div className="p-6 rounded-xl bg-gradient-primary/10 border border-primary/30">
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <Trophy className="h-8 w-8 text-accent animate-pulse" />
-                  <h4 className="text-xl font-bold text-foreground">🎉 Winner! 🎉</h4>
-                  <Trophy className="h-8 w-8 text-accent animate-pulse" />
+              <div className="p-4 sm:p-6 rounded-xl bg-kick-green/10 border border-kick-green/30">
+                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
+                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-kick-green animate-pulse" />
+                  <h4 className="text-lg sm:text-xl font-bold text-foreground">🎉 Winner! 🎉</h4>
+                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-kick-green animate-pulse" />
                 </div>
                 
                 <div className="flex items-center justify-center gap-4">
-                  <Avatar className="w-16 h-16 border-4 border-accent pulse-glow">
+                  <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-kick-green pulse-glow">
                     <AvatarImage src={winner.avatar} />
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold">
+                    <AvatarFallback className="bg-kick-green text-kick-dark font-bold">
                       {winner.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{winner.username}</p>
-                    <Badge className="bg-accent/20 text-accent border-accent/30 mt-1">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">{winner.username}</p>
+                    <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30 mt-1">
                       <Crown className="h-3 w-3 mr-1" />
                       Winner
                     </Badge>
@@ -182,11 +183,11 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
                   {participants.map((participant) => (
                     <div 
                       key={participant.id}
-                      className="flex items-center gap-2 bg-secondary/30 rounded-lg px-2 py-1"
+                      className="flex items-center gap-2 bg-kick-green/10 border border-kick-green/20 rounded-lg px-2 py-1"
                     >
                       <Avatar className="w-5 h-5">
                         <AvatarImage src={participant.avatar} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
+                        <AvatarFallback className="bg-kick-green text-kick-dark text-xs">
                           {participant.username.slice(0, 1).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

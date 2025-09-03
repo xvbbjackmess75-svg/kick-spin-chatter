@@ -61,12 +61,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				'kick-green': 'hsl(var(--kick-green))',
+				'kick-purple': 'hsl(var(--kick-purple))',
+				'kick-dark': 'hsl(var(--kick-dark))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			borderWidth: {
+				'3': '3px'
 			},
 			keyframes: {
 				'accordion-down': {

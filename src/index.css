@@ -195,4 +195,25 @@ All colors MUST be HSL.
   .pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
+
+  /* Kick brand utility classes */
+  .text-kick-green {
+    color: hsl(var(--kick-green));
+  }
+
+  .bg-kick-green {
+    background-color: hsl(var(--kick-green));
+  }
+
+  .text-kick-dark {
+    color: hsl(var(--kick-dark));
+  }
+
+  .bg-kick-purple {
+    background-color: hsl(var(--kick-purple));
+  }
+
+  .border-kick-green {
+    border-color: hsl(var(--kick-green));
+  }
 }
