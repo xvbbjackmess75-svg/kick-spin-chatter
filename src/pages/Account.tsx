@@ -41,9 +41,20 @@ export default function Account() {
   const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
   const isKickAuthenticated = kickUser?.authenticated;
   const isEmailAuthenticated = !!user && !isKickAuthenticated;
+  const isHybridAccount = !!user && isKickAuthenticated; // Kick user with Supabase account
 
   const getCurrentUserInfo = () => {
-    if (kickUser?.authenticated) {
+    if (isHybridAccount) {
+      // Kick user with Supabase account
+      return {
+        username: kickUser.username,
+        displayName: kickUser.display_name || kickUser.username,
+        avatar: kickUser.avatar,
+        email: user?.email || 'Auto-generated email',
+        provider: 'Kick + Email (Hybrid)'
+      };
+    } else if (kickUser?.authenticated) {
+      // Kick-only user (shouldn't happen with auto-creation)
       return {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
@@ -52,6 +63,7 @@ export default function Account() {
         provider: 'Kick'
       };
     } else if (user) {
+      // Email-only user
       return {
         username: user.email?.split('@')[0] || 'User',
         displayName: user.email?.split('@')[0] || 'User',
@@ -301,8 +313,9 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Email Management - For email authenticated users */}
-        {isEmailAuthenticated && (
+
+        {/* Email Management - For email authenticated users AND hybrid accounts */}
+        {(isEmailAuthenticated || isHybridAccount) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -310,11 +323,24 @@ export default function Account() {
                 Email Address
               </CardTitle>
               <CardDescription>
-                Update your email address. You'll need to verify the new email.
+                {isHybridAccount 
+                  ? "Update your email address from the auto-generated one to your preferred email."
+                  : "Update your email address. You'll need to verify the new email."
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleEmailUpdate} className="space-y-4">
+                {isHybridAccount && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      <strong>Current email:</strong> {user?.email}
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      This was auto-generated when you signed in with Kick. You can change it to your preferred email.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -333,11 +359,8 @@ export default function Account() {
           </Card>
         )}
 
-        {/* Email/Password Setup for Kick Users - No longer needed since auto-created */}
-        {/* Keeping this comment for reference, but the manual setup is removed since accounts are auto-created */}
-
-        {/* Password Management - Only for email authenticated users */}
-        {isEmailAuthenticated && (
+        {/* Password Management - For email authenticated users AND hybrid accounts */}
+        {(isEmailAuthenticated || isHybridAccount) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -345,11 +368,24 @@ export default function Account() {
                 Password
               </CardTitle>
               <CardDescription>
-                Change your account password. Make sure it's strong and unique.
+                {isHybridAccount 
+                  ? "Set a password you can remember. Currently using an auto-generated secure password."
+                  : "Change your account password. Make sure it's strong and unique."
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                {isHybridAccount && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
+                    <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                      <strong>Auto-generated password:</strong> For security, we created a secure password when you signed in with Kick.
+                    </p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                      Set your own password below to log in from other devices.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New Password</Label>
                   <Input
@@ -382,6 +418,7 @@ export default function Account() {
             </CardContent>
           </Card>
         )}
+
 
         {/* Kick Account Linking */}
         <Card>
