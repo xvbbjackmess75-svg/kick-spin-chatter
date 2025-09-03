@@ -67,20 +67,27 @@ export default function Commands() {
     console.log('🔧 Commands useEffect - user:', user?.email, 'loading:', loading);
     
     if (user) {
+      console.log('🔧 User exists, fetching commands...');
       fetchCommands();
     } else if (!loading) {
       // If no user and not loading, stop loading immediately
+      console.log('🔧 No user and not loading, stopping loader...');
       setLoading(false);
+    } else {
+      console.log('🔧 Still loading auth state...');
     }
   }, [user, loading]);
 
   const fetchCommands = async () => {
+    console.log('🔧 fetchCommands called, user:', user?.email);
     try {
       const { data, error } = await supabase
         .from('commands')
         .select('*')
         .order('created_at', { ascending: false });
 
+      console.log('🔧 Commands query result:', { data: data?.length, error });
+      
       if (error) throw error;
       setCommands(data || []);
     } catch (error) {
@@ -91,6 +98,7 @@ export default function Commands() {
         variant: "destructive"
       });
     } finally {
+      console.log('🔧 Setting commands loading to false');
       setLoading(false);
     }
   };
