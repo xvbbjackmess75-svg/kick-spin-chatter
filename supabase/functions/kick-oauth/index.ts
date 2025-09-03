@@ -85,8 +85,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     if (action === 'authorize') {
-      // Generate authorization URL
-      const clientId = Deno.env.get('KICK_CLIENT_ID')!
+      // Generate authorization URL - temporarily hardcode for testing
+      const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ'
       const frontendUrl = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
       console.log('🔄 Using code verifier:', codeVerifier.substring(0, 10) + '...')
 
       // Exchange code for access token
-      const clientId = Deno.env.get('KICK_CLIENT_ID')!
-      const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')!
+      const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ'
+      const clientSecret = '4f9941ca9147c4ea96e6612ef140a3761760daa479bba1f36023ce4616063105'
       const redirectUri = `${origin}/auth/callback`
 
       const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
