@@ -101,5 +101,65 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Gaming animations */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: var(--glow-green); }
+    50% { box-shadow: var(--glow-purple); }
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes slide-in {
+    from { 
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Gaming utility classes */
+  .gaming-card {
+    @apply bg-gradient-to-br from-card via-card to-secondary/50 border border-border/50 backdrop-blur-sm;
+    box-shadow: var(--shadow-gaming);
+  }
+
+  .gaming-button {
+    @apply relative overflow-hidden bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold;
+    transition: all 0.3s ease;
+  }
+
+  .gaming-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glow-green);
+  }
+
+  .roulette-spin {
+    animation: spin-slow 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  }
+
+  .chat-message {
+    animation: slide-in 0.3s ease-out;
+  }
+
+  .floating-element {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 }
