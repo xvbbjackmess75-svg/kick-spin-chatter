@@ -82,6 +82,15 @@ export default function Giveaways() {
   const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
+    // Check if in guest mode
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    
+    if (isGuestMode) {
+      // For guest mode, don't fetch from database, just stop loading
+      setLoading(false);
+      return;
+    }
+    
     if (user) {
       fetchGiveaways();
       initializeWebSocket();
@@ -89,6 +98,13 @@ export default function Giveaways() {
   }, [user]);
 
   const fetchGiveaways = async () => {
+    // Don't fetch if in guest mode
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (isGuestMode) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('giveaways')
@@ -681,6 +697,71 @@ export default function Giveaways() {
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green mx-auto" />
           <p className="text-muted-foreground">Loading giveaways...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if in guest mode
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
+  // Guest mode - show demo/informational content
+  if (isGuestMode) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="text-center py-12 bg-gradient-primary/10 rounded-xl border border-primary/20">
+            <div className="max-w-2xl mx-auto px-6">
+              <Gift className="h-16 w-16 text-primary mx-auto mb-4" />
+              <h1 className="text-3xl font-bold text-foreground mb-4">Giveaway Manager</h1>
+              <p className="text-xl text-muted-foreground mb-6">
+                This is where you'll manage your Kick.com giveaways with real-time chat integration.
+              </p>
+              <p className="text-muted-foreground mb-8">
+                <strong>Guest Mode:</strong> You're viewing this as a guest. To create and manage real giveaways, 
+                please sign up for an account or connect your Kick account.
+              </p>
+              <Button 
+                className="gaming-button" 
+                onClick={() => window.location.href = '/auth'}
+              >
+                Sign Up to Get Started
+              </Button>
+            </div>
+          </div>
+
+          {/* Demo Features */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="gaming-card">
+              <CardContent className="p-6 text-center">
+                <Monitor className="h-12 w-12 text-accent mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Real-time Chat Monitoring</h3>
+                <p className="text-sm text-muted-foreground">
+                  Monitor your Kick chat for giveaway keywords and automatically add participants.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="gaming-card">
+              <CardContent className="p-6 text-center">
+                <Trophy className="h-12 w-12 text-kick-green mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Fair Winner Selection</h3>
+                <p className="text-sm text-muted-foreground">
+                  Provably fair roulette system ensures every participant has an equal chance to win.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="gaming-card">
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 text-purple-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Participant Management</h3>
+                <p className="text-sm text-muted-foreground">
+                  Track participants, manage entries, and handle multiple winners per giveaway.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
