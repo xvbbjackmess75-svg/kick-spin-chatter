@@ -199,6 +199,47 @@ export type Database = {
           },
         ]
       }
+      giveaway_winners: {
+        Row: {
+          created_at: string
+          giveaway_id: string
+          id: string
+          tickets_per_participant: number | null
+          total_tickets: number | null
+          winner_username: string
+          winning_ticket: number | null
+          won_at: string
+        }
+        Insert: {
+          created_at?: string
+          giveaway_id: string
+          id?: string
+          tickets_per_participant?: number | null
+          total_tickets?: number | null
+          winner_username: string
+          winning_ticket?: number | null
+          won_at?: string
+        }
+        Update: {
+          created_at?: string
+          giveaway_id?: string
+          id?: string
+          tickets_per_participant?: number | null
+          total_tickets?: number | null
+          winner_username?: string
+          winning_ticket?: number | null
+          won_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giveaway_winners_giveaway_id_fkey"
+            columns: ["giveaway_id"]
+            isOneToOne: false
+            referencedRelation: "giveaways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       giveaways: {
         Row: {
           channel_id: string | null

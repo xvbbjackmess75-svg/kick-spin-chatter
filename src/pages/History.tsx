@@ -22,14 +22,19 @@ import { format } from "date-fns";
 interface Winner {
   id: string;
   title: string;
-  winner_user_id: string;
+  winners: Array<{
+    id: string;
+    winner_username: string;
+    winning_ticket?: number;
+    total_tickets?: number;
+    tickets_per_participant?: number;
+    won_at: string;
+  }>;
   participants_count: number;
   created_at: string;
   updated_at: string;
   description?: string;
-  winning_ticket?: number;
-  total_tickets?: number;
-  tickets_per_participant?: number;
+  status: string;
 }
 
 export default function History() {
@@ -52,9 +57,11 @@ export default function History() {
     if (searchTerm.trim() === "") {
       setFilteredWinners(winners);
     } else {
-      const filtered = winners.filter(winner => 
-        winner.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        winner.winner_user_id.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = winners.filter(giveaway => 
+        giveaway.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        giveaway.winners.some(winner => 
+          winner.winner_username.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       );
       setFilteredWinners(filtered);
     }
@@ -66,10 +73,18 @@ export default function History() {
       
       const { data, error } = await supabase
         .from('giveaways')
-        .select('*')
+        .select(`
+          *,
+          giveaway_winners!inner(
+            id,
+            winner_username,
+            winning_ticket,
+            total_tickets,
+            tickets_per_participant,
+            won_at
+          )
+        `)
         .eq('user_id', user?.id)
-        .eq('status', 'completed')
-        .not('winner_user_id', 'is', null)
         .order('updated_at', { ascending: false });
 
       console.log("📚 HISTORY: Database query result:", {
@@ -79,15 +94,21 @@ export default function History() {
           id: d.id,
           title: d.title,
           status: d.status,
-          winner: d.winner_user_id,
+          winnersCount: d.giveaway_winners?.length || 0,
           updated_at: d.updated_at
         }))
       });
 
       if (error) throw error;
       
-      setWinners(data || []);
-      console.log("📚 HISTORY: Winners set, total:", data?.length || 0);
+      // Transform data to group winners by giveaway
+      const transformedData = data?.map(giveaway => ({
+        ...giveaway,
+        winners: giveaway.giveaway_winners || []
+      })) || [];
+      
+      setWinners(transformedData);
+      console.log("📚 HISTORY: Winners set, total giveaways:", transformedData.length);
     } catch (error) {
       console.error('Error fetching winners:', error);
       toast({
@@ -167,7 +188,7 @@ export default function History() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {winners.reduce((sum, winner) => sum + (winner.participants_count || 0), 0)}
+                      {winners.reduce((sum, giveaway) => sum + (giveaway.participants_count || 0), 0)}
                     </p>
                     <p className="text-sm text-muted-foreground">Total Participants</p>
                   </div>
@@ -183,9 +204,9 @@ export default function History() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {new Set(winners.map(w => w.winner_user_id)).size}
+                      {winners.reduce((sum, giveaway) => sum + giveaway.winners.length, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Unique Winners</p>
+                    <p className="text-sm text-muted-foreground">Total Winners</p>
                   </div>
                 </div>
               </CardContent>
@@ -222,44 +243,21 @@ export default function History() {
             </Card>
           ) : (
             <div className="grid gap-6">
-              {filteredWinners.map((winner) => {
-                const channelMatch = winner.description?.match(/Channel: ([^,]+)/);
-                const keywordMatch = winner.description?.match(/Keyword: (.+)/);
+              {filteredWinners.map((giveaway) => {
+                const channelMatch = giveaway.description?.match(/Channel: ([^,]+)/);
+                const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
                 const channel = channelMatch?.[1]?.trim();
                 const keyword = keywordMatch?.[1]?.trim();
 
                 return (
-                  <Card key={winner.id} className="gaming-card hover:shadow-lg transition-all duration-200">
+                  <Card key={giveaway.id} className="gaming-card hover:shadow-lg transition-all duration-200">
                     <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                      <div className="space-y-6">
                         
-                        {/* Winner Info */}
-                        <div className="flex items-center gap-4">
-                          <Avatar className="w-16 h-16 border-4 border-kick-green/30">
-                            <AvatarImage 
-                              src={`https://files.kick.com/images/user/${winner.winner_user_id}/profile_image/conversion/300x300-medium.webp`}
-                              alt={winner.winner_user_id}
-                              onError={(e) => {
-                                e.currentTarget.src = '/placeholder-avatar.jpg';
-                              }}
-                            />
-                            <AvatarFallback className="bg-kick-green text-kick-dark font-bold">
-                              {winner.winner_user_id.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                        {/* Giveaway Header */}
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                           <div>
-                            <h3 className="text-xl font-bold text-foreground">{winner.winner_user_id}</h3>
-                            <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30">
-                              <Crown className="h-3 w-3 mr-1" />
-                              Winner
-                            </Badge>
-                          </div>
-                        </div>
-
-                        {/* Giveaway Details */}
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <h4 className="text-lg font-semibold text-foreground">{winner.title}</h4>
+                            <h4 className="text-xl font-semibold text-foreground">{giveaway.title}</h4>
                             <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                               {channel && (
                                 <div className="flex items-center gap-1">
@@ -275,48 +273,84 @@ export default function History() {
                               )}
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3" />
-                                <span>{winner.participants_count || 0} participants</span>
+                                <span>{giveaway.participants_count || 0} participants</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Crown className="h-3 w-3" />
+                                <span>{giveaway.winners.length} winner{giveaway.winners.length !== 1 ? 's' : ''}</span>
                               </div>
                             </div>
-                            
-                            {/* Provably Fair Information */}
-                            {winner.winning_ticket && (
-                              <div className="mt-3 p-3 bg-secondary/50 rounded-lg border">
-                                <h5 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                                  <Trophy className="h-4 w-4 text-kick-green" />
-                                  Provably Fair Results
-                                </h5>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                                  <div className="text-center">
-                                    <div className="text-lg font-bold text-kick-green">#{winner.winning_ticket}</div>
-                                    <div className="text-muted-foreground">Winning Ticket</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-lg font-bold text-foreground">{winner.total_tickets}</div>
-                                    <div className="text-muted-foreground">Total Tickets</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-lg font-bold text-foreground">{winner.tickets_per_participant}</div>
-                                    <div className="text-muted-foreground">Per Participant</div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                          </div>
+                          <div className="text-right">
+                            <Badge className={`${giveaway.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'} border-0`}>
+                              {giveaway.status === 'completed' ? 'Completed' : 'Active'}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Created: {format(new Date(giveaway.created_at), 'MMM dd, yyyy')}
+                            </p>
                           </div>
                         </div>
 
-                        {/* Date Info */}
-                        <div className="text-right space-y-1">
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            <span>Won on</span>
-                          </div>
-                          <p className="text-sm font-medium">
-                            {format(new Date(winner.updated_at), 'MMM dd, yyyy')}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(winner.updated_at), 'HH:mm')}
-                          </p>
+                        {/* Winners List */}
+                        <div className="space-y-4">
+                          <h5 className="text-lg font-medium text-foreground flex items-center gap-2">
+                            <Trophy className="h-5 w-5 text-kick-green" />
+                            Winners ({giveaway.winners.length})
+                          </h5>
+                          
+                          {giveaway.winners.map((winner, index) => (
+                            <div key={winner.id} className="bg-secondary/30 rounded-lg p-4 border">
+                              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                                
+                                {/* Winner Info */}
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-kick-green/20 rounded-full flex items-center justify-center text-kick-green font-bold text-sm">
+                                      #{index + 1}
+                                    </div>
+                                    <Avatar className="w-12 h-12 border-2 border-kick-green/30">
+                                      <AvatarImage 
+                                        src={`https://files.kick.com/images/user/${winner.winner_username}/profile_image/conversion/300x300-medium.webp`}
+                                        alt={winner.winner_username}
+                                        onError={(e) => {
+                                          e.currentTarget.src = '/placeholder-avatar.jpg';
+                                        }}
+                                      />
+                                      <AvatarFallback className="bg-kick-green text-kick-dark font-bold">
+                                        {winner.winner_username.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </div>
+                                  <div>
+                                    <h6 className="font-semibold text-foreground">{winner.winner_username}</h6>
+                                    <p className="text-sm text-muted-foreground">
+                                      Won on {format(new Date(winner.won_at), 'MMM dd, yyyy HH:mm')}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Provably Fair Info */}
+                                {winner.winning_ticket && (
+                                  <div className="flex-1">
+                                    <div className="grid grid-cols-3 gap-3 text-center">
+                                      <div>
+                                        <div className="text-lg font-bold text-kick-green">#{winner.winning_ticket}</div>
+                                        <div className="text-xs text-muted-foreground">Winning Ticket</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-lg font-bold text-foreground">{winner.total_tickets}</div>
+                                        <div className="text-xs text-muted-foreground">Total Tickets</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-lg font-bold text-foreground">{winner.tickets_per_participant}</div>
+                                        <div className="text-xs text-muted-foreground">Per Participant</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </CardContent>

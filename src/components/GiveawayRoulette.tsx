@@ -22,9 +22,17 @@ interface GiveawayRouletteProps {
   participants: Participant[];
   onAcceptWinner: (winner: Participant, result: WinnerResult) => void;
   onRerollWinner: () => void;
+  onAddAnotherWinner?: () => void;
+  onEndGiveaway?: () => void;
 }
 
-export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner }: GiveawayRouletteProps) {
+export function GiveawayRoulette({ 
+  participants, 
+  onAcceptWinner, 
+  onRerollWinner, 
+  onAddAnotherWinner,
+  onEndGiveaway 
+}: GiveawayRouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
@@ -317,7 +325,7 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button 
                   onClick={handleAcceptWinner}
                   className="bg-kick-green hover:bg-kick-green/80 text-kick-dark font-bold"
@@ -333,6 +341,24 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reroll
                 </Button>
+                {onAddAnotherWinner && (
+                  <Button 
+                    onClick={onAddAnotherWinner}
+                    variant="outline"
+                    className="border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white font-semibold"
+                  >
+                    Add Another Winner
+                  </Button>
+                )}
+                {onEndGiveaway && (
+                  <Button 
+                    onClick={onEndGiveaway}
+                    variant="outline"
+                    className="border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold"
+                  >
+                    End Giveaway
+                  </Button>
+                )}
               </div>
             </div>
           </div>

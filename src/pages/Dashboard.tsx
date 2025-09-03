@@ -385,45 +385,107 @@ export default function Dashboard() {
     });
 
     try {
-      // Update giveaway with winner and completed status including provably fair data
-      const { data, error } = await supabase
-        .from('giveaways')
-        .update({ 
-          winner_user_id: winner.username,
-          status: 'completed',
+      // Add winner to the giveaway_winners table (keeping giveaway active)
+      const { data: winnerData, error: winnerError } = await supabase
+        .from('giveaway_winners')
+        .insert({
+          giveaway_id: currentGiveaway.id,
+          winner_username: winner.username,
           winning_ticket: result.winningTicket,
           total_tickets: result.totalTickets,
           tickets_per_participant: result.ticketsPerParticipant
         })
-        .eq('id', currentGiveaway.id)
-        .select(); // Return updated data to verify
+        .select();
 
-      if (error) {
-        console.error("❌ Database update error:", error);
-        throw error;
+      if (winnerError) {
+        console.error("❌ Winner insert error:", winnerError);
+        throw winnerError;
       }
 
-      console.log("✅ Database updated successfully:", data);
+      console.log("✅ Winner added successfully:", winnerData);
 
       toast({
-        title: "Winner Accepted!",
-        description: `${winner.username} has been confirmed as the winner! Check History page.`,
+        title: "Winner Added!",
+        description: `${winner.username} has been added as a winner! You can add more winners or end the giveaway.`,
       });
 
-      // Reset states
+      // Reset roulette for next winner selection
       setCurrentGiveaway(null);
       setParticipants([]);
       
       // Refresh giveaways to update the UI
       await fetchGiveaways();
       
-      console.log("🔄 Dashboard refreshed, winner should now appear in History");
+      console.log("🔄 Dashboard refreshed, winner added to giveaway");
       
     } catch (error) {
       console.error('Error accepting winner:', error);
       toast({
         title: "Error",
         description: `Failed to accept winner: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddAnotherWinner = async () => {
+    if (!currentGiveaway) return;
+    
+    try {
+      // Fetch fresh participants for the giveaway
+      const { data: participantsData, error } = await supabase
+        .from('giveaway_participants')
+        .select('*')
+        .eq('giveaway_id', currentGiveaway.id);
+
+      if (error) throw error;
+
+      const mappedParticipants: RouletteParticipant[] = participantsData.map((p, index) => ({
+        id: index + 1,
+        username: p.kick_username,
+        avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
+      }));
+
+      console.log("🎯 Adding another winner - participants loaded:", mappedParticipants.length);
+      
+      setParticipants(mappedParticipants);
+      
+    } catch (error) {
+      console.error('Error loading participants for another winner:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load participants for another winner",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEndGiveaway = async () => {
+    if (!currentGiveaway) return;
+
+    try {
+      // Mark giveaway as completed
+      const { error } = await supabase
+        .from('giveaways')
+        .update({ status: 'completed' })
+        .eq('id', currentGiveaway.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Giveaway Ended!",
+        description: "The giveaway has been marked as completed.",
+      });
+
+      setCurrentGiveaway(null);
+      setParticipants([]);
+      await fetchGiveaways();
+      
+    } catch (error) {
+      console.error('Error ending giveaway:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to end giveaway",
         variant: "destructive"
       });
     }
@@ -852,6 +914,8 @@ export default function Dashboard() {
             participants={participants}
             onAcceptWinner={handleAcceptWinner}
             onRerollWinner={handleRerollWinner}
+            onAddAnotherWinner={handleAddAnotherWinner}
+            onEndGiveaway={handleEndGiveaway}
           />
         )}
 
