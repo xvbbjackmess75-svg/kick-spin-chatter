@@ -39,6 +39,7 @@ export default function History() {
 
   useEffect(() => {
     if (user) {
+      console.log("📚 HISTORY: Component mounted, fetching winners...");
       fetchWinners();
     }
   }, [user]);
@@ -58,6 +59,8 @@ export default function History() {
 
   const fetchWinners = async () => {
     try {
+      console.log("📚 HISTORY: Fetching winners for user:", user?.id);
+      
       const { data, error } = await supabase
         .from('giveaways')
         .select('*')
@@ -66,8 +69,22 @@ export default function History() {
         .not('winner_user_id', 'is', null)
         .order('updated_at', { ascending: false });
 
+      console.log("📚 HISTORY: Database query result:", {
+        error,
+        dataLength: data?.length || 0,
+        data: data?.map(d => ({
+          id: d.id,
+          title: d.title,
+          status: d.status,
+          winner: d.winner_user_id,
+          updated_at: d.updated_at
+        }))
+      });
+
       if (error) throw error;
+      
       setWinners(data || []);
+      console.log("📚 HISTORY: Winners set, total:", data?.length || 0);
     } catch (error) {
       console.error('Error fetching winners:', error);
       toast({

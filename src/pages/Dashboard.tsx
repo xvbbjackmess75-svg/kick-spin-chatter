@@ -376,36 +376,51 @@ export default function Dashboard() {
   const handleAcceptWinner = async (winner: RouletteParticipant, result: any) => {
     if (!currentGiveaway) return;
 
+    console.log("🏆 ACCEPTING WINNER:", {
+      giveaway: currentGiveaway.title,
+      giveawayId: currentGiveaway.id,
+      winner: winner.username,
+      winningTicket: result.winningTicket,
+      currentStatus: currentGiveaway.status
+    });
+
     try {
-      await supabase
+      // Update giveaway with winner and completed status
+      const { data, error } = await supabase
         .from('giveaways')
         .update({ 
           winner_user_id: winner.username,
           status: 'completed'
         })
-        .eq('id', currentGiveaway.id);
+        .eq('id', currentGiveaway.id)
+        .select(); // Return updated data to verify
+
+      if (error) {
+        console.error("❌ Database update error:", error);
+        throw error;
+      }
+
+      console.log("✅ Database updated successfully:", data);
 
       toast({
         title: "Winner Accepted!",
-        description: `${winner.username} has been confirmed as the winner!`,
-      });
-
-      console.log("🏆 Winner accepted and saved to history:", {
-        giveaway: currentGiveaway.title,
-        winner: winner.username,
-        winningTicket: result.winningTicket
+        description: `${winner.username} has been confirmed as the winner! Check History page.`,
       });
 
       // Reset states
       setCurrentGiveaway(null);
       setParticipants([]);
-      fetchGiveaways();
+      
+      // Refresh giveaways to update the UI
+      await fetchGiveaways();
+      
+      console.log("🔄 Dashboard refreshed, winner should now appear in History");
       
     } catch (error) {
       console.error('Error accepting winner:', error);
       toast({
         title: "Error",
-        description: "Failed to accept winner",
+        description: `Failed to accept winner: ${error.message}`,
         variant: "destructive"
       });
     }
