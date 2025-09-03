@@ -58,16 +58,48 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const generatePKCE = () => {
+    // Generate a random code verifier
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    const codeVerifier = btoa(String.fromCharCode.apply(null, Array.from(array)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    // Generate code challenge
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    return crypto.subtle.digest('SHA-256', data).then(hash => {
+      const codeChallenge = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(hash))))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      
+      return { codeVerifier, codeChallenge };
+    });
+  };
+
   const handleKickAuth = async () => {
     setLoading(true);
     
     try {
-      // Build the Kick OAuth URL with proper parameters
+      // Generate PKCE parameters
+      const { codeVerifier, codeChallenge } = await generatePKCE();
+      
+      // Store code verifier for later use in token exchange
+      localStorage.setItem('kick_code_verifier', codeVerifier);
+      
+      // Build the Kick OAuth URL with proper parameters including PKCE
       const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ';
       const redirectUri = encodeURIComponent(`${window.location.origin}/kick-callback`);
       const scope = encodeURIComponent('user:read');
+      const state = crypto.randomUUID();
       
-      const kickAuthUrl = `https://id.kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=oauth_state`;
+      // Store state for validation
+      localStorage.setItem('kick_oauth_state', state);
+      
+      const kickAuthUrl = `https://id.kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
       
       // Redirect to Kick OAuth
       window.location.href = kickAuthUrl;
