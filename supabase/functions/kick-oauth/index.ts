@@ -28,20 +28,22 @@ interface KickTokenResponse {
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
-  return btoa(String.fromCharCode.apply(null, Array.from(array)))
+  const verifier = btoa(String.fromCharCode(...Array.from(array)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
+  return verifier
 }
 
 async function generateCodeChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(verifier)
   const digest = await crypto.subtle.digest('SHA-256', data)
-  return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+  const challenge = btoa(String.fromCharCode(...Array.from(new Uint8Array(digest))))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
+  return challenge
 }
 
 Deno.serve(async (req) => {
@@ -64,6 +66,14 @@ Deno.serve(async (req) => {
       // For authorize action, also get the origin from body
       if (action === 'authorize' && body.origin) {
         url.searchParams.set('origin', body.origin)
+      }
+      
+      // For exchange action, get additional parameters
+      if (action === 'exchange') {
+        if (body.code) url.searchParams.set('code', body.code)
+        if (body.state) url.searchParams.set('state', body.state)
+        if (body.code_verifier) url.searchParams.set('code_verifier', body.code_verifier)
+        if (body.origin) url.searchParams.set('origin', body.origin)
       }
     }
     
@@ -91,6 +101,9 @@ Deno.serve(async (req) => {
       const codeVerifier = generateCodeVerifier()
       const codeChallenge = await generateCodeChallenge(codeVerifier)
       
+      console.log('🔧 PKCE - Code Verifier generated:', codeVerifier.substring(0, 10) + '...')
+      console.log('🔧 PKCE - Code Challenge generated:', codeChallenge.substring(0, 10) + '...')
+      
       const authUrl = new URL('https://id.kick.com/oauth/authorize')
       authUrl.searchParams.set('client_id', clientId)
       authUrl.searchParams.set('redirect_uri', redirectUri)
@@ -114,14 +127,19 @@ Deno.serve(async (req) => {
     if (action === 'exchange') {
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
-      const codeVerifier = url.searchParams.get('code_verifier') // This should come from the client
+      const codeVerifier = url.searchParams.get('code_verifier')
       const origin = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       
       if (!code) {
         throw new Error('No authorization code received')
       }
 
+      if (!codeVerifier) {
+        throw new Error('No code verifier provided')
+      }
+
       console.log('🔄 Processing OAuth callback with code:', code.substring(0, 10) + '...')
+      console.log('🔄 Using code verifier:', codeVerifier.substring(0, 10) + '...')
 
       // Exchange code for access token
       const clientId = Deno.env.get('KICK_CLIENT_ID')!
@@ -139,14 +157,14 @@ Deno.serve(async (req) => {
           client_secret: clientSecret,
           redirect_uri: redirectUri,
           code: code,
-          code_verifier: codeVerifier || '', // PKCE code verifier
+          code_verifier: codeVerifier,
         }),
       })
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text()
         console.error('❌ Token exchange failed:', errorText)
-        throw new Error(`Token exchange failed: ${tokenResponse.status}`)
+        throw new Error(`Token exchange failed: ${tokenResponse.status} - ${errorText}`)
       }
 
       const tokenData: KickTokenResponse = await tokenResponse.json()
