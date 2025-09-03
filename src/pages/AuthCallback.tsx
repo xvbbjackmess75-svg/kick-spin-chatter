@@ -27,9 +27,20 @@ export default function AuthCallback() {
 
       if (code) {
         try {
+          console.log('🔄 Callback Debug - Code received:', code.substring(0, 10) + '...')
+          console.log('🔄 Callback Debug - State received:', state)
+          
           // Get stored code verifier
           const codeVerifier = sessionStorage.getItem('kick_code_verifier');
+          console.log('🔄 Callback Debug - Code verifier from storage:', !!codeVerifier)
           sessionStorage.removeItem('kick_code_verifier'); // Clean up
+          
+          if (!codeVerifier) {
+            console.error('❌ No code verifier found in sessionStorage')
+            throw new Error('No code verifier found. Please try logging in again.')
+          }
+          
+          console.log('🔄 Calling exchange function...')
           
           // Exchange the code for tokens via our edge function
           const response = await supabase.functions.invoke('kick-oauth', {
@@ -41,6 +52,8 @@ export default function AuthCallback() {
               origin: window.location.origin
             }
           });
+
+          console.log('🔄 Exchange response:', response)
 
           if (response.error) {
             throw response.error;
