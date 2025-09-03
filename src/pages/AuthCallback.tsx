@@ -14,6 +14,10 @@ export default function AuthCallback() {
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
+      
+      // Check if this is account linking mode
+      const isLinkingMode = sessionStorage.getItem('kick_linking_mode') === 'true';
+      sessionStorage.removeItem('kick_linking_mode'); // Clean up
 
       if (error) {
         toast({
@@ -83,7 +87,7 @@ export default function AuthCallback() {
               avatar: user.avatar
             });
             
-            // Store Kick user info in localStorage since we're not using Supabase auth for Kick
+            // Store Kick user info in localStorage
             localStorage.setItem('kick_user', JSON.stringify({
               id: user.id,
               username: user.username,
@@ -98,12 +102,17 @@ export default function AuthCallback() {
               localStorage.setItem('kick_token', JSON.stringify(token_info));
             }
 
+            const successMessage = isLinkingMode 
+              ? `Kick account @${user.username} linked successfully!`
+              : `Successfully signed in with Kick as ${user.username}`;
+
             toast({
-              title: "Welcome!",
-              description: `Successfully signed in with Kick as ${user.username}`,
+              title: isLinkingMode ? "Account Linked!" : "Welcome!",
+              description: successMessage,
             });
             
-            navigate('/');
+            // Redirect based on mode
+            navigate(isLinkingMode ? '/account' : '/');
           } else {
             throw new Error('OAuth exchange failed - no user data received');
           }

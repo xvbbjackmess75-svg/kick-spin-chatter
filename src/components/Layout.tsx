@@ -137,9 +137,12 @@ export function Layout({ children }: LayoutProps) {
                   {userInfo.initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:block">
+              <Link 
+                to="/account" 
+                className="text-sm font-medium hidden sm:block hover:text-primary transition-colors cursor-pointer"
+              >
                 {userInfo.displayName}
-              </span>
+              </Link>
             </div>
             
             <Button 

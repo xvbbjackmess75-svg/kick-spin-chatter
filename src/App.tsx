@@ -16,6 +16,7 @@ import Giveaways from "./pages/Giveaways";
 import Commands from "./pages/Commands";
 import ChatMonitor from "./pages/ChatMonitor";
 import BotSettings from "./pages/BotSettings";
+import Account from "./pages/Account";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,14 @@ const App = () => (
                   <Layout>
                     <History />
                   </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <Account />
                 </ProtectedRoute>
               }
             />
