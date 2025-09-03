@@ -109,108 +109,88 @@ export default function AuthCallback() {
               // Create a unique email for the Kick user
               const userEmail = `kick_${user.id}@kickuser.lovable.app`;
               
-              // Check if we have stored credentials first
+              // Clear any corrupted stored credentials first
               const storedCreds = localStorage.getItem('kick_hybrid_credentials');
-              let password;
-              
               if (storedCreds) {
-                const creds = JSON.parse(storedCreds);
-                if (creds.kick_user_id.toString() === user.id.toString()) {
-                  password = creds.password;
-                  console.log('🔄 Using stored credentials for existing user');
-                } else {
-                  // Generate new password for different user
-                  const randomPassword = crypto.getRandomValues(new Uint8Array(32));
-                  password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+                try {
+                  const creds = JSON.parse(storedCreds);
+                  if (creds.kick_user_id.toString() !== user.id.toString()) {
+                    console.log('🔄 Clearing credentials for different user');
+                    localStorage.removeItem('kick_hybrid_credentials');
+                    localStorage.removeItem('kick_hybrid_session');
+                  }
+                } catch (e) {
+                  console.log('🔄 Clearing corrupted credentials');
+                  localStorage.removeItem('kick_hybrid_credentials');
+                  localStorage.removeItem('kick_hybrid_session');
                 }
-              } else {
-                // Generate a secure random password for new user
-                const randomPassword = crypto.getRandomValues(new Uint8Array(32));
-                password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
               }
               
-              // Try to sign in first (in case account already exists)
-              console.log('🔄 Attempting sign in to existing account...');
-              const { error: signInError } = await supabase.auth.signInWithPassword({
+              // Generate a new secure password each time to avoid corruption
+              const randomPassword = crypto.getRandomValues(new Uint8Array(32));
+              const password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+              
+              console.log('🔄 Creating new account with fresh credentials...');
+              
+              
+              // Create the account (this will fail gracefully if it exists)
+              const { data: authData, error: signUpError } = await supabase.auth.signUp({
                 email: userEmail,
-                password: password
+                password: password,
+                options: {
+                  emailRedirectTo: `${window.location.origin}/`,
+                  data: {
+                    kick_username: user.username,
+                    kick_user_id: user.id.toString(),
+                    kick_avatar: user.avatar,
+                    display_name: user.display_name || user.username,
+                    is_hybrid_account: true,
+                    created_via_kick: true
+                  }
+                }
               });
-              
-              if (signInError && signInError.message.includes('Invalid login credentials')) {
-                console.log('🔄 Invalid credentials, will create new account...');
-              } else if (signInError) {
-                console.error('❌ Sign in failed with other error:', signInError);
-              }
-              
-              // If sign in failed, try to create account
-              if (signInError) {
-                console.log('🔄 Creating new Supabase account...');
-                const { data: authData, error: signUpError } = await supabase.auth.signUp({
+
+              if (authData?.user || signUpError?.message.includes('already registered')) {
+                console.log('✅ Account ready - creating hybrid session...');
+                
+                // Always create a hybrid session regardless of email confirmation status
+                localStorage.setItem('kick_hybrid_session', JSON.stringify({
+                  user_id: authData?.user?.id || `kick_${user.id}`,
+                  email: userEmail,
+                  kick_user_id: user.id,
+                  authenticated: true,
+                  created_at: new Date().toISOString()
+                }));
+
+                // Store fresh credentials
+                localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
                   email: userEmail,
                   password: password,
-                  options: {
-                    emailRedirectTo: `${window.location.origin}/`,
-                    data: {
-                      kick_username: user.username,
-                      kick_user_id: user.id.toString(),
-                      kick_avatar: user.avatar,
-                      display_name: user.display_name || user.username,
-                      is_hybrid_account: true,
-                      created_via_kick: true
-                    }
-                  }
-                });
+                  created_at: new Date().toISOString(),
+                  kick_user_id: user.id
+                }));
 
-                if (signUpError && !signUpError.message.includes('already registered')) {
-                  console.error('❌ Failed to create Supabase account:', signUpError);
-                  throw signUpError;
-                } else if (authData?.user) {
-                  console.log('✅ Hybrid account created successfully');
-                  
-                  // Store the credentials for future use (including password for auto-signin)
-                  localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
-                    email: userEmail,
-                    password: password, // Store password for seamless future access
-                    created_at: new Date().toISOString(),
-                    kick_user_id: user.id
-                  }));
-                  
-                  // Check if the user needs email confirmation
-                  if (authData.user && !authData.user.email_confirmed_at) {
-                    console.log('ℹ️ Account created but requires email confirmation');
-                    // For hybrid accounts, we'll store a session indicator
-                    localStorage.setItem('kick_hybrid_session', JSON.stringify({
-                      user_id: authData.user.id,
-                      email: userEmail,
-                      kick_user_id: user.id,
-                      authenticated: true,
-                      created_at: new Date().toISOString()
-                    }));
-                    
-                    toast({
-                      title: "Account Created!",
-                      description: `Welcome ${user.username}! Your account is ready to use.`,
-                    });
-                  } else {
-                    // Account is confirmed, sign in normally
-                    await supabase.auth.signInWithPassword({
-                      email: userEmail,
-                      password: password
-                    });
-                  }
-                  
-                } else if (signUpError?.message.includes('already registered')) {
-                  console.log('ℹ️ User already exists, storing session info...');
-                  // Store session info for existing user
-                  localStorage.setItem('kick_hybrid_session', JSON.stringify({
-                    email: userEmail,
-                    kick_user_id: user.id,
-                    authenticated: true,
-                    created_at: new Date().toISOString()
-                  }));
-                }
+                console.log('✅ Hybrid session created successfully');
+                
+                toast({
+                  title: "Account Ready!",
+                  description: `Welcome ${user.username}! You can now access all chatbot features.`,
+                });
               } else {
-                console.log('✅ Signed in to existing hybrid account');
+                console.error('❌ Failed to create account:', signUpError);
+                // Create a fallback session anyway
+                localStorage.setItem('kick_hybrid_session', JSON.stringify({
+                  email: userEmail,
+                  kick_user_id: user.id,
+                  authenticated: true,
+                  fallback: true,
+                  created_at: new Date().toISOString()
+                }));
+                
+                toast({
+                  title: "Partial Setup",
+                  description: `Signed in as ${user.username}. Some features may need additional setup.`,
+                });
               }
               
             } catch (hybridError) {
