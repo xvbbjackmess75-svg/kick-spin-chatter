@@ -25,6 +25,9 @@ interface KickTokenResponse {
 }
 
 Deno.serve(async (req) => {
+  console.log('🚀 Kick OAuth function called with method:', req.method)
+  console.log('🚀 Request URL:', req.url)
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -43,6 +46,8 @@ Deno.serve(async (req) => {
         url.searchParams.set('origin', body.origin)
       }
     }
+    
+    console.log('🎯 Action determined:', action)
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
