@@ -106,8 +106,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setShowWinner(false);
       
       const participantWidth = 80;
-      const containerWidth = 800;
-      const centerOffset = containerWidth / 2 - participantWidth / 2;
+      const containerWidth = 800; // Container width
+      const centerLinePosition = containerWidth / 2; // Center line at 400px
       
       // Generate provably fair result
       const result = selectWinnerTicket(participants);
@@ -121,30 +121,55 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         targetWinner = participants[result.winnerTicket];
       }
       
-      // Calculate how many complete cycles of participants we want to scroll through
-      const minCycles = 15; // Minimum cycles for good effect
-      const maxCycles = 25; // Maximum cycles
-      const cycles = minCycles + Math.random() * (maxCycles - minCycles);
-      
-      // Find the winner's position in one complete cycle
-      const winnerIndexInCycle = participants.findIndex(p => p.id === targetWinner.id);
-      if (winnerIndexInCycle === -1) {
+      // Find the winner's position in the original participants array
+      const winnerIndexInOriginal = participants.findIndex(p => p.id === targetWinner.id);
+      if (winnerIndexInOriginal === -1) {
         console.error("Winner not found in participants");
         setIsAnimating(false);
         return;
       }
       
-      // Calculate final position
-      const cycleLength = participants.length * participantWidth;
-      const baseCycles = Math.floor(cycles);
-      const baseDistance = baseCycles * cycleLength;
-      const winnerPosition = winnerIndexInCycle * participantWidth;
+      // Calculate how many complete cycles we want to go through
+      const minCycles = 20; // More cycles for better effect
+      const maxCycles = 30;
+      const cycles = minCycles + Math.random() * (maxCycles - minCycles);
+      
+      // Calculate the total distance to scroll
+      const participantsPerCycle = participants.length;
+      const cycleWidth = participantsPerCycle * participantWidth;
+      const completeCyclesDistance = Math.floor(cycles) * cycleWidth;
+      
+      // Position of winner within one cycle (from left edge of container)
+      const winnerPositionInCycle = winnerIndexInOriginal * participantWidth;
+      
+      // Calculate where the winner's center will be
+      const winnerCenterPosition = winnerPositionInCycle + (participantWidth / 2);
+      
+      // Calculate how much we need to scroll so the winner's center aligns with the center line
+      // We want: winnerCenterPosition - scrollPosition = centerLinePosition
+      // So: scrollPosition = winnerCenterPosition - centerLinePosition
+      const baseScrollForAlignment = winnerCenterPosition - centerLinePosition;
+      
+      // Add random offset within avatar bounds
       const landingOffset = result.landingOffset;
       
-      const finalPosition = baseDistance + winnerPosition + landingOffset;
+      // Final scroll position
+      const finalScrollPosition = completeCyclesDistance + baseScrollForAlignment + landingOffset;
+      
+      console.log("Debug info:", {
+        winnerUsername: targetWinner.username,
+        winnerIndexInOriginal,
+        winnerPositionInCycle,
+        winnerCenterPosition,
+        centerLinePosition,
+        baseScrollForAlignment,
+        completeCyclesDistance,
+        landingOffset,
+        finalScrollPosition
+      });
       
       // Set the scroll position
-      setScrollPosition(finalPosition);
+      setScrollPosition(finalScrollPosition);
       
       // Animation complete handler
       const animationDuration = 5000; // 5 seconds
