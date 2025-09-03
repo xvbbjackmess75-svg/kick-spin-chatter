@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveChatFeed } from "@/components/LiveChatFeed";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -126,9 +126,10 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Active Giveaways */}
-        <Card className="gaming-card">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="gaming-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -175,10 +176,10 @@ export default function Dashboard() {
               </div>
             ))}
           </CardContent>
-        </Card>
+          </Card>
 
-        {/* Recent Activity */}
-        <Card className="gaming-card">
+          {/* Recent Activity */}
+          <Card className="gaming-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -205,7 +206,13 @@ export default function Dashboard() {
               ))}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
+
+        {/* Live Chat Feed */}
+        <div className="lg:col-span-1">
+          <LiveChatFeed />
+        </div>
       </div>
     </div>
   );

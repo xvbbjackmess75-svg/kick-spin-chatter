@@ -28,6 +28,7 @@ const mainItems = [
 
 const botItems = [
   { title: "Bot Settings", url: "/bot-settings", icon: Bot },
+  { title: "Kick Integration", url: "/kick-integration", icon: Zap },
 ];
 
 export function AppSidebar() {

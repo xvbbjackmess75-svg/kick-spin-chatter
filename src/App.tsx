@@ -9,6 +9,7 @@ import Commands from "./pages/Commands";
 import Giveaways from "./pages/Giveaways";
 import ChatMonitor from "./pages/ChatMonitor";
 import BotSettings from "./pages/BotSettings";
+import KickIntegration from "./pages/KickIntegration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/giveaways" element={<Giveaways />} />
             <Route path="/chat" element={<ChatMonitor />} />
             <Route path="/bot-settings" element={<BotSettings />} />
+            <Route path="/kick-integration" element={<KickIntegration />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RouletteWheel } from "@/components/RouletteWheel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,36 @@ const recentParticipants = [
 export default function Giveaways() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedGiveaway, setSelectedGiveaway] = useState<number | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winner, setWinner] = useState<any>(null);
+
+  // Mock participants for roulette
+  const mockParticipants = [
+    { id: 1, username: "StreamFan99", avatar: "/avatar1.jpg" },
+    { id: 2, username: "GamingQueen", avatar: "/avatar2.jpg" },
+    { id: 3, username: "BotLover", avatar: "/avatar3.jpg" },
+    { id: 4, username: "ChatMaster", avatar: "/avatar4.jpg" },
+    { id: 5, username: "NightOwl", avatar: "/avatar5.jpg" },
+    { id: 6, username: "ProGamer", avatar: "/avatar6.jpg" },
+    { id: 7, username: "StreamLover", avatar: "/avatar7.jpg" },
+    { id: 8, username: "GamerPro123", avatar: "/avatar8.jpg" },
+    { id: 9, username: "ChatKing", avatar: "/avatar9.jpg" },
+    { id: 10, username: "WinnerWins", avatar: "/avatar10.jpg" },
+    { id: 11, username: "LuckyUser", avatar: "/avatar11.jpg" },
+    { id: 12, username: "StreamStar", avatar: "/avatar12.jpg" },
+  ];
+
+  const handleSpin = () => {
+    setIsSpinning(true);
+    setWinner(null);
+    
+    // Simulate spinning duration
+    setTimeout(() => {
+      const randomWinner = mockParticipants[Math.floor(Math.random() * mockParticipants.length)];
+      setWinner(randomWinner);
+      setIsSpinning(false);
+    }, 4000);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -157,9 +188,19 @@ export default function Giveaways() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Roulette Wheel */}
+        <div className="lg:col-span-1">
+          <RouletteWheel 
+            participants={mockParticipants}
+            isSpinning={isSpinning}
+            onSpin={handleSpin}
+            winner={winner}
+          />
+        </div>
+
         {/* Active Giveaways */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-1 space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <Crown className="h-5 w-5 text-accent" />
             <h2 className="text-xl font-semibold text-foreground">Active Giveaways</h2>
@@ -168,7 +209,7 @@ export default function Giveaways() {
             </Badge>
           </div>
 
-          {giveaways.map((giveaway) => (
+          {giveaways.slice(0, 3).map((giveaway) => (
             <Card key={giveaway.id} className="gaming-card hover:scale-[1.02] transition-transform duration-200">
               <CardContent className="p-6">
                 <div className="flex gap-4">
@@ -229,7 +270,7 @@ export default function Giveaways() {
                     <div className="flex gap-2">
                       {giveaway.status === 'active' ? (
                         <>
-                          <Button size="sm" className="gaming-button">
+                          <Button size="sm" className="gaming-button" onClick={handleSpin}>
                             <Zap className="h-3 w-3 mr-2" />
                             Draw Winner
                           </Button>
@@ -255,63 +296,64 @@ export default function Giveaways() {
             </Card>
           ))}
         </div>
+      </div>
 
+      {/* Recent Participants - Now Full Width */}
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Participants */}
-        <div className="space-y-4">
-          <Card className="gaming-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Recent Participants
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {recentParticipants.map((participant, index) => (
-                <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={participant.avatar} />
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
-                      {participant.username.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{participant.username}</p>
-                    <p className="text-xs text-muted-foreground">joined {participant.joinedAt}</p>
-                  </div>
-                  <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse" />
+        <Card className="gaming-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Recent Participants
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentParticipants.map((participant, index) => (
+              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={participant.avatar} />
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
+                    {participant.username.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{participant.username}</p>
+                  <p className="text-xs text-muted-foreground">joined {participant.joinedAt}</p>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <div className="w-2 h-2 bg-kick-green rounded-full animate-pulse" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-          {/* Quick Stats */}
-          <Card className="gaming-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-accent" />
-                Giveaway Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Giveaways</span>
-                <span className="font-semibold text-foreground">24</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Participants</span>
-                <span className="font-semibold text-foreground">1,247</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Active Now</span>
-                <span className="font-semibold text-kick-green">3</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Avg. Participation</span>
-                <span className="font-semibold text-foreground">156</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Quick Stats */}
+        <Card className="gaming-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-accent" />
+              Giveaway Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Giveaways</span>
+              <span className="font-semibold text-foreground">24</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Participants</span>
+              <span className="font-semibold text-foreground">1,247</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Active Now</span>
+              <span className="font-semibold text-kick-green">3</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Avg. Participation</span>
+              <span className="font-semibold text-foreground">156</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
