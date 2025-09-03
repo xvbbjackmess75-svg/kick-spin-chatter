@@ -115,64 +115,58 @@ Deno.serve(async (req) => {
       console.log('✅ Token exchange successful')
 
       console.log('🔧 Getting user info...')
-      // Try to get user data from the token response first
       let kickUser = null
       
-      // Check if user info is included in token response
+      // Check if user info is included in token response first
       if (tokenData.user) {
         kickUser = tokenData.user
         console.log('✅ User info found in token response:', kickUser.username || kickUser.name)
       } else {
-        // Try the authenticated user endpoint
+        // Use the correct Kick API endpoint for authenticated user
         try {
-          const userResponse = await fetch('https://kick.com/api/v2/user/me', {
+          const userResponse = await fetch('https://kick.com/api/v1/user', {
             headers: {
               'Authorization': `Bearer ${tokenData.access_token}`,
               'Accept': 'application/json',
-              'User-Agent': 'KickBot/1.0'
+              'User-Agent': 'KickBot/1.0',
+              'Content-Type': 'application/json'
             },
           })
           
           console.log('🔧 User API response status:', userResponse.status)
-          const responseText = await userResponse.text()
-          console.log('🔧 User API response (first 200 chars):', responseText.substring(0, 200))
+          console.log('🔧 User API response headers:', JSON.stringify(Object.fromEntries(userResponse.headers.entries())))
           
-          if (userResponse.ok && responseText.startsWith('{')) {
-            kickUser = JSON.parse(responseText)
-            console.log('✅ User info retrieved from /me endpoint:', kickUser.username || kickUser.name)
-          } else {
-            console.log('⚠️ /me endpoint failed, trying alternative approach...')
+          if (userResponse.ok) {
+            const responseText = await userResponse.text()
+            console.log('🔧 User API response body (first 300 chars):', responseText.substring(0, 300))
             
-            // Try to extract user info from token if available
-            if (tokenData.user_id || tokenData.username) {
-              kickUser = {
-                id: tokenData.user_id || 'unknown',
-                username: tokenData.username || `user_${Date.now()}`,
-                display_name: tokenData.display_name || tokenData.username || 'Kick User',
-                avatar: tokenData.avatar || null
-              }
-              console.log('✅ Using token data for user info:', kickUser.username)
+            if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+              kickUser = JSON.parse(responseText)
+              console.log('✅ User info retrieved successfully:', kickUser.username || kickUser.name || 'no_username_field')
+              console.log('🔧 Available user fields:', Object.keys(kickUser))
             } else {
-              // Generate a fallback user
-              kickUser = {
-                id: `kick_${Date.now()}`,
-                username: `kick_user_${Math.random().toString(36).substr(2, 8)}`,
-                display_name: 'Kick User',
-                avatar: null
-              }
-              console.log('⚠️ Using fallback user data:', kickUser.username)
+              console.error('❌ Response is not JSON:', responseText.substring(0, 100))
+              throw new Error('API returned non-JSON response')
             }
+          } else {
+            const errorText = await userResponse.text()
+            console.error('❌ User API failed with status:', userResponse.status)
+            console.error('❌ Error response:', errorText.substring(0, 200))
+            throw new Error(`User API failed with status ${userResponse.status}`)
           }
         } catch (error) {
           console.error('❌ User info fetch failed:', error.message)
-          // Create fallback user with timestamp to make it unique
+          console.error('❌ Error details:', error.stack)
+          
+          // Create a fallback user with some randomness to avoid conflicts
+          const randomId = Math.random().toString(36).substr(2, 8)
           kickUser = {
-            id: `kick_${Date.now()}`,
-            username: `kick_user_${Math.random().toString(36).substr(2, 8)}`,
-            display_name: 'Kick User',
+            id: `fallback_${randomId}`,
+            username: `kick_user_${randomId}`,
+            display_name: 'Kick User (API Error)',
             avatar: null
           }
-          console.log('⚠️ Using fallback user due to error:', kickUser.username)
+          console.log('⚠️ Using fallback user due to API error:', kickUser.username)
         }
       }
 
