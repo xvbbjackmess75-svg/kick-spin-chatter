@@ -1,0 +1,228 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface KickUserInfo {
+  id: number
+  username: string
+  display_name: string
+  avatar?: string
+  verified: boolean
+  follower_badges: any[]
+  subscriber_badges: any[]
+  bio?: string
+}
+
+interface KickTokenResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+  refresh_token: string
+  scope: string
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const url = new URL(req.url)
+    const action = url.searchParams.get('action')
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    if (action === 'authorize') {
+      // Generate authorization URL
+      const clientId = Deno.env.get('KICK_CLIENT_ID')!
+      const redirectUri = `${url.origin}/supabase/functions/v1/kick-oauth?action=callback`
+      
+      const state = crypto.randomUUID()
+      const scopes = ['user:read'].join(' ')
+      
+      const authUrl = new URL('https://id.kick.com/oauth/authorize')
+      authUrl.searchParams.set('client_id', clientId)
+      authUrl.searchParams.set('redirect_uri', redirectUri)
+      authUrl.searchParams.set('response_type', 'code')
+      authUrl.searchParams.set('scope', scopes)
+      authUrl.searchParams.set('state', state)
+
+      console.log('🔗 Generated authorization URL:', authUrl.toString())
+
+      return new Response(JSON.stringify({ 
+        authUrl: authUrl.toString(),
+        state 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'callback') {
+      const code = url.searchParams.get('code')
+      const state = url.searchParams.get('state')
+      
+      if (!code) {
+        throw new Error('No authorization code received')
+      }
+
+      console.log('🔄 Processing OAuth callback with code:', code.substring(0, 10) + '...')
+
+      // Exchange code for access token
+      const clientId = Deno.env.get('KICK_CLIENT_ID')!
+      const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')!
+      const redirectUri = `${url.origin}/supabase/functions/v1/kick-oauth?action=callback`
+
+      const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          code: code,
+        }),
+      })
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text()
+        console.error('❌ Token exchange failed:', errorText)
+        throw new Error(`Token exchange failed: ${tokenResponse.status}`)
+      }
+
+      const tokenData: KickTokenResponse = await tokenResponse.json()
+      console.log('✅ Successfully exchanged code for token')
+
+      // Get user info from Kick API
+      const userResponse = await fetch('https://kick.com/api/v2/user', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Accept': 'application/json',
+        },
+      })
+
+      if (!userResponse.ok) {
+        const errorText = await userResponse.text()
+        console.error('❌ Failed to fetch user info:', errorText)
+        throw new Error(`Failed to fetch user info: ${userResponse.status}`)
+      }
+
+      const kickUser: KickUserInfo = await userResponse.json()
+      console.log('👤 Retrieved user info for:', kickUser.username)
+
+      // Create or update user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: `${kickUser.username}@kick.placeholder`,
+        email_confirm: true,
+        user_metadata: {
+          kick_id: kickUser.id,
+          kick_username: kickUser.username,
+          display_name: kickUser.display_name,
+          avatar_url: kickUser.avatar,
+          verified: kickUser.verified,
+          provider: 'kick',
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+        }
+      })
+
+      if (authError && !authError.message.includes('already been registered')) {
+        console.error('❌ Failed to create user:', authError)
+        throw authError
+      }
+
+      // If user already exists, update their metadata
+      let userId = authData?.user?.id
+      if (authError?.message.includes('already been registered')) {
+        const { data: existingUsers } = await supabase.auth.admin.listUsers()
+        const existingUser = existingUsers.users.find(u => 
+          u.user_metadata?.kick_id === kickUser.id
+        )
+        if (existingUser) {
+          userId = existingUser.id
+          await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              kick_id: kickUser.id,
+              kick_username: kickUser.username,
+              display_name: kickUser.display_name,
+              avatar_url: kickUser.avatar,
+              verified: kickUser.verified,
+              provider: 'kick',
+              access_token: tokenData.access_token,
+              refresh_token: tokenData.refresh_token,
+            }
+          })
+        }
+      }
+
+      if (!userId) {
+        throw new Error('Failed to get or create user ID')
+      }
+
+      // Update or create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: userId,
+          display_name: kickUser.display_name || kickUser.username,
+          kick_user_id: kickUser.id.toString(),
+          kick_username: kickUser.username,
+          avatar_url: kickUser.avatar,
+          is_streamer: true, // Assume Kick users are streamers
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (profileError) {
+        console.error('❌ Failed to update profile:', profileError)
+      }
+
+      // Generate session for the user
+      const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: `${kickUser.username}@kick.placeholder`,
+      })
+
+      if (sessionError) {
+        console.error('❌ Failed to generate session:', sessionError)
+        throw sessionError
+      }
+
+      console.log('🎉 OAuth flow completed for user:', kickUser.username)
+
+      // Redirect to frontend with success
+      const frontendUrl = url.origin
+      const redirectUrl = new URL(`${frontendUrl}/auth/callback`)
+      redirectUrl.searchParams.set('success', 'true')
+      redirectUrl.searchParams.set('username', kickUser.username)
+      
+      if (sessionData.properties?.action_link) {
+        redirectUrl.searchParams.set('session_url', sessionData.properties.action_link)
+      }
+
+      return Response.redirect(redirectUrl.toString())
+    }
+
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  } catch (error) {
+    console.error('🚨 OAuth error:', error)
+    return new Response(JSON.stringify({ 
+      error: error.message || 'OAuth flow failed' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})

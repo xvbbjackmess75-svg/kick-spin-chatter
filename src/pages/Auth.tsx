@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -69,6 +70,35 @@ export default function Auth() {
     navigate('/');
   };
 
+  const handleKickOAuth = async () => {
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('kick-oauth', {
+        body: {},
+        method: 'GET'
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const { authUrl } = response.data;
+      if (authUrl) {
+        window.location.href = authUrl;
+      } else {
+        throw new Error('No authorization URL received');
+      }
+    } catch (error) {
+      console.error('Kick OAuth error:', error);
+      toast({
+        title: "Authentication failed",
+        description: "Failed to start Kick authentication. Please try again.",
+        variant: "destructive"
+      });
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="gaming-card w-full max-w-md">
@@ -82,10 +112,25 @@ export default function Auth() {
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Sign in with Kick Button */}
+          <Button 
+            type="button"
+            className="w-full gaming-button mb-4"
+            onClick={handleKickOAuth}
+            disabled={loading}
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-kick-green" />
+              {loading ? "Connecting..." : "Sign in with Kick"}
+              <ArrowRight className="h-4 w-4" />
+            </div>
+          </Button>
+
           {/* Continue as Guest Button */}
           <Button 
             type="button"
-            className="w-full gaming-button mb-6"
+            variant="ghost"
+            className="w-full mb-6"
             onClick={handleContinueAsGuest}
           >
             <div className="flex items-center gap-2">

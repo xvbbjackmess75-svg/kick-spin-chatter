@@ -61,3 +61,6 @@ inspector_port = 54331
 
 [functions.kick-chat-monitor]
 verify_jwt = false
+
+[functions.kick-oauth]
+verify_jwt = false
