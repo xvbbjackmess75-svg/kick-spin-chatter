@@ -49,6 +49,9 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Clear guest mode
+    localStorage.removeItem('guest_mode');
+    
     const { error } = await supabase.auth.signOut();
     return { error };
   };

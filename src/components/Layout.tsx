@@ -24,7 +24,16 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
 
   const handleSignOut = async () => {
-    await signOut();
+    // Clear guest mode if active
+    localStorage.removeItem('guest_mode');
+    
+    // Sign out from Supabase if user is authenticated
+    if (user) {
+      await signOut();
+    }
+    
+    // Redirect to auth page
+    window.location.href = '/auth';
   };
 
   const isActive = (path: string) => location.pathname === path;
