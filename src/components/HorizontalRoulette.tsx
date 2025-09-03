@@ -26,13 +26,25 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
       setAnimationClass("roulette-scroll");
-      // Calculate random scroll position to land on a winner
-      const containerWidth = 800; // Base container width
+      
+      // Calculate scroll to ensure we always land on a participant
       const participantWidth = 80; // Width of each participant slot
-      const totalWidth = participants.length * participantWidth;
-      const maxScroll = totalWidth - containerWidth;
-      const randomScroll = Math.random() * maxScroll + containerWidth * 3; // Extra scrolling for effect
-      setScrollPosition(randomScroll);
+      const containerWidth = 800; // Visible container width
+      const visibleParticipants = Math.floor(containerWidth / participantWidth);
+      
+      // Create enough scrolling distance (3-5 full cycles) plus landing position
+      const fullCycles = 3 + Math.random() * 2; // 3-5 cycles
+      const cycleDistance = participants.length * participantWidth;
+      const baseCycles = Math.floor(fullCycles) * cycleDistance;
+      
+      // Random landing position within one cycle
+      const randomLanding = Math.floor(Math.random() * participants.length) * participantWidth;
+      
+      // Center the selection in the viewport
+      const centerOffset = containerWidth / 2 - participantWidth / 2;
+      
+      const finalScrollPosition = baseCycles + randomLanding - centerOffset;
+      setScrollPosition(finalScrollPosition);
       
       // Reset animation after spinning
       setTimeout(() => {
@@ -41,8 +53,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     }
   }, [isSpinning, participants.length]);
 
-  // Create extended participants array for seamless scrolling
-  const extendedParticipants = [...participants, ...participants, ...participants, ...participants];
+  // Create extended participants array for seamless infinite scrolling
+  // Repeat participants enough times to fill scroll distance + visible area
+  const repeats = Math.max(8, Math.ceil(2400 / (participants.length * 80))); // Ensure enough length
+  const extendedParticipants = Array(repeats).fill(participants).flat();
 
   return (
     <Card className="gaming-card w-full">
@@ -71,10 +85,13 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
           {/* Scrolling Container */}
           <div className="relative h-24 sm:h-32">
             <div 
-              className={`flex absolute top-0 h-full ${animationClass}`}
+              className={`flex absolute top-0 h-full transition-transform duration-[4000ms] ease-out ${isSpinning ? '' : ''}`}
               style={{ 
                 transform: `translateX(-${scrollPosition}px)`,
-                width: `${extendedParticipants.length * 80}px`
+                width: `${extendedParticipants.length * 80}px`,
+                ...(isSpinning && {
+                  transition: 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)'
+                })
               }}
             >
               {extendedParticipants.map((participant, index) => (
