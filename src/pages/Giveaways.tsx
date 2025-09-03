@@ -705,8 +705,8 @@ export default function Giveaways() {
   // Check if in guest mode
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
-  // Guest mode - show demo/informational content
-  if (isGuestMode) {
+  // Guest mode - show demo/informational content (only if not authenticated)
+  if (isGuestMode && !user) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
