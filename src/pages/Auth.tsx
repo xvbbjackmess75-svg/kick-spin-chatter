@@ -52,8 +52,13 @@ export default function Auth() {
     } else {
       toast({
         title: "Account created!",
-        description: "Please check your email to confirm your account."
+        description: "You can now sign in and link your Kick account."
       });
+      // Auto-switch to sign in tab after successful signup
+      setTimeout(() => {
+        const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
+        signInTab?.click();
+      }, 1000);
     }
     
     setLoading(false);
@@ -122,6 +127,9 @@ export default function Auth() {
             </h1>
           </div>
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            To use the chatbot features, you need both a Kick account and a KickBot account.
+          </p>
         </CardHeader>
         <CardContent>
           {/* Sign in with Kick Button */}
@@ -161,11 +169,16 @@ export default function Auth() {
             </div>
           </div>
 
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+          <Tabs defaultValue="signup" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="signup">Create Account</TabsTrigger>
               <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
+            <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <p className="text-sm text-center">
+                <strong className="text-primary">New here?</strong> Create a KickBot account first, then link your Kick account to manage commands and giveaways.
+              </p>
+            </div>
             
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
@@ -198,7 +211,7 @@ export default function Auth() {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">Email (no confirmation required)</Label>
                   <Input
                     id="signup-email"
                     type="email"
