@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Crown } from "lucide-react";
+import { Trophy, Users, Crown, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Participant {
   id: number;
@@ -14,11 +15,20 @@ interface Participant {
 interface HorizontalRouletteProps {
   participants: Participant[];
   isSpinning: boolean;
-  onSpin: () => void;
   winner?: Participant; // Winner determined externally by provably fair system
+  isWinnerPending?: boolean;
+  onAcceptWinner?: () => void;
+  onRerollWinner?: () => void;
 }
 
-export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }: HorizontalRouletteProps) {
+export function HorizontalRoulette({ 
+  participants, 
+  isSpinning, 
+  winner, 
+  isWinnerPending, 
+  onAcceptWinner, 
+  onRerollWinner 
+}: HorizontalRouletteProps) {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [showWinner, setShowWinner] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -179,7 +189,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                 <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-kick-green animate-pulse" />
               </div>
               
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-4 mb-6">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-kick-green pulse-glow">
                   <AvatarImage 
                     src={`https://files.kick.com/images/user/${winner.username}/profile_image/conversion/300x300-medium.webp`}
@@ -200,6 +210,27 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
                   </Badge>
                 </div>
               </div>
+
+              {/* Accept/Reroll Buttons */}
+              {isWinnerPending && onAcceptWinner && onRerollWinner && (
+                <div className="flex justify-center gap-4">
+                  <Button 
+                    onClick={onAcceptWinner}
+                    className="bg-kick-green hover:bg-kick-green/80 text-kick-dark font-bold"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Accept Winner
+                  </Button>
+                  <Button 
+                    onClick={onRerollWinner}
+                    variant="outline"
+                    className="border-kick-green/30 text-kick-green hover:bg-kick-green/10"
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Reroll
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

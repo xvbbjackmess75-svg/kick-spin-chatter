@@ -383,54 +383,42 @@ export default function Dashboard() {
     }
   };
 
-  // Provably fair system functions
-  const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
-  
-  const generateServerSeed = () => Math.random().toString(36).substring(2, 15);
-  
-  const hashSeeds = (clientSeed: string, serverSeed: string, nonce: number) => {
-    const data = `${clientSeed}:${serverSeed}:${nonce}`;
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16);
-  };
+  // Winner selection states
+  const [selectedWinner, setSelectedWinner] = useState<DashboardParticipant | null>(null);
+  const [isWinnerPending, setIsWinnerPending] = useState(false);
+  const [fairnessData, setFairnessData] = useState<any>(null);
 
-  const selectWinnerTicket = (participants: DashboardParticipant[]) => {
-    const clientSeed = generateClientSeed();
-    const serverSeed = generateServerSeed();
-    const nonce = Date.now();
-    const hash = hashSeeds(clientSeed, serverSeed, nonce);
-    
-    // Fixed 1000 tickets distributed equally among participants
+  // Provably fair system - pick random number 1-1000, distribute tickets equally
+  const selectWinnerUsingProvablyFair = (participants: DashboardParticipant[]) => {
     const totalTickets = 1000;
     const ticketsPerParticipant = Math.floor(totalTickets / participants.length);
     
-    // Use hash to determine winning ticket number (1-1000)
-    const hashInt = parseInt(hash.substring(0, 8), 16);
-    const winningTicketNumber = (hashInt % totalTickets) + 1; // 1-1000
+    // Generate random number between 1 and 1000
+    const winningTicketNumber = Math.floor(Math.random() * totalTickets) + 1;
     
     // Determine which participant owns this ticket
     const winnerIndex = Math.floor((winningTicketNumber - 1) / ticketsPerParticipant);
-    const actualWinnerIndex = Math.min(winnerIndex, participants.length - 1); // Ensure within bounds
+    const actualWinnerIndex = Math.min(winnerIndex, participants.length - 1);
     
-    return {
-      clientSeed,
-      serverSeed,
-      nonce,
-      hash,
-      winnerIndex: actualWinnerIndex,
+    const fairnessData = {
       winningTicketNumber,
       ticketsPerParticipant,
-      totalTickets
+      totalTickets,
+      winnerIndex: actualWinnerIndex,
+      timestamp: new Date().toISOString()
     };
+    
+    console.log("🎲 PROVABLY FAIR RESULT:", {
+      winningTicket: winningTicketNumber,
+      ticketsPerParticipant,
+      winnerIndex: actualWinnerIndex,
+      winner: participants[actualWinnerIndex]?.username
+    });
+    
+    return { winner: participants[actualWinnerIndex], fairnessData };
   };
 
   const drawWinner = async (giveaway: Giveaway) => {
-    // First fetch participants for this specific giveaway
     try {
       const { data, error } = await supabase
         .from('giveaway_participants')
@@ -454,64 +442,79 @@ export default function Dashboard() {
         return;
       }
 
-      console.log("🎰 DASHBOARD: Starting winner selection with participants:", giveawayParticipants.map(p => p.username));
-
-      // STEP 1: Use provably fair system to select winner
-      const result = selectWinnerTicket(giveawayParticipants);
-      const selectedWinner = giveawayParticipants[result.winnerIndex];
+      // Use provably fair system to select winner
+      const { winner: provablyFairWinner, fairnessData } = selectWinnerUsingProvablyFair(giveawayParticipants);
       
-      console.log("🎯 PROVABLY FAIR RESULT:", {
-        winner: selectedWinner.username,
-        winnerIndex: result.winnerIndex,
-        winningTicket: result.winningTicketNumber,
-        ticketsPerParticipant: result.ticketsPerParticipant,
-        totalTickets: result.totalTickets
-      });
-
-      // STEP 2: Set up roulette animation
+      // Set states for pending winner
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
-      setWinner(selectedWinner); // Set the provably fair winner
-      setIsSpinning(true); // Start the roulette animation
+      setSelectedWinner(provablyFairWinner);
+      setFairnessData(fairnessData);
+      setIsWinnerPending(true);
+      setIsSpinning(true);
 
-      // STEP 3: After 4 seconds, complete the process
-      setTimeout(async () => {
+      // Start roulette animation - it will land on the predetermined winner
+      setTimeout(() => {
         setIsSpinning(false);
-        
-        try {
-          await supabase
-            .from('giveaways')
-            .update({ 
-              winner_user_id: selectedWinner.username,
-              status: 'completed'
-            })
-            .eq('id', giveaway.id);
-
-          toast({
-            title: "Winner Selected!",
-            description: `Congratulations to ${selectedWinner.username}!`,
-          });
-
-          fetchGiveaways();
-          setCurrentGiveaway(null);
-        } catch (error) {
-          console.error('Error updating winner:', error);
-        }
-      }, 4500); // 4.5 seconds to let animation complete
+      }, 4000);
 
     } catch (error) {
-      console.error('Error fetching participants:', error);
+      console.error('Error drawing winner:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch participants",
+        description: "Failed to draw winner",
         variant: "destructive"
       });
     }
   };
 
-  const handleWinnerSelected = async (selectedWinner: DashboardParticipant) => {
-    // This function is no longer needed since we determine winner in drawWinner
-    console.log("🏆 Winner animation completed:", selectedWinner.username);
+  const acceptWinner = async () => {
+    if (!selectedWinner || !currentGiveaway) return;
+
+    try {
+      // Update giveaway with winner
+      await supabase
+        .from('giveaways')
+        .update({ 
+          winner_user_id: selectedWinner.username,
+          status: 'completed'
+        })
+        .eq('id', currentGiveaway.id);
+
+      toast({
+        title: "Winner Accepted!",
+        description: `${selectedWinner.username} has been confirmed as the winner!`,
+      });
+
+      // Reset states
+      setIsWinnerPending(false);
+      setSelectedWinner(null);
+      setCurrentGiveaway(null);
+      setFairnessData(null);
+      fetchGiveaways();
+      
+    } catch (error) {
+      console.error('Error accepting winner:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept winner",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const rerollWinner = () => {
+    if (!currentGiveaway) return;
+    
+    // Reset states and draw again
+    setIsWinnerPending(false);
+    setSelectedWinner(null);
+    setFairnessData(null);
+    
+    // Draw new winner
+    setTimeout(() => {
+      drawWinner(currentGiveaway);
+    }, 500);
   };
 
   const simulateParticipant = async (giveawayId: string) => {
@@ -938,13 +941,15 @@ export default function Dashboard() {
               isWinner: p.isWinner
             }))}
             isSpinning={isSpinning}
-            onSpin={() => {}}
-            winner={winner ? {
+            winner={selectedWinner ? {
               id: 0,
-              username: winner.username,
-              avatar: winner.avatar || '/placeholder-avatar.jpg',
-              isWinner: winner.isWinner
+              username: selectedWinner.username,
+              avatar: selectedWinner.avatar || '/placeholder-avatar.jpg',
+              isWinner: selectedWinner.isWinner
             } : undefined}
+            isWinnerPending={isWinnerPending}
+            onAcceptWinner={acceptWinner}
+            onRerollWinner={rerollWinner}
           />
         )}
 
