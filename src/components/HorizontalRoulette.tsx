@@ -32,8 +32,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const containerWidth = 800; // Visible container width
       const visibleParticipants = Math.floor(containerWidth / participantWidth);
       
-      // Create enough scrolling distance (3-5 full cycles) plus landing position
-      const fullCycles = 3 + Math.random() * 2; // 3-5 cycles
+      // Create enough scrolling distance (6-10 full cycles) plus landing position
+      const fullCycles = 6 + Math.random() * 4; // 6-10 cycles
       const cycleDistance = participants.length * participantWidth;
       const baseCycles = Math.floor(fullCycles) * cycleDistance;
       
@@ -49,7 +49,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       // Reset animation after spinning
       setTimeout(() => {
         setAnimationClass("");
-      }, 4000);
+      }, 8000);
     }
   }, [isSpinning, participants.length]);
 
@@ -85,12 +85,12 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
           {/* Scrolling Container */}
           <div className="relative h-24 sm:h-32">
             <div 
-              className={`flex absolute top-0 h-full transition-transform duration-[4000ms] ease-out ${isSpinning ? '' : ''}`}
+              className={`flex absolute top-0 h-full transition-transform duration-[8000ms] ease-out ${isSpinning ? '' : ''}`}
               style={{ 
                 transform: `translateX(-${scrollPosition}px)`,
                 width: `${extendedParticipants.length * 80}px`,
                 ...(isSpinning && {
-                  transition: 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)'
+                  transition: 'transform 8s cubic-bezier(0.17, 0.67, 0.12, 0.99)'
                 })
               }}
             >
@@ -168,25 +168,6 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
               <span>{participants.length} participants</span>
             </div>
           </div>
-          
-          <Button 
-            onClick={onSpin}
-            disabled={isSpinning || participants.length === 0}
-            className="gaming-button text-lg px-8 py-3"
-            size="lg"
-          >
-            {isSpinning ? (
-              <>
-                <div className="animate-spin mr-2">🎲</div>
-                Rolling...
-              </>
-            ) : (
-              <>
-                <Zap className="h-5 w-5 mr-2" />
-                Roll the Strip!
-              </>
-            )}
-          </Button>
         </div>
 
         {/* Participants List */}
