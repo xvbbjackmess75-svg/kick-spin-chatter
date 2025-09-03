@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { RouletteWheel } from "@/components/RouletteWheel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,10 +102,6 @@ export default function Giveaways() {
     { id: 6, username: "ProGamer", avatar: "/avatar6.jpg" },
     { id: 7, username: "StreamLover", avatar: "/avatar7.jpg" },
     { id: 8, username: "GamerPro123", avatar: "/avatar8.jpg" },
-    { id: 9, username: "ChatKing", avatar: "/avatar9.jpg" },
-    { id: 10, username: "WinnerWins", avatar: "/avatar10.jpg" },
-    { id: 11, username: "LuckyUser", avatar: "/avatar11.jpg" },
-    { id: 12, username: "StreamStar", avatar: "/avatar12.jpg" },
   ];
 
   const handleSpin = () => {
@@ -188,19 +183,52 @@ export default function Giveaways() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Roulette Wheel */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Roulette Wheel Placeholder */}
         <div className="lg:col-span-1">
-          <RouletteWheel 
-            participants={mockParticipants}
-            isSpinning={isSpinning}
-            onSpin={handleSpin}
-            winner={winner}
-          />
+          <Card className="gaming-card">
+            <CardContent className="p-8 text-center">
+              <div className="w-64 h-64 mx-auto bg-gradient-primary/10 rounded-full border-4 border-accent/30 flex items-center justify-center mb-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-primary/5 animate-spin-slow"></div>
+                <Trophy className="h-16 w-16 text-accent animate-pulse relative z-10" />
+              </div>
+              
+              {winner && !isSpinning && (
+                <div className="mb-6 p-4 bg-gradient-primary/10 rounded-lg border border-accent/30">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Crown className="h-5 w-5 text-accent" />
+                    <span className="text-lg font-bold text-foreground">Winner!</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                        {winner.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-accent">{winner.username}</span>
+                  </div>
+                </div>
+              )}
+              
+              <h3 className="text-xl font-bold text-foreground mb-2">Roulette Wheel</h3>
+              <p className="text-muted-foreground mb-4">
+                {mockParticipants.length} participants ready to win!
+              </p>
+              <Button 
+                className="gaming-button" 
+                onClick={handleSpin} 
+                disabled={isSpinning}
+                size="lg"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                {isSpinning ? "Spinning..." : "Draw Winner"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Active Giveaways */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <Crown className="h-5 w-5 text-accent" />
             <h2 className="text-xl font-semibold text-foreground">Active Giveaways</h2>
@@ -298,7 +326,7 @@ export default function Giveaways() {
         </div>
       </div>
 
-      {/* Recent Participants - Now Full Width */}
+      {/* Recent Participants */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Participants */}
         <Card className="gaming-card">
@@ -312,7 +340,6 @@ export default function Giveaways() {
             {recentParticipants.map((participant, index) => (
               <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors chat-message">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={participant.avatar} />
                   <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
                     {participant.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
