@@ -54,10 +54,19 @@ export default function AuthCallback() {
           });
 
           console.log('🔄 Exchange response:', response)
+          console.log('🔄 Exchange response data:', response.data)
+          console.log('🔄 Exchange response error:', response.error)
 
           if (response.error) {
             console.error('❌ Exchange failed with error:', response.error)
-            throw new Error(response.error.error || response.error.message || 'OAuth exchange failed')
+            console.error('❌ Full error object:', JSON.stringify(response.error, null, 2))
+            throw new Error(`OAuth exchange failed: ${JSON.stringify(response.error)}`)
+          }
+
+          if (response.data?.error) {
+            console.error('❌ Exchange failed with data error:', response.data.error)
+            console.error('❌ Full data error:', JSON.stringify(response.data, null, 2))
+            throw new Error(`OAuth exchange failed: ${response.data.error}`)
           }
 
           const { success, user, session_data } = response.data;
