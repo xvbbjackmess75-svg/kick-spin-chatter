@@ -33,10 +33,9 @@ interface DrawResult {
 
 export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }: HorizontalRouletteProps) {
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [animationClass, setAnimationClass] = useState("");
   const [showWinner, setShowWinner] = useState(false);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
-  const [lastWinnerId, setLastWinnerId] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Provably fair system functions
   const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
@@ -67,8 +66,8 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     const hashInt = parseInt(hash.substring(0, 8), 16);
     const winnerTicket = hashInt % totalTickets;
     
-    // Random offset within avatar bounds for landing position (-30 to +30 pixels)
-    const landingOffset = (hashInt % 61) - 30; // Range: -30 to +30
+    // Random offset within avatar bounds for landing position (-20 to +20 pixels)
+    const landingOffset = (hashInt % 41) - 20; // Range: -20 to +20
     
     return {
       clientSeed,
@@ -81,30 +80,29 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     };
   };
 
-  // Create randomized infinite participants array for seamless infinite scrolling
-  // This allows participants to appear multiple times and next to each other
+  // Create simple extended participants array for infinite scrolling
   const extendedParticipants = useMemo(() => {
     if (participants.length === 0) return [];
     
-    const participantWidth = 80;
-    const totalAvatarsNeeded = 2000; // Fixed large number for consistent behavior
+    // Create enough repetitions to handle any scroll distance
+    const repetitions = 200; // Simple approach: repeat participants 200 times
+    const extended = [];
     
-    const randomizedParticipants = [];
-    for (let i = 0; i < totalAvatarsNeeded; i++) {
-      // Random selection allowing duplicates and adjacent participants
-      const randomIndex = Math.floor(Math.random() * participants.length);
-      randomizedParticipants.push({
-        ...participants[randomIndex],
-        uniqueKey: `${participants[randomIndex].id}-${i}` // Unique key for React
+    for (let i = 0; i < repetitions; i++) {
+      participants.forEach((participant, index) => {
+        extended.push({
+          ...participant,
+          uniqueKey: `${participant.id}-cycle-${i}-${index}`
+        });
       });
     }
     
-    return randomizedParticipants;
+    return extended;
   }, [participants]);
 
   useEffect(() => {
-    if (isSpinning && participants.length > 0) {
-      setAnimationClass("roulette-scroll");
+    if (isSpinning && participants.length > 0 && !isAnimating) {
+      setIsAnimating(true);
       setShowWinner(false);
       
       const participantWidth = 80;
@@ -115,60 +113,53 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // Find winner in original participants array
-      let winnerParticipant;
+      // Determine target winner
+      let targetWinner: Participant;
       if (winner) {
-        winnerParticipant = winner;
+        targetWinner = winner;
       } else {
-        winnerParticipant = participants[result.winnerTicket];
+        targetWinner = participants[result.winnerTicket];
       }
       
-      // Find a good landing position for this winner in the extended array
-      // Look for positions that are far enough to create a good spin effect
-      const minStartPosition = Math.floor(scrollPosition / participantWidth) + 50; // Start from current position + buffer
-      const possiblePositions = extendedParticipants
-        .map((p, index) => ({ participant: p, index }))
-        .filter(({ participant, index }) => 
-          participant.id === winnerParticipant.id && index >= minStartPosition && index < extendedParticipants.length - 100
-        );
+      // Calculate how many complete cycles of participants we want to scroll through
+      const minCycles = 15; // Minimum cycles for good effect
+      const maxCycles = 25; // Maximum cycles
+      const cycles = minCycles + Math.random() * (maxCycles - minCycles);
       
-      if (possiblePositions.length === 0) {
-        console.warn("No suitable winner position found");
+      // Find the winner's position in one complete cycle
+      const winnerIndexInCycle = participants.findIndex(p => p.id === targetWinner.id);
+      if (winnerIndexInCycle === -1) {
+        console.error("Winner not found in participants");
+        setIsAnimating(false);
         return;
       }
       
-      // Select a random position from the possible ones (for variety)
-      const selectedPosition = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
-      const targetIndex = selectedPosition.index;
+      // Calculate final position
+      const cycleLength = participants.length * participantWidth;
+      const baseCycles = Math.floor(cycles);
+      const baseDistance = baseCycles * cycleLength;
+      const winnerPosition = winnerIndexInCycle * participantWidth;
+      const landingOffset = result.landingOffset;
       
-      // Calculate target position with random offset within avatar bounds
-      const randomOffset = (result.landingOffset / 30) * 15; // ±15px within avatar
-      const targetPosition = targetIndex * participantWidth - centerOffset + randomOffset;
+      const finalPosition = baseDistance + winnerPosition + landingOffset;
       
-      // Ensure smooth forward movement
-      const minAdditionalScroll = 3000; // Minimum 3000px additional scroll
-      const finalPosition = Math.max(targetPosition, scrollPosition + minAdditionalScroll);
-      
+      // Set the scroll position
       setScrollPosition(finalPosition);
       
-      // Track the current winner
-      if (winner) {
-        setLastWinnerId(winner.id);
-      }
-      
-      // Reset animation after spinning
+      // Animation complete handler
+      const animationDuration = 5000; // 5 seconds
       setTimeout(() => {
-        setAnimationClass("");
-      }, 6000); // Reduced to 6s for better timing
+        setIsAnimating(false);
+      }, animationDuration);
 
       // Show winner announcement
       if (winner) {
         setTimeout(() => {
           setShowWinner(true);
-        }, 7500); // 6000ms animation + 1500ms delay
+        }, animationDuration + 1000); // 1 second after animation
       }
     }
-  }, [isSpinning, participants, winner, extendedParticipants]);
+  }, [isSpinning, participants, winner, isAnimating]);
 
   return (
     <Card className="gaming-card w-full">
@@ -197,18 +188,16 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
           {/* Scrolling Container */}
           <div className="relative h-24 sm:h-32">
             <div 
-              className={`flex absolute top-0 h-full transition-transform ease-out ${isSpinning ? '' : ''}`}
+              className="flex absolute top-0 h-full"
               style={{ 
                 transform: `translateX(-${scrollPosition}px)`,
                 width: `${extendedParticipants.length * 80}px`,
-                ...(isSpinning && {
-                  transition: 'transform 6s cubic-bezier(0.25, 0.1, 0.25, 1)' // Smooth 6s animation
-                })
+                transition: isAnimating ? 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none'
               }}
             >
-              {extendedParticipants.map((participant, index) => (
+              {extendedParticipants.map((participant) => (
                 <div
-                  key={participant.uniqueKey || `${participant.id}-${index}`}
+                  key={participant.uniqueKey}
                   className="flex-shrink-0 w-20 h-full flex flex-col items-center justify-center p-2 border-r border-kick-green/20"
                 >
                   <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-background shadow-lg">
