@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHybridAuth } from "@/hooks/useHybridAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Plus, 
   Gift, 
@@ -60,6 +61,7 @@ interface Giveaway {
 
 export default function Giveaways() {
   const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
@@ -312,7 +314,7 @@ export default function Giveaways() {
           title: title.trim(),
           channel_id: null,
           description: `Channel: ${channelName.trim()}, Keyword: ${keyword.trim()}`,
-          user_id: hybridUserId,
+          user_id: user?.id, // Use the current authenticated user ID
           status: 'active'
         })
         .select()
