@@ -448,21 +448,46 @@ export default function Giveaways() {
     if (!currentGiveaway) return;
     
     try {
-      // Fetch fresh participants for the giveaway
-      const { data: participantsData, error } = await supabase
+      // Fetch all participants for the giveaway
+      const { data: participantsData, error: participantsError } = await supabase
         .from('giveaway_participants')
         .select('*')
         .eq('giveaway_id', currentGiveaway.id);
 
-      if (error) throw error;
+      if (participantsError) throw participantsError;
 
-      const mappedParticipants: RouletteParticipant[] = participantsData.map((p, index) => ({
+      // Fetch existing winners to exclude them
+      const { data: winnersData, error: winnersError } = await supabase
+        .from('giveaway_winners')
+        .select('winner_username')
+        .eq('giveaway_id', currentGiveaway.id);
+
+      if (winnersError) throw winnersError;
+
+      // Get list of usernames that have already won
+      const previousWinners = winnersData.map(w => w.winner_username);
+      
+      // Filter out previous winners from participants
+      const availableParticipants = participantsData.filter(
+        p => !previousWinners.includes(p.kick_username)
+      );
+
+      if (availableParticipants.length === 0) {
+        toast({
+          title: "No More Participants",
+          description: "All participants have already won!",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const mappedParticipants: RouletteParticipant[] = availableParticipants.map((p, index) => ({
         id: index + 1,
         username: p.kick_username,
         avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
       }));
 
-      console.log("🎯 Adding another winner - participants loaded:", mappedParticipants.length);
+      console.log("🎯 Adding another winner - available participants:", mappedParticipants.length, "excluded:", previousWinners.length);
       
       setParticipants(mappedParticipants);
       

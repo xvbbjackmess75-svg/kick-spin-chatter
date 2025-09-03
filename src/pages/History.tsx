@@ -83,7 +83,7 @@ export default function History() {
         .from('giveaways')
         .select(`
           *,
-          giveaway_winners!inner(
+          giveaway_winners(
             id,
             winner_username,
             winning_ticket,
