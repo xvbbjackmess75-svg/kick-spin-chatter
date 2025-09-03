@@ -69,7 +69,6 @@ export default function Dashboard() {
   const [participants, setParticipants] = useState<DashboardParticipant[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [winner, setWinner] = useState<DashboardParticipant | null>(null);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatConnected, setChatConnected] = useState(false);
@@ -506,15 +505,19 @@ export default function Dashboard() {
   const rerollWinner = () => {
     if (!currentGiveaway) return;
     
-    // Reset states and draw again
+    console.log("🔄 REROLL: Resetting all states");
+    
+    // Reset ALL animation states
     setIsWinnerPending(false);
     setSelectedWinner(null);
     setFairnessData(null);
+    setIsSpinning(false);
     
-    // Draw new winner
+    // Small delay to ensure states are reset before drawing new winner
     setTimeout(() => {
+      console.log("🎲 REROLL: Drawing new winner");
       drawWinner(currentGiveaway);
-    }, 500);
+    }, 100);
   };
 
   const simulateParticipant = async (giveawayId: string) => {
@@ -560,8 +563,8 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Clear winner state if the deleted giveaway had the current winner
-      setWinner(null);
+      // Clear all winner states if the deleted giveaway had the current winner
+      setSelectedWinner(null);
       setParticipants([]);
 
       toast({

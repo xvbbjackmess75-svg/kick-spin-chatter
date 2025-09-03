@@ -33,6 +33,16 @@ export function HorizontalRoulette({
   const [showWinner, setShowWinner] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Reset animation states when isSpinning changes or winner changes
+  useEffect(() => {
+    if (!isSpinning && !winner) {
+      console.log("🔄 ROULETTE: Resetting animation states");
+      setScrollPosition(0);
+      setShowWinner(false);
+      setIsAnimating(false);
+    }
+  }, [isSpinning, winner]);
+
   // Create simple extended participants array - just repeat participants in order
   const extendedParticipants = useMemo(() => {
     if (participants.length === 0) return [];
@@ -59,7 +69,7 @@ export function HorizontalRoulette({
       setIsAnimating(true);
       setShowWinner(false);
       
-      // Reset scroll position to 0
+      // Reset scroll position to 0 first
       setScrollPosition(0);
       
       // Calculate EXACT landing position for the provided winner
@@ -71,7 +81,8 @@ export function HorizontalRoulette({
       const winnerIndexInOriginal = participants.findIndex(p => p.username === winner.username);
       
       if (winnerIndexInOriginal === -1) {
-        console.error("❌ Winner not found in participants:", winner.username);
+        console.error("❌ ROULETTE: Winner not found in participants:", winner.username);
+        console.log("🔍 Available participants:", participants.map(p => p.username));
         setIsAnimating(false);
         return;
       }
