@@ -62,27 +62,23 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      // Since Kick doesn't have public OAuth yet, we'll simulate the flow
-      // In production, this would redirect to Kick's OAuth endpoint
-      const kickAuthUrl = `https://kick.com/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=user:read`;
+      // Build the Kick OAuth URL with proper parameters
+      const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ';
+      const redirectUri = encodeURIComponent(`${window.location.origin}/kick-callback`);
+      const scope = encodeURIComponent('user:read');
       
-      toast({
-        title: "Kick OAuth Coming Soon",
-        description: "Kick OAuth integration will be available when their public API launches. For now, please use email/password.",
-        variant: "default"
-      });
+      const kickAuthUrl = `https://kick.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=oauth_state`;
       
-      // For now, we'll just show the message
-      // window.location.href = kickAuthUrl;
+      // Redirect to Kick OAuth
+      window.location.href = kickAuthUrl;
     } catch (error) {
       toast({
         title: "Authentication Error",
-        description: "Failed to connect with Kick",
+        description: "Failed to connect with Kick. Please try again.",
         variant: "destructive"
       });
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
