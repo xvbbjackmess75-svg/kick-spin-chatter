@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
   const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
   const [winnerResult, setWinnerResult] = useState<WinnerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
   const extendedParticipants = [];
@@ -94,10 +95,18 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     setShowResult(false);
     setScrollPosition(0);
     
-    // Step 3: Calculate landing position for the predetermined winner
+    // Step 3: Calculate landing position using ACTUAL container width
     const participantWidth = 80;
-    const containerWidth = 800;
-    const centerPosition = containerWidth / 2;
+    
+    // Get actual container width instead of hardcoded value
+    const actualContainerWidth = containerRef.current?.offsetWidth || 800;
+    const centerPosition = actualContainerWidth / 2;
+    
+    console.log("📐 RESPONSIVE CALCULATION:", {
+      actualContainerWidth,
+      centerPosition,
+      hardcodedWouldBe: 400
+    });
     
     // Find winner's index in original participants array
     const winnerIndex = participants.findIndex(p => p.username === result.winner.username);
@@ -123,13 +132,14 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     // FIXED: Calculate exact center alignment
     const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
     
-    console.log("🎯 ANIMATION CALCULATION:", {
+    console.log("🎯 RESPONSIVE ANIMATION CALCULATION:", {
       winnerUsername: result.winner.username,
       winnerIndex,
       cycles,
       participantsLength: participants.length,
       targetIndex,
       participantWidth,
+      actualContainerWidth,
       centerPosition,
       targetPosition,
       participantAtTargetIndex: extendedParticipants[targetIndex]?.username,
@@ -229,8 +239,8 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
           {/* Center line - EXACT CENTER */}
           <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-1 bg-kick-green z-10 opacity-80" />
           
-          {/* Scrolling container - PRECISE ALIGNMENT */}
-          <div className="relative h-32">
+          {/* Scrolling container - RESPONSIVE WIDTH */}
+          <div ref={containerRef} className="relative h-32">
             <div 
               className="flex absolute top-0 h-full"
               style={{ 
