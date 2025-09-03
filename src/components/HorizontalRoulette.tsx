@@ -27,23 +27,30 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
     if (isSpinning && participants.length > 0) {
       setAnimationClass("roulette-scroll");
       
-      // Calculate scroll to ensure we always land on a participant
+      // Calculate scroll to ensure we land on the winner if provided, otherwise random
       const participantWidth = 80; // Width of each participant slot
       const containerWidth = 800; // Visible container width
-      const visibleParticipants = Math.floor(containerWidth / participantWidth);
       
       // Create enough scrolling distance (20-50 full cycles) plus landing position
       const fullCycles = 20 + Math.random() * 30; // 20-50 cycles
       const cycleDistance = participants.length * participantWidth;
       const baseCycles = Math.floor(fullCycles) * cycleDistance;
       
-      // Random landing position within one cycle
-      const randomLanding = Math.floor(Math.random() * participants.length) * participantWidth;
+      // If we have a winner, find their position, otherwise random
+      let targetParticipantIndex;
+      if (winner) {
+        targetParticipantIndex = participants.findIndex(p => p.id === winner.id);
+        if (targetParticipantIndex === -1) targetParticipantIndex = 0; // Fallback if winner not found
+      } else {
+        targetParticipantIndex = Math.floor(Math.random() * participants.length);
+      }
+      
+      const targetPosition = targetParticipantIndex * participantWidth;
       
       // Center the selection in the viewport
       const centerOffset = containerWidth / 2 - participantWidth / 2;
       
-      const finalScrollPosition = baseCycles + randomLanding - centerOffset;
+      const finalScrollPosition = baseCycles + targetPosition - centerOffset;
       setScrollPosition(finalScrollPosition);
       
       // Reset animation after spinning
@@ -51,7 +58,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         setAnimationClass("");
       }, 8000);
     }
-  }, [isSpinning, participants.length]);
+  }, [isSpinning, participants.length, winner]);
 
   // Create extended participants array for seamless infinite scrolling
   // Calculate based on maximum possible scroll distance to ensure we always have enough participants
