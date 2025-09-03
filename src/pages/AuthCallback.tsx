@@ -109,9 +109,25 @@ export default function AuthCallback() {
               // Create a unique email for the Kick user
               const userEmail = `kick_${user.id}@kickuser.lovable.app`;
               
-              // Generate a secure random password
-              const randomPassword = crypto.getRandomValues(new Uint8Array(32));
-              const password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+              // Check if we have stored credentials first
+              const storedCreds = localStorage.getItem('kick_hybrid_credentials');
+              let password;
+              
+              if (storedCreds) {
+                const creds = JSON.parse(storedCreds);
+                if (creds.kick_user_id.toString() === user.id.toString()) {
+                  password = creds.password;
+                  console.log('🔄 Using stored credentials for existing user');
+                } else {
+                  // Generate new password for different user
+                  const randomPassword = crypto.getRandomValues(new Uint8Array(32));
+                  password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+                }
+              } else {
+                // Generate a secure random password for new user
+                const randomPassword = crypto.getRandomValues(new Uint8Array(32));
+                password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+              }
               
               // Try to sign in first (in case account already exists)
               console.log('🔄 Attempting sign in to existing account...');
@@ -120,8 +136,10 @@ export default function AuthCallback() {
                 password: password
               });
               
-              if (signInError && !signInError.message.includes('Invalid login credentials')) {
-                console.error('❌ Sign in failed:', signInError);
+              if (signInError && signInError.message.includes('Invalid login credentials')) {
+                console.log('🔄 Invalid credentials, will create new account...');
+              } else if (signInError) {
+                console.error('❌ Sign in failed with other error:', signInError);
               }
               
               // If sign in failed, try to create account
@@ -149,10 +167,10 @@ export default function AuthCallback() {
                 } else if (authData?.user) {
                   console.log('✅ Hybrid account created successfully');
                   
-                  // Store the credentials for future use
+                  // Store the credentials for future use (including password for auto-signin)
                   localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
                     email: userEmail,
-                    password: password,
+                    password: password, // Store password for seamless future access
                     created_at: new Date().toISOString(),
                     kick_user_id: user.id
                   }));

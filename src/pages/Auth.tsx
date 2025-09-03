@@ -128,7 +128,7 @@ export default function Auth() {
           </div>
           <CardTitle className="text-xl text-foreground">Welcome Back</CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
-            To use the chatbot features, you need both a Kick account and a KickBot account.
+            Sign in with your Kick account to automatically access all chatbot features.
           </p>
         </CardHeader>
         <CardContent>
@@ -141,7 +141,7 @@ export default function Auth() {
           >
             <div className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-kick-green" />
-              {loading ? "Connecting..." : "Sign in with Kick"}
+              {loading ? "Connecting..." : "Sign in with Kick (Recommended)"}
               <ArrowRight className="h-4 w-4" />
             </div>
           </Button>
@@ -165,7 +165,7 @@ export default function Auth() {
               <span className="w-full border-t border-border/50" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or use email</span>
+              <span className="bg-background px-2 text-muted-foreground">Or create manual account</span>
             </div>
           </div>
 
@@ -174,9 +174,9 @@ export default function Auth() {
               <TabsTrigger value="signup">Create Account</TabsTrigger>
               <TabsTrigger value="signin">Sign In</TabsTrigger>
             </TabsList>
-            <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+            <div className="mb-4 p-3 bg-kick-green/10 border border-kick-green/20 rounded-lg">
               <p className="text-sm text-center">
-                <strong className="text-primary">New here?</strong> Create a KickBot account first, then link your Kick account to manage commands and giveaways.
+                <strong className="text-kick-green">Kick users:</strong> Sign in with Kick above for instant access to all features - no additional setup required!
               </p>
             </div>
             
