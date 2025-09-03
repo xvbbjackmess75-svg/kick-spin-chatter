@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useHybridAuth } from '@/hooks/useHybridAuth';
+import { useKickAccount } from '@/hooks/useKickAccount';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +17,8 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { hybridUserId, isKickUser } = useHybridAuth();
+  const { kickUser } = useKickAccount();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -59,6 +63,76 @@ export default function Auth() {
         const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
         signInTab?.click();
       }, 1000);
+    }
+    
+    setLoading(false);
+  };
+
+  const handleUpgradeKickAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Please enter both email and password",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Create a new Supabase account with the provided credentials
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            kick_username: kickUser?.username,
+            kick_user_id: kickUser?.id?.toString(),
+            kick_avatar: kickUser?.avatar,
+            display_name: kickUser?.display_name || kickUser?.username,
+            upgraded_from_kick: true,
+            original_hybrid_id: hybridUserId
+          }
+        }
+      });
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          toast({
+            title: "Email already exists",
+            description: "This email is already registered. Try signing in instead.",
+            variant: "destructive"
+          });
+        } else {
+          throw signUpError;
+        }
+      } else if (authData?.user) {
+        // Clear hybrid session and replace with real account
+        localStorage.removeItem('kick_hybrid_session');
+        localStorage.removeItem('kick_hybrid_credentials');
+        
+        toast({
+          title: "Account Upgraded!",
+          description: `Your Kick account has been upgraded! You can now sign in with email or Kick.`,
+        });
+        
+        // Auto-switch to sign in tab
+        setTimeout(() => {
+          const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
+          signInTab?.click();
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error('Account upgrade error:', error);
+      toast({
+        title: "Upgrade failed",
+        description: error.message || "Failed to upgrade account",
+        variant: "destructive"
+      });
     }
     
     setLoading(false);
@@ -169,16 +243,55 @@ export default function Auth() {
             </div>
           </div>
 
-          <Tabs defaultValue="signup" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+          <Tabs defaultValue={isKickUser ? "upgrade" : "signup"} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              {isKickUser && <TabsTrigger value="upgrade">Add Email & Password</TabsTrigger>}
               <TabsTrigger value="signup">Create Account</TabsTrigger>
               <TabsTrigger value="signin">Sign In</TabsTrigger>
             </TabsList>
-            <div className="mb-4 p-3 bg-kick-green/10 border border-kick-green/20 rounded-lg">
-              <p className="text-sm text-center">
-                <strong className="text-kick-green">Kick users:</strong> Sign in with Kick above for instant access to all features - no additional setup required!
-              </p>
-            </div>
+            {isKickUser && (
+              <div className="mb-4 p-3 bg-kick-green/10 border border-kick-green/20 rounded-lg">
+                <p className="text-sm text-center">
+                  <strong className="text-kick-green">@{kickUser?.username}</strong> - Add email & password to your Kick account for enhanced security!
+                </p>
+              </div>
+            )}
+            
+            {isKickUser && (
+              <TabsContent value="upgrade">
+                <form onSubmit={handleUpgradeKickAccount} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="upgrade-email">Email Address</Label>
+                    <Input
+                      id="upgrade-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="upgrade-password">Password</Label>
+                    <Input
+                      id="upgrade-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Choose a secure password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full gaming-button" disabled={loading}>
+                    {loading ? "Upgrading..." : "Add Email & Password"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    This will allow you to sign in with either your Kick account or email/password
+                  </p>
+                </form>
+              </TabsContent>
+            )}
             
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
