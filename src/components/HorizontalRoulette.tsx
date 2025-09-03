@@ -102,7 +102,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   }, [participants]);
 
   useEffect(() => {
-    if (isSpinning && participants.length > 0 && !isAnimating) {
+    if (isSpinning && participants.length > 0 && !isAnimating && winner) {
       setIsAnimating(true);
       setShowWinner(false);
       
@@ -114,15 +114,15 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const containerWidth = 800;
       const centerLinePosition = containerWidth / 2;
       
-      // Generate provably fair result - this determines the actual landing position
+      // Generate provably fair result - but ONLY use it for the landing offset
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      // ALWAYS use provably fair winner for positioning calculation
-      const targetWinner = participants[result.winnerTicket];
-      console.log("Provably fair winner:", targetWinner.username, "at index:", result.winnerTicket);
+      // Use the ACTUAL winner passed as prop, not the provably fair winner
+      const targetWinner = winner;
+      console.log("Actual selected winner:", targetWinner.username);
       
-      // Find ALL positions where this provably fair winner appears in the extended array
+      // Find ALL positions where this ACTUAL winner appears in the extended array
       const winnerPositions = [];
       extendedParticipants.forEach((participant, index) => {
         if (participant.id === targetWinner.id) {
@@ -130,7 +130,13 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }
       });
       
-      console.log("Winner appears at positions:", winnerPositions.slice(0, 10));
+      console.log("Selected winner appears at positions:", winnerPositions.slice(0, 10));
+      
+      if (winnerPositions.length === 0) {
+        console.error("Selected winner not found in extended array");
+        setIsAnimating(false);
+        return;
+      }
       
       // Choose a position that gives us a good spin effect (at least 20 full cycles)
       const minScrollDistance = 20 * participants.length * participantWidth; // 20 complete cycles minimum
@@ -139,15 +145,21 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
       
       if (suitablePositions.length === 0) {
-        console.error("No suitable winner positions found, using fallback");
-        setIsAnimating(false);
-        return;
+        console.error("No suitable positions for selected winner, using closest available");
+        // Fallback to the first available position that's reasonably far
+        const fallbackMinPosition = Math.ceil((5 * participants.length * participantWidth) / participantWidth);
+        const fallbackPositions = winnerPositions.filter(pos => pos >= fallbackMinPosition);
+        if (fallbackPositions.length === 0) {
+          setIsAnimating(false);
+          return;
+        }
+        var chosenPosition = fallbackPositions[0];
+      } else {
+        // Choose the first suitable position for consistency
+        var chosenPosition = suitablePositions[0];
       }
       
-      // Choose the first suitable position for consistency
-      const chosenPosition = suitablePositions[0];
-      
-      console.log("Chosen position:", chosenPosition, "for winner:", targetWinner.username);
+      console.log("Chosen position:", chosenPosition, "for selected winner:", targetWinner.username);
       
       // Calculate the exact scroll position needed
       const avatarLeftEdge = chosenPosition * participantWidth;
@@ -156,10 +168,11 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       // Calculate scroll to center the avatar on the center line
       let finalScrollPosition = avatarCenter - centerLinePosition;
       
-      // Add the provably fair landing offset
+      // Add the provably fair landing offset for slight randomness
       finalScrollPosition += result.landingOffset;
       
-      console.log("Final scroll calculation:", {
+      console.log("Final scroll calculation for selected winner:", {
+        selectedWinner: targetWinner.username,
         chosenPosition,
         avatarLeftEdge,
         avatarCenter,
@@ -170,7 +183,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       
       // Apply the scroll with a slight delay to ensure reset is processed
       setTimeout(() => {
-        console.log("Setting final scroll position:", finalScrollPosition);
+        console.log("Setting final scroll position for:", targetWinner.username, "at position:", finalScrollPosition);
         setScrollPosition(finalScrollPosition);
       }, 100);
       
@@ -178,14 +191,12 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const animationDuration = 5000;
       setTimeout(() => {
         setIsAnimating(false);
-      }, animationDuration + 100); // Add buffer for the delayed scroll
+      }, animationDuration + 100);
       
-      // Show winner announcement (show the passed winner prop, but position was calculated with provably fair)
-      if (winner) {
-        setTimeout(() => {
-          setShowWinner(true);
-        }, animationDuration + 1500);
-      }
+      // Show winner announcement
+      setTimeout(() => {
+        setShowWinner(true);
+      }, animationDuration + 1500);
     }
   }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
 
