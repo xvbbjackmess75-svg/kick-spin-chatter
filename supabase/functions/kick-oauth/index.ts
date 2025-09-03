@@ -90,7 +90,9 @@ Deno.serve(async (req) => {
       const frontendUrl = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
+      console.log('🔧 OAuth Debug - Raw Client ID from env:', Deno.env.get('KICK_CLIENT_ID'))
       console.log('🔧 OAuth Debug - Client ID exists:', !!clientId)
+      console.log('🔧 OAuth Debug - Client ID length:', clientId?.length || 0)
       console.log('🔧 OAuth Debug - Frontend URL:', frontendUrl)
       console.log('🔧 OAuth Debug - Redirect URI:', redirectUri)
       
