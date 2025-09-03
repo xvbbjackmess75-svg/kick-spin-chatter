@@ -164,7 +164,10 @@ Deno.serve(async (req) => {
       console.log('🔧 Initializing Supabase...')
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      console.log('🔧 Supabase URL exists:', !!supabaseUrl)
+      console.log('🔧 Service key exists:', !!supabaseServiceKey)
       const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      console.log('🔧 Supabase client created')
 
       // Create or update user in Supabase Auth
       console.log('🔧 Creating/updating Supabase user...')
