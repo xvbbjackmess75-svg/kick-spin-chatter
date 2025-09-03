@@ -47,14 +47,14 @@ export default function History() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (isAuthenticated) {
+      if (isSupabaseUser) {
         console.log("📚 HISTORY: Component mounted, fetching winners...");
         fetchWinners();
       } else {
         setLoading(false);
       }
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isSupabaseUser]);
 
   useEffect(() => {
     // Filter winners based on search term
@@ -72,7 +72,7 @@ export default function History() {
   }, [winners, searchTerm]);
 
   const fetchWinners = async () => {
-    if (!isAuthenticated) {
+    if (!isSupabaseUser) {
       setLoading(false);
       return;
     }
@@ -80,7 +80,7 @@ export default function History() {
     try {
       console.log("📚 HISTORY: Fetching winners for user:", hybridUserId);
       
-      let query = supabase
+      const { data, error } = await supabase
         .from('giveaways')
         .select(`
           *,
@@ -92,17 +92,8 @@ export default function History() {
             tickets_per_participant,
             won_at
           )
-        `);
-      
-      // For Supabase users, use normal RLS
-      if (isSupabaseUser) {
-        query = query.eq('user_id', hybridUserId);
-      } else if (isKickUser) {
-        // For Kick users, we need to filter by their hybrid ID
-        query = query.eq('user_id', hybridUserId);
-      }
-      
-      const { data, error } = await query.order('updated_at', { ascending: false });
+        `)
+        .order('updated_at', { ascending: false });
 
       console.log("📚 HISTORY: Database query result:", {
         error,
@@ -167,6 +158,43 @@ export default function History() {
               >
                 Login to View History
               </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Kick user without email - show security notice
+  if (isKickUser && !isSupabaseUser) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-20 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 rounded-xl border border-red-200 dark:border-red-800">
+            <div className="max-w-md mx-auto px-6">
+              <Trophy className="h-16 w-16 text-red-500 mx-auto mb-6" />
+              <h1 className="text-3xl font-bold text-foreground mb-4">Security Enhancement Required</h1>
+              <p className="text-lg text-muted-foreground mb-6">
+                For your security and data protection, viewing giveaway history requires enhanced authentication.
+              </p>
+              <div className="bg-background/50 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-semibold text-foreground mb-2">Why this matters:</h3>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Protects your historical data from unauthorized access</li>
+                  <li>• Secures participant and winner information</li>
+                  <li>• Prevents data exposure to competitors</li>
+                  <li>• Ensures compliance with privacy regulations</li>
+                </ul>
+              </div>
+              <Button 
+                className="gaming-button w-full" 
+                onClick={() => window.location.href = '/account'}
+              >
+                Add Email & Password to Continue
+              </Button>
+              <p className="text-xs text-muted-foreground mt-4">
+                You'll keep your Kick login and gain additional security features
+              </p>
             </div>
           </div>
         </div>
