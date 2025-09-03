@@ -333,77 +333,8 @@ export default function Account() {
           </Card>
         )}
 
-        {/* Email/Password Setup for Kick Users */}
-        {isKickAuthenticated && !user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Add Email & Password
-              </CardTitle>
-              <CardDescription>
-                Create email credentials to access your account from multiple platforms and enable additional features.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleKickUserEmailSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="kick-email">Email Address</Label>
-                  <Input
-                    id="kick-email"
-                    type="email"
-                    value={kickUserEmail}
-                    onChange={(e) => setKickUserEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kick-password">Password</Label>
-                  <Input
-                    id="kick-password"
-                    type="password"
-                    value={kickUserPassword}
-                    onChange={(e) => setKickUserPassword(e.target.value)}
-                    placeholder="Choose a secure password"
-                    minLength={6}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kick-confirm-password">Confirm Password</Label>
-                  <Input
-                    id="kick-confirm-password"
-                    type="password"
-                    value={kickUserConfirmPassword}
-                    onChange={(e) => setKickUserConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    minLength={6}
-                    required
-                  />
-                </div>
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
-                    <strong>Benefits of adding email/password:</strong>
-                  </p>
-                  <ul className="text-sm text-blue-800 dark:text-blue-200 mt-1 space-y-1">
-                    <li>• Login from any device without Kick</li>
-                    <li>• Access to additional features and integrations</li>
-                    <li>• Backup authentication method</li>
-                    <li>• Email notifications and updates</li>
-                  </ul>
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={loading || !kickUserEmail || !kickUserPassword || kickUserPassword !== kickUserConfirmPassword}
-                  className="w-full"
-                >
-                  {loading ? "Creating Account..." : "Add Email & Password"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* Email/Password Setup for Kick Users - No longer needed since auto-created */}
+        {/* Keeping this comment for reference, but the manual setup is removed since accounts are auto-created */}
 
         {/* Password Management - Only for email authenticated users */}
         {isEmailAuthenticated && (
