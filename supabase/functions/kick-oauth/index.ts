@@ -132,11 +132,18 @@ Deno.serve(async (req) => {
       const codeVerifier = url.searchParams.get('code_verifier')
       const origin = url.searchParams.get('origin') || 'https://kick-spin-chatter.lovable.app'
       
+      console.log('🔄 Exchange Debug - Code exists:', !!code)
+      console.log('🔄 Exchange Debug - Code verifier exists:', !!codeVerifier)
+      console.log('🔄 Exchange Debug - State:', state)
+      console.log('🔄 Exchange Debug - Origin:', origin)
+      
       if (!code) {
+        console.error('❌ No authorization code received')
         throw new Error('No authorization code received')
       }
 
       if (!codeVerifier) {
+        console.error('❌ No code verifier provided')
         throw new Error('No code verifier provided')
       }
 
@@ -147,6 +154,8 @@ Deno.serve(async (req) => {
       const clientId = '01K48PAFGDJXCP7V52WK8ZCYCJ'
       const clientSecret = '4f9941ca9147c4ea96e6612ef140a3761760daa479bba1f36023ce4616063105'
       const redirectUri = `${origin}/auth/callback`
+
+      console.log('🔄 Token exchange - Redirect URI:', redirectUri)
 
       const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
         method: 'POST',
@@ -162,6 +171,8 @@ Deno.serve(async (req) => {
           code_verifier: codeVerifier,
         }),
       })
+
+      console.log('🔄 Token response status:', tokenResponse.status)
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text()
