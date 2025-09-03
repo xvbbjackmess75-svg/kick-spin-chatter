@@ -110,7 +110,16 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   }, [participants]);
 
   useEffect(() => {
-    if (isSpinning && participants.length > 0 && winner && !isAnimating) {
+    console.log("useEffect triggered:", {
+      isSpinning,
+      participantsLength: participants.length,
+      winner: winner?.username,
+      isAnimating
+    });
+    
+    // Start spinning when isSpinning becomes true
+    if (isSpinning && participants.length > 0 && !isAnimating) {
+      console.log("Starting roulette animation!");
       setIsAnimating(true);
       setShowWinner(false);
       
@@ -118,17 +127,32 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       setScrollPosition(0);
       
       const participantWidth = 80;
-      const containerWidth = 800;
-      const centerLinePosition = containerWidth / 2;
       
       // Generate provably fair result for the dialog
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
-      console.log("Selected winner:", winner.username);
+      console.log("Roulette spinning started - waiting for winner...");
+      
+      // Start with a basic spin animation
+      setTimeout(() => {
+        const spinDistance = 20 * participants.length * participantWidth; // 20 cycles
+        setScrollPosition(spinDistance);
+      }, 100);
+    }
+  }, [isSpinning, participants, isAnimating]);
+
+  // Separate effect to handle winner landing
+  useEffect(() => {
+    if (winner && isAnimating && !isSpinning) { // Winner is set and we're still animating but isSpinning is false
+      console.log("Winner received, adjusting landing position:", winner.username);
+      
+      const participantWidth = 80;
+      const containerWidth = 800;
+      const centerLinePosition = containerWidth / 2;
       
       // Find where the winner appears in the original participants array
-      const winnerIndexInOriginal = participants.findIndex(p => p.id === winner.id);
+      const winnerIndexInOriginal = participants.findIndex(p => p.username === winner.username);
       if (winnerIndexInOriginal === -1) {
         console.error("Winner not found in participants");
         setIsAnimating(false);
@@ -137,13 +161,10 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       
       console.log("Winner index in original array:", winnerIndexInOriginal);
       
-      // Calculate how many complete cycles to scroll through (for good effect)
+      // Calculate precise landing position
       const cycles = 20; // 20 complete cycles through all participants
       const participantsInOneCycle = participants.length;
-      
-      // Position where we want to land (after X cycles + winner position)
-      const targetCycle = cycles;
-      const targetIndex = (targetCycle * participantsInOneCycle) + winnerIndexInOriginal;
+      const targetIndex = (cycles * participantsInOneCycle) + winnerIndexInOriginal;
       
       console.log("Target index in extended array:", targetIndex);
       
@@ -152,7 +173,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const avatarCenter = avatarLeftEdge + (participantWidth / 2);
       const finalScrollPosition = avatarCenter - centerLinePosition;
       
-      console.log("Scroll calculation:", {
+      console.log("Final scroll calculation:", {
         winnerUsername: winner.username,
         winnerIndexInOriginal,
         targetIndex,
@@ -162,23 +183,16 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         finalScrollPosition
       });
       
-      // Apply scroll with small delay to ensure reset
-      setTimeout(() => {
-        setScrollPosition(finalScrollPosition);
-      }, 100);
+      // Adjust to final position
+      setScrollPosition(finalScrollPosition);
       
       // Animation complete
-      const animationDuration = 4000;
       setTimeout(() => {
         setIsAnimating(false);
-      }, animationDuration + 100);
-      
-      // Show winner
-      setTimeout(() => {
         setShowWinner(true);
-      }, animationDuration + 1000);
+      }, 1000); // 1 second to land on winner
     }
-  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
+  }, [winner, isAnimating, isSpinning, participants]);
 
   return (
     <Card className="gaming-card w-full">
