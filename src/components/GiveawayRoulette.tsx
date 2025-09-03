@@ -30,6 +30,7 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
   const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
   const [winnerResult, setWinnerResult] = useState<WinnerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [isResultLocked, setIsResultLocked] = useState(false); // Lock result to prevent changes
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
@@ -81,111 +82,83 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
 
   // Start the roulette process
   const startRoulette = () => {
-    if (participants.length === 0) return;
+    if (participants.length === 0 || isResultLocked) return;
     
     console.log("🎰 Starting roulette with participants:", participants.map(p => p.username));
     
-    // Step 1: Select winner using provably fair system
+    // Step 1: Select winner using provably fair system (FINAL - never changes)
     const result = selectWinner();
     setWinnerResult(result);
     setSelectedWinner(result.winner);
     
-    // Step 2: Start animation
+    // Step 2: Lock the result to prevent any changes
+    setIsResultLocked(true);
+    
+    console.log("🔒 RESULT LOCKED:", {
+      finalWinner: result.winner.username,
+      winningTicket: result.winningTicket,
+      locked: true
+    });
+    
+    // Step 3: Start animation
     setIsSpinning(true);
     setShowResult(false);
     setScrollPosition(0);
     
-    // Step 3: Calculate landing position using ACTUAL container width
-    const participantWidth = 80;
-    
-    // Get actual container width instead of hardcoded value
-    const actualContainerWidth = containerRef.current?.offsetWidth || 800;
-    const centerPosition = actualContainerWidth / 2;
-    
-    console.log("📐 RESPONSIVE CALCULATION:", {
-      actualContainerWidth,
-      centerPosition,
-      hardcodedWouldBe: 400
-    });
-    
-    // Find winner's index in original participants array
-    const winnerIndex = participants.findIndex(p => p.username === result.winner.username);
-    
-    console.log("🎯 ANIMATION SETUP:", {
-      winnerToFind: result.winner.username,
-      winnerIndex,
-      participantsOrder: participants.map((p, i) => `${i}: ${p.username}`),
-      extendedParticipantsCheck: extendedParticipants.slice(0, participants.length).map((p, i) => `${i}: ${p.username}`)
-    });
-    
-    if (winnerIndex === -1) {
-      console.error("❌ CRITICAL ERROR: Winner not found in participants array!", {
-        winnerToFind: result.winner.username,
-        availableParticipants: participants.map(p => p.username)
-      });
-      return;
-    }
-    
-    // Calculate target position (after several cycles)
-    const cycles = 25;
-    const targetIndex = (cycles * participants.length) + winnerIndex;
-    // FIXED: Calculate exact center alignment
-    const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
-    
-    console.log("🎯 RESPONSIVE ANIMATION CALCULATION:", {
-      winnerUsername: result.winner.username,
-      winnerIndex,
-      cycles,
-      participantsLength: participants.length,
-      targetIndex,
-      participantWidth,
-      actualContainerWidth,
-      centerPosition,
-      targetPosition,
-      participantAtTargetIndex: extendedParticipants[targetIndex]?.username,
-      participantAtTargetOriginalIndex: extendedParticipants[targetIndex]?.originalIndex
-    });
-    
-    // VERIFICATION: Check if the participant at target index matches our winner
-    const participantAtTarget = extendedParticipants[targetIndex];
-    if (participantAtTarget?.username !== result.winner.username) {
-      console.error("❌ ANIMATION MISMATCH DETECTED!", {
-        expectedWinner: result.winner.username,
-        participantAtTarget: participantAtTarget?.username,
-        targetIndex,
-        extendedArraySlice: extendedParticipants.slice(targetIndex-2, targetIndex+3).map((p, i) => `${targetIndex-2+i}: ${p.username}`)
-      });
-    }
-    
-    // Step 4: Animate to winner
-    setTimeout(() => {
-      console.log("🚀 STARTING ANIMATION to position:", targetPosition);
-      setScrollPosition(targetPosition);
-    }, 100);
-    
-    // Step 5: Show result
-    setTimeout(() => {
-      setIsSpinning(false);
-      setShowResult(true);
-      console.log("✅ ANIMATION COMPLETE - Expected:", result.winner.username);
+    // Step 4: Calculate landing position using CURRENT container width (for animation only)
+    const calculateAndAnimate = () => {
+      const participantWidth = 80;
       
-      // Final verification of landing position
-      const finalTargetParticipant = extendedParticipants[targetIndex];
-      console.log("🏁 FINAL VERIFICATION:", {
-        expectedWinner: result.winner.username,
-        participantAtLandingPosition: finalTargetParticipant?.username,
-        match: finalTargetParticipant?.username === result.winner.username
+      // Get actual container width for animation calculation
+      const actualContainerWidth = containerRef.current?.offsetWidth || 800;
+      const centerPosition = actualContainerWidth / 2;
+      
+      // Find winner's index in original participants array
+      const winnerIndex = participants.findIndex(p => p.username === result.winner.username);
+      
+      if (winnerIndex === -1) {
+        console.error("❌ CRITICAL ERROR: Winner not found in participants array!");
+        return;
+      }
+      
+      // Calculate target position (after several cycles)
+      const cycles = 25;
+      const targetIndex = (cycles * participants.length) + winnerIndex;
+      const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
+      
+      console.log("🎯 ANIMATION (locked result):", {
+        lockedWinner: result.winner.username,
+        winnerIndex,
+        actualContainerWidth,
+        targetPosition
       });
-    }, 4000);
+      
+      // Animate to winner
+      setTimeout(() => {
+        setScrollPosition(targetPosition);
+      }, 100);
+      
+      // Show final result (this never changes once locked)
+      setTimeout(() => {
+        setIsSpinning(false);
+        setShowResult(true);
+        console.log("✅ FINAL RESULT DISPLAYED (LOCKED):", result.winner.username);
+      }, 4000);
+    };
+    
+    // Execute animation
+    calculateAndAnimate();
   };
 
-  // Reset roulette
+  // Reset roulette - UNLOCKS result for new selection
   const resetRoulette = () => {
+    console.log("🔓 UNLOCKING RESULT for new selection");
     setIsSpinning(false);
     setScrollPosition(0);
     setSelectedWinner(null);
     setWinnerResult(null);
     setShowResult(false);
+    setIsResultLocked(false); // Unlock for new selection
   };
 
   // Handle accept winner
@@ -207,12 +180,12 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     }, 500);
   };
 
-  // Auto-start when participants change
+  // Auto-start when participants change (only if not already locked)
   useEffect(() => {
-    if (participants.length > 0 && !isSpinning && !selectedWinner) {
+    if (participants.length > 0 && !isSpinning && !selectedWinner && !isResultLocked) {
       startRoulette();
     }
-  }, [participants]);
+  }, [participants, isResultLocked]);
 
   return (
     <Card className="gaming-card w-full">
