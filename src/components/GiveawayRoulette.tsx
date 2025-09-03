@@ -30,7 +30,8 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
   const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
   const [winnerResult, setWinnerResult] = useState<WinnerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [isResultLocked, setIsResultLocked] = useState(false); // Lock result to prevent changes
+  const [isResultLocked, setIsResultLocked] = useState(false);
+  const [lockedIndicatorPosition, setLockedIndicatorPosition] = useState<number | null>(null); // Lock indicator position
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
@@ -138,11 +139,21 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
         setScrollPosition(targetPosition);
       }, 100);
       
-      // Show final result (this never changes once locked)
+      // Show final result and LOCK positions
       setTimeout(() => {
         setIsSpinning(false);
         setShowResult(true);
-        console.log("✅ FINAL RESULT DISPLAYED (LOCKED):", result.winner.username);
+        
+        // LOCK the indicator position at the current center
+        const currentCenterPosition = actualContainerWidth / 2;
+        setLockedIndicatorPosition(currentCenterPosition);
+        
+        console.log("✅ FINAL RESULT LOCKED:", {
+          winner: result.winner.username,
+          scrollPosition: targetPosition,
+          lockedIndicatorPosition: currentCenterPosition,
+          containerWidth: actualContainerWidth
+        });
       }, 4000);
     };
     
@@ -150,15 +161,16 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
     calculateAndAnimate();
   };
 
-  // Reset roulette - UNLOCKS result for new selection
+  // Reset roulette - UNLOCKS everything for new selection
   const resetRoulette = () => {
-    console.log("🔓 UNLOCKING RESULT for new selection");
+    console.log("🔓 UNLOCKING ALL POSITIONS for new selection");
     setIsSpinning(false);
     setScrollPosition(0);
     setSelectedWinner(null);
     setWinnerResult(null);
     setShowResult(false);
-    setIsResultLocked(false); // Unlock for new selection
+    setIsResultLocked(false);
+    setLockedIndicatorPosition(null); // Unlock indicator position
   };
 
   // Handle accept winner
@@ -204,13 +216,27 @@ export function GiveawayRoulette({ participants, onAcceptWinner, onRerollWinner 
         {/* Roulette Strip */}
         <div className="relative overflow-hidden border-2 border-kick-green/30 rounded-lg bg-gradient-to-r from-kick-dark via-kick-purple/20 to-kick-dark">
           
-          {/* Winner indicator arrow - EXACT CENTER */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1 z-20">
+          {/* Winner indicator arrow - RESPONSIVE OR LOCKED */}
+          <div 
+            className="absolute top-0 transform -translate-x-1/2 -translate-y-1 z-20"
+            style={{
+              left: lockedIndicatorPosition !== null 
+                ? `${lockedIndicatorPosition}px` 
+                : '50%'
+            }}
+          >
             <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-kick-green drop-shadow-lg" />
           </div>
           
-          {/* Center line - EXACT CENTER */}
-          <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-1 bg-kick-green z-10 opacity-80" />
+          {/* Center line - RESPONSIVE OR LOCKED */}
+          <div 
+            className="absolute top-0 bottom-0 transform -translate-x-1/2 w-1 bg-kick-green z-10 opacity-80"
+            style={{
+              left: lockedIndicatorPosition !== null 
+                ? `${lockedIndicatorPosition}px` 
+                : '50%'
+            }}
+          />
           
           {/* Scrolling container - RESPONSIVE WIDTH */}
           <div ref={containerRef} className="relative h-32">
