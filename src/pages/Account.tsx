@@ -30,6 +30,11 @@ export default function Account() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // For Kick users adding email/password
+  const [kickUserEmail, setKickUserEmail] = useState('');
+  const [kickUserPassword, setKickUserPassword] = useState('');
+  const [kickUserConfirmPassword, setKickUserConfirmPassword] = useState('');
 
   // Check authentication method
   const kickUserData = localStorage.getItem('kick_user');
@@ -167,6 +172,69 @@ export default function Account() {
     }
   };
 
+  const handleKickUserEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (kickUserPassword !== kickUserConfirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "Passwords don't match",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (kickUserPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create Supabase account for Kick user
+      const { data, error } = await supabase.auth.signUp({
+        email: kickUserEmail,
+        password: kickUserPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            kick_username: kickUser?.username,
+            kick_user_id: kickUser?.id?.toString(),
+            kick_avatar: kickUser?.avatar,
+            display_name: kickUser?.display_name || kickUser?.username,
+            is_hybrid_account: true
+          }
+        }
+      });
+      
+      if (error) throw error;
+
+      toast({
+        title: "Account created successfully!",
+        description: "Please check your email to verify your account. You can now use both Kick and email login.",
+      });
+      
+      // Clear form
+      setKickUserEmail('');
+      setKickUserPassword('');
+      setKickUserConfirmPassword('');
+      
+    } catch (error: any) {
+      toast({
+        title: "Signup failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!userInfo) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -233,7 +301,7 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Email Management - Only for email authenticated users */}
+        {/* Email Management - For email authenticated users */}
         {isEmailAuthenticated && (
           <Card>
             <CardHeader>
@@ -259,6 +327,78 @@ export default function Account() {
                 </div>
                 <Button type="submit" disabled={loading || email === user?.email}>
                   {loading ? "Updating..." : "Update Email"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Email/Password Setup for Kick Users */}
+        {isKickAuthenticated && !user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Add Email & Password
+              </CardTitle>
+              <CardDescription>
+                Create email credentials to access your account from multiple platforms and enable additional features.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleKickUserEmailSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="kick-email">Email Address</Label>
+                  <Input
+                    id="kick-email"
+                    type="email"
+                    value={kickUserEmail}
+                    onChange={(e) => setKickUserEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kick-password">Password</Label>
+                  <Input
+                    id="kick-password"
+                    type="password"
+                    value={kickUserPassword}
+                    onChange={(e) => setKickUserPassword(e.target.value)}
+                    placeholder="Choose a secure password"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kick-confirm-password">Confirm Password</Label>
+                  <Input
+                    id="kick-confirm-password"
+                    type="password"
+                    value={kickUserConfirmPassword}
+                    onChange={(e) => setKickUserConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    <strong>Benefits of adding email/password:</strong>
+                  </p>
+                  <ul className="text-sm text-blue-800 dark:text-blue-200 mt-1 space-y-1">
+                    <li>• Login from any device without Kick</li>
+                    <li>• Access to additional features and integrations</li>
+                    <li>• Backup authentication method</li>
+                    <li>• Email notifications and updates</li>
+                  </ul>
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading || !kickUserEmail || !kickUserPassword || kickUserPassword !== kickUserConfirmPassword}
+                  className="w-full"
+                >
+                  {loading ? "Creating Account..." : "Add Email & Password"}
                 </Button>
               </form>
             </CardContent>
