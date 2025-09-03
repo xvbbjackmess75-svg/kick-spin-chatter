@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<DashboardParticipant | null>(null);
+  const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatConnected, setChatConnected] = useState(false);
   const [connectedChannel, setConnectedChannel] = useState<string>("");
@@ -408,6 +409,8 @@ export default function Dashboard() {
       }
 
       // Set participants for the roulette and start spinning
+      // Store the current giveaway for the callback
+      setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
       setIsSpinning(true);
       setWinner(null);
@@ -422,14 +425,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleWinnerSelected = async (selectedWinner: DashboardParticipant, giveaway?: Giveaway) => {
+  const handleWinnerSelected = async (selectedWinner: DashboardParticipant) => {
+    console.log("🏆 Winner selected by roulette:", selectedWinner.username);
+    
     setWinner({ ...selectedWinner, isWinner: true });
     setIsSpinning(false);
 
-    // Find the active giveaway if not provided
-    const activeGiveaway = giveaway || giveaways.find(g => g.status === 'active');
-    
-    if (activeGiveaway) {
+    if (currentGiveaway) {
       try {
         await supabase
           .from('giveaways')
@@ -437,7 +439,7 @@ export default function Dashboard() {
             winner_user_id: selectedWinner.username,
             status: 'completed'
           })
-          .eq('id', activeGiveaway.id);
+          .eq('id', currentGiveaway.id);
 
         toast({
           title: "Winner Selected!",
@@ -445,6 +447,7 @@ export default function Dashboard() {
         });
 
         fetchGiveaways();
+        setCurrentGiveaway(null);
       } catch (error) {
         console.error('Error updating winner:', error);
       }

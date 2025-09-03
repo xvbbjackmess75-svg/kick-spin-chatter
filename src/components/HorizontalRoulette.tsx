@@ -112,62 +112,71 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, onWinnerS
 
   useEffect(() => {
     if (isSpinning && participants.length > 0 && !isAnimating) {
-      console.log("🎰 Starting roulette animation!");
+      console.log("🎰 ROULETTE: Starting animation with participants:", participants.map(p => p.username));
       setIsAnimating(true);
       setShowWinner(false);
       setSelectedWinner(null);
       
-      // FIRST: Generate the provably fair winner
+      // STEP 1: Generate the provably fair winner FIRST
       const result = selectWinnerTicket(participants);
       setDrawResult(result);
       
       const winner = participants[result.winnerTicket];
       setSelectedWinner(winner);
       
-      console.log("🎯 Provably fair winner selected:", winner.username, "Ticket:", result.winningTicketNumber);
+      console.log("🎯 PROVABLY FAIR WINNER:", winner.username, "Index:", result.winnerTicket, "Ticket:", result.winningTicketNumber);
       
-      // Notify parent component about the winner
-      if (onWinnerSelected) {
-        onWinnerSelected(winner);
-      }
-      
-      // Reset to start position
-      setScrollPosition(0);
-      
-      // SECOND: Calculate where to land (on the winner's avatar)
+      // STEP 2: Calculate EXACT landing position for this winner
       const participantWidth = 80;
       const containerWidth = 800;
       const centerLinePosition = containerWidth / 2;
       
-      // Find winner's index in original participants array
-      const winnerIndexInOriginal = participants.findIndex(p => p.id === winner.id);
+      // Reset scroll position to 0
+      setScrollPosition(0);
       
-      // Calculate landing position after 20 cycles
-      const cycles = 20;
+      // Find winner's index in the original participants array
+      const winnerIndexInOriginal = participants.findIndex(p => p.id === winner.id);
+      console.log("🎯 Winner index in participants array:", winnerIndexInOriginal);
+      
+      // Calculate target position after 25 cycles for dramatic effect
+      const cycles = 25;
       const participantsInOneCycle = participants.length;
       const targetIndex = (cycles * participantsInOneCycle) + winnerIndexInOriginal;
       
-      // Calculate scroll position to center this avatar
+      // Calculate exact scroll position to center this winner's avatar
       const avatarLeftEdge = targetIndex * participantWidth;
       const avatarCenter = avatarLeftEdge + (participantWidth / 2);
       const finalScrollPosition = avatarCenter - centerLinePosition + result.landingOffset;
       
-      console.log("🎯 Animation target:", {
+      console.log("🎯 FINAL CALCULATION:", {
         winnerUsername: winner.username,
         winnerIndexInOriginal,
+        cycles,
         targetIndex,
+        avatarLeftEdge,
+        avatarCenter,
+        centerLinePosition,
+        landingOffset: result.landingOffset,
         finalScrollPosition
       });
       
-      // THIRD: Start animation to the winner's position
+      // STEP 3: Start animation to land on this exact winner
       setTimeout(() => {
+        console.log("🚀 Starting scroll to position:", finalScrollPosition);
         setScrollPosition(finalScrollPosition);
       }, 100);
       
-      // FOURTH: Complete animation and show winner
+      // STEP 4: Complete animation and notify parent
       setTimeout(() => {
+        console.log("✅ Animation complete, winner is:", winner.username);
         setIsAnimating(false);
         setShowWinner(true);
+        
+        // Notify parent component about the selected winner
+        if (onWinnerSelected) {
+          console.log("📤 Notifying parent of winner:", winner.username);
+          onWinnerSelected(winner);
+        }
       }, 4000); // 4 second animation
     }
   }, [isSpinning, participants, isAnimating, onWinnerSelected]);
