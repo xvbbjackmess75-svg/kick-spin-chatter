@@ -36,6 +36,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
   const [showWinner, setShowWinner] = useState(false);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastWinnerId, setLastWinnerId] = useState<number | null>(null);
 
   // Provably fair system functions
   const generateClientSeed = () => Math.random().toString(36).substring(2, 15);
@@ -123,6 +124,18 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       
       console.log("Target winner:", targetWinner.username);
       
+      // Reset to beginning if we're picking a new winner (different from last one)
+      const isNewWinner = !lastWinnerId || (winner && winner.id !== lastWinnerId);
+      let startPosition = 0;
+      
+      if (isNewWinner) {
+        console.log("New winner detected, resetting scroll position");
+        setScrollPosition(0); // Reset immediately
+        startPosition = 0;
+      } else {
+        startPosition = scrollPosition;
+      }
+      
       // Find ALL positions where this winner appears in the extended array
       const winnerPositions = [];
       extendedParticipants.forEach((participant, index) => {
@@ -134,9 +147,9 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       console.log("Winner appears at positions:", winnerPositions.slice(0, 10)); // Log first 10 positions
       
       // Choose a position that's far enough for a good spin effect
-      // We want at least 1500px of scrolling (about 18-19 participants)
+      // Start from the current position and add minimum scroll distance
       const minScrollDistance = 1500;
-      const minPosition = Math.ceil(minScrollDistance / participantWidth);
+      const minPosition = Math.ceil((startPosition + minScrollDistance) / participantWidth);
       
       const suitablePositions = winnerPositions.filter(pos => pos >= minPosition);
       
@@ -151,7 +164,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
       const randomIndex = Math.floor(Math.random() * maxPositionsToConsider);
       const chosenPosition = suitablePositions[randomIndex];
       
-      console.log("Chosen position:", chosenPosition);
+      console.log("Chosen position:", chosenPosition, "starting from:", startPosition);
       
       // Calculate the exact scroll position needed
       // We want the center of the chosen avatar to align with the center line
@@ -172,11 +185,19 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         avatarCenter,
         centerLinePosition,
         landingOffset: result.landingOffset,
-        finalScrollPosition
+        finalScrollPosition,
+        startPosition
       });
       
-      // Set the scroll position
-      setScrollPosition(finalScrollPosition);
+      // Set the target scroll position with slight delay to ensure reset is applied
+      setTimeout(() => {
+        setScrollPosition(finalScrollPosition);
+      }, isNewWinner ? 100 : 0); // Small delay for new winners to ensure reset
+      
+      // Track the current winner
+      if (winner) {
+        setLastWinnerId(winner.id);
+      }
       
       // Animation complete handler
       const animationDuration = 5000;
@@ -191,7 +212,7 @@ export function HorizontalRoulette({ participants, isSpinning, onSpin, winner }:
         }, animationDuration + 1000);
       }
     }
-  }, [isSpinning, participants, winner, isAnimating, extendedParticipants]);
+  }, [isSpinning, participants, winner, isAnimating, extendedParticipants, scrollPosition, lastWinnerId]);
 
   return (
     <Card className="gaming-card w-full">
