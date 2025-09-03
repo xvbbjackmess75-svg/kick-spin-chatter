@@ -5,6 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { RouletteWheel } from "@/components/RouletteWheel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +38,11 @@ import {
   MonitorX,
   Play,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Trash2,
+  Edit,
+  UserX,
+  MoreVertical
 } from "lucide-react";
 
 interface DashboardParticipant {
@@ -53,6 +74,12 @@ export default function Dashboard() {
   const [chatConnected, setChatConnected] = useState(false);
   const [connectedChannel, setConnectedChannel] = useState<string>("");
   const socketRef = useRef<WebSocket | null>(null);
+  
+  // Management states
+  const [editingGiveaway, setEditingGiveaway] = useState<Giveaway | null>(null);
+  const [newKeyword, setNewKeyword] = useState("");
+  const [deleteGiveawayId, setDeleteGiveawayId] = useState<string | null>(null);
+  const [clearParticipantsId, setClearParticipantsId] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -400,6 +427,106 @@ export default function Dashboard() {
     }
   };
 
+  // Management functions
+  const deleteGiveaway = async (giveawayId: string) => {
+    try {
+      const { error } = await supabase
+        .from('giveaways')
+        .delete()
+        .eq('id', giveawayId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Giveaway Deleted",
+        description: "The giveaway has been permanently deleted",
+      });
+
+      fetchGiveaways();
+      setDeleteGiveawayId(null);
+    } catch (error) {
+      console.error('Error deleting giveaway:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete giveaway",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateKeyword = async () => {
+    if (!editingGiveaway || !newKeyword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid keyword",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const channelMatch = editingGiveaway.description?.match(/Channel: ([^,]+)/);
+      const channel = channelMatch?.[1]?.trim();
+      
+      const { error } = await supabase
+        .from('giveaways')
+        .update({
+          description: `Channel: ${channel}, Keyword: ${newKeyword.trim()}`
+        })
+        .eq('id', editingGiveaway.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Keyword Updated",
+        description: `Keyword changed to "${newKeyword.trim()}"`,
+      });
+
+      fetchGiveaways();
+      setEditingGiveaway(null);
+      setNewKeyword("");
+    } catch (error) {
+      console.error('Error updating keyword:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update keyword",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clearParticipants = async (giveawayId: string) => {
+    try {
+      const { error } = await supabase
+        .from('giveaway_participants')
+        .delete()
+        .eq('giveaway_id', giveawayId);
+
+      if (error) throw error;
+
+      // Update participant count
+      await supabase
+        .from('giveaways')
+        .update({ participants_count: 0 })
+        .eq('id', giveawayId);
+
+      toast({
+        title: "Participants Cleared",
+        description: "All participants have been removed from this giveaway",
+      });
+
+      fetchGiveaways();
+      setClearParticipantsId(null);
+    } catch (error) {
+      console.error('Error clearing participants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear participants",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -631,44 +758,81 @@ export default function Dashboard() {
                           </div>
                           
                           {/* Action Buttons */}
-                          <div className="flex flex-col gap-2 min-w-[200px]">
-                            {!isMonitoring ? (
+                          <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 min-w-[200px]">
+                              {!isMonitoring ? (
+                                <Button 
+                                  onClick={() => joinChatChannel(channel || '')}
+                                  className="w-full bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <Monitor className="h-4 w-4 mr-2" />
+                                  Start Monitoring
+                                </Button>
+                              ) : (
+                                <Button 
+                                  onClick={stopChatMonitoring}
+                                  variant="outline"
+                                  className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10"
+                                >
+                                  <MonitorX className="h-4 w-4 mr-2" />
+                                  Stop Monitoring
+                                </Button>
+                              )}
+                              
                               <Button 
-                                onClick={() => joinChatChannel(channel || '')}
-                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                onClick={() => drawWinner(giveaway)}
+                                disabled={isSpinning || (giveaway.participants_count || 0) === 0}
+                                className="w-full bg-gradient-to-r from-primary to-primary/80"
                               >
-                                <Monitor className="h-4 w-4 mr-2" />
-                                Start Monitoring
+                                <Trophy className="h-4 w-4 mr-2" />
+                                {isSpinning ? 'Drawing...' : 'Pick Winner'}
                               </Button>
-                            ) : (
+                              
                               <Button 
-                                onClick={stopChatMonitoring}
-                                variant="outline"
-                                className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => simulateParticipant(giveaway.id)}
+                                className="w-full"
                               >
-                                <MonitorX className="h-4 w-4 mr-2" />
-                                Stop Monitoring
+                                <Users className="h-3 w-3 mr-2" />
+                                Add Test Participant
                               </Button>
-                            )}
+                            </div>
                             
-                            <Button 
-                              onClick={() => drawWinner(giveaway)}
-                              disabled={isSpinning || (giveaway.participants_count || 0) === 0}
-                              className="w-full bg-gradient-to-r from-primary to-primary/80"
-                            >
-                              <Trophy className="h-4 w-4 mr-2" />
-                              {isSpinning ? 'Drawing...' : 'Pick Winner'}
-                            </Button>
-                            
-                            <Button 
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => simulateParticipant(giveaway.id)}
-                              className="w-full"
-                            >
-                              <Users className="h-3 w-3 mr-2" />
-                              Add Test Participant
-                            </Button>
+                            {/* Management Dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="px-2">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setEditingGiveaway(giveaway);
+                                    setNewKeyword(keyword || '');
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Keyword
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => setClearParticipantsId(giveaway.id)}
+                                  disabled={(giveaway.participants_count || 0) === 0}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Clear Participants
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => setDeleteGiveawayId(giveaway.id)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Giveaway
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </CardContent>
@@ -709,6 +873,79 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+      
+      {/* Edit Keyword Dialog */}
+      <Dialog open={!!editingGiveaway} onOpenChange={() => setEditingGiveaway(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Keyword</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newKeyword">New Keyword</Label>
+              <Input 
+                id="newKeyword" 
+                value={newKeyword}
+                onChange={(e) => setNewKeyword(e.target.value)}
+                placeholder="Enter new keyword" 
+              />
+              <p className="text-xs text-muted-foreground">
+                Viewers will need to type this new keyword to enter the giveaway
+              </p>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button onClick={updateKeyword} className="flex-1">
+                Update Keyword
+              </Button>
+              <Button variant="outline" onClick={() => setEditingGiveaway(null)} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Giveaway Confirmation */}
+      <AlertDialog open={!!deleteGiveawayId} onOpenChange={() => setDeleteGiveawayId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Giveaway</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this giveaway? This action cannot be undone and will remove all participants.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteGiveawayId && deleteGiveaway(deleteGiveawayId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear Participants Confirmation */}
+      <AlertDialog open={!!clearParticipantsId} onOpenChange={() => setClearParticipantsId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Participants</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove all participants from this giveaway? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => clearParticipantsId && clearParticipants(clearParticipantsId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Clear All Participants
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
