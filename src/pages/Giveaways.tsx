@@ -78,14 +78,6 @@ export default function Giveaways() {
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
   const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
-  // Store saved state per giveaway ID - persist in localStorage
-  const [savedGiveawayStates, setSavedGiveawayStates] = useState<Record<string, {
-    pendingWinners: PendingWinner[];
-    participants: RouletteParticipant[];
-  }>>(() => {
-    const saved = localStorage.getItem('giveaway-states');
-    return saved ? JSON.parse(saved) : {};
-  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
@@ -508,18 +500,42 @@ export default function Giveaways() {
       console.log("👥 Participants fetched:", giveawayParticipants.map(p => p.username));
       console.log("📊 Setting participants state:", giveawayParticipants.length);
       
-      // Check if we have saved state for this specific giveaway
-      const savedState = savedGiveawayStates[giveaway.id];
-      
-      if (savedState && savedState.pendingWinners.length > 0) {
-        console.log("🔄 Restoring saved state for giveaway:", giveaway.id, {
-          pendingWinners: savedState.pendingWinners.length,
-          remainingParticipants: savedState.participants.length
-        });
-        setParticipants(savedState.participants);
-        setPendingWinners(savedState.pendingWinners);
-      } else {
-        console.log("🆕 Fresh start for giveaway:", giveaway.id);
+      // Check if we have saved state for this specific giveaway in database
+      try {
+        const { data: savedState } = await supabase
+          .from('giveaway_states')
+          .select('*')
+          .eq('giveaway_id', giveaway.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (savedState && savedState.pending_winners) {
+          const pendingWinnersData = typeof savedState.pending_winners === 'string' 
+            ? JSON.parse(savedState.pending_winners) 
+            : savedState.pending_winners;
+          const remainingParticipantsData = typeof savedState.remaining_participants === 'string' 
+            ? JSON.parse(savedState.remaining_participants) 
+            : savedState.remaining_participants;
+          
+          if (Array.isArray(pendingWinnersData) && pendingWinnersData.length > 0) {
+            console.log("🔄 Restoring saved state for giveaway:", giveaway.id, {
+              pendingWinners: pendingWinnersData.length,
+              remainingParticipants: Array.isArray(remainingParticipantsData) ? remainingParticipantsData.length : 0
+            });
+            setParticipants(remainingParticipantsData as RouletteParticipant[]);
+            setPendingWinners(pendingWinnersData as PendingWinner[]);
+          } else {
+            console.log("🆕 Fresh start for giveaway:", giveaway.id);
+            setParticipants(giveawayParticipants);
+            setPendingWinners([]);
+          }
+        } else {
+          console.log("🆕 Fresh start for giveaway:", giveaway.id);
+          setParticipants(giveawayParticipants);
+          setPendingWinners([]);
+        }
+      } catch (error) {
+        console.log("🆕 No saved state found, fresh start for giveaway:", giveaway.id);
         setParticipants(giveawayParticipants);
         setPendingWinners([]);
       }
@@ -643,10 +659,15 @@ export default function Giveaways() {
       
       // Clear saved state for this giveaway since it's completed
       if (currentGiveaway) {
-        const newStates = { ...savedGiveawayStates };
-        delete newStates[currentGiveaway.id];
-        setSavedGiveawayStates(newStates);
-        localStorage.setItem('giveaway-states', JSON.stringify(newStates));
+        try {
+          await supabase
+            .from('giveaway_states')
+            .delete()
+            .eq('giveaway_id', currentGiveaway.id)
+            .eq('user_id', user.id);
+        } catch (error) {
+          console.error('Error clearing giveaway state:', error);
+        }
       }
       
       // Refresh giveaways list
@@ -752,8 +773,8 @@ export default function Giveaways() {
   };
 
   // Handle saving pending winners when modal closes
-  const handleSavePendingWinners = (winners: PendingWinner[], remainingParticipants: RouletteParticipant[]) => {
-    if (!currentGiveaway) return;
+  const handleSavePendingWinners = async (winners: PendingWinner[], remainingParticipants: RouletteParticipant[]) => {
+    if (!currentGiveaway || !user) return;
     
     console.log("💾 Saving pending winners for giveaway:", currentGiveaway.id, {
       winners: winners.length,
@@ -761,17 +782,19 @@ export default function Giveaways() {
       winnerNames: winners.map(w => w.username)
     });
     
-    // Save state for this specific giveaway
-    const newStates = {
-      ...savedGiveawayStates,
-      [currentGiveaway.id]: {
-        pendingWinners: winners,
-        participants: remainingParticipants
-      }
-    };
-    
-    setSavedGiveawayStates(newStates);
-    localStorage.setItem('giveaway-states', JSON.stringify(newStates));
+    try {
+      // Save state to database
+      const { error } = await supabase
+        .from('giveaway_states')
+        .upsert({
+          giveaway_id: currentGiveaway.id,
+          user_id: user.id,
+          pending_winners: JSON.stringify(winners),
+          remaining_participants: JSON.stringify(remainingParticipants)
+        });
+    } catch (error) {
+      console.error('Error saving giveaway state:', error);
+    }
     
     // Update current state as well
     setPendingWinners(winners);

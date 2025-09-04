@@ -244,6 +244,44 @@ export type Database = {
           },
         ]
       }
+      giveaway_states: {
+        Row: {
+          created_at: string
+          giveaway_id: string
+          id: string
+          pending_winners: Json | null
+          remaining_participants: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          giveaway_id: string
+          id?: string
+          pending_winners?: Json | null
+          remaining_participants?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          giveaway_id?: string
+          id?: string
+          pending_winners?: Json | null
+          remaining_participants?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giveaway_states_giveaway_id_fkey"
+            columns: ["giveaway_id"]
+            isOneToOne: false
+            referencedRelation: "giveaways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       giveaway_winners: {
         Row: {
           created_at: string
