@@ -104,14 +104,28 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
 
     console.log(`✅ Got Kick user data: ${kickUserData.name} (ID: ${kickUserData.user_id})`);
 
-    // Update/create profile with Kick data
+    // Get channel info to find chatroom ID  
+    const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUserData.name}`);
+    
+    if (!channelResponse.ok) {
+      throw new Error(`Channel not found: ${kickUserData.name}`);
+    }
+
+    const channelData = await channelResponse.json();
+    const chatroomId = channelData.chatroom?.id;
+
+    if (!chatroomId) {
+      throw new Error(`No chatroom found for channel: ${kickUserData.name}`);
+    }
+
+    // Update/create profile with Kick data including the chatroom ID
     await supabase
       .from('profiles')
       .upsert({
         user_id: userId,
         kick_username: kickUserData.name,
         kick_user_id: kickUserData.user_id?.toString(),
-        kick_channel_id: kickUserData.user_id?.toString(),
+        kick_channel_id: chatroomId.toString(), // Use the actual chatroom ID
         updated_at: new Date().toISOString()
       }, { 
         onConflict: 'user_id' 
