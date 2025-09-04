@@ -169,7 +169,7 @@ export function HorizontalRoulette({
                 >
                   <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-background shadow-lg">
                     <AvatarImage 
-                      src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
+                      src={participant.avatar}
                       alt={participant.username}
                       onError={(e) => {
                         // Fallback to default if Kick avatar fails
@@ -206,7 +206,7 @@ export function HorizontalRoulette({
               <div className="flex items-center justify-center gap-4 mb-6">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-kick-green pulse-glow">
                   <AvatarImage 
-                    src={`https://files.kick.com/images/user/${winner.username}/profile_image/conversion/300x300-medium.webp`}
+                    src={winner.avatar}
                     alt={winner.username}
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-avatar.jpg';
@@ -265,7 +265,7 @@ export function HorizontalRoulette({
                   >
                     <Avatar className="w-5 h-5">
                       <AvatarImage 
-                        src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
+                        src={participant.avatar}
                         alt={participant.username}
                         onError={(e) => {
                           e.currentTarget.src = '/placeholder-avatar.jpg';

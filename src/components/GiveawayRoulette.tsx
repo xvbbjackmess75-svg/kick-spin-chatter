@@ -271,7 +271,7 @@ export function GiveawayRoulette({
                 >
                   <Avatar className="w-16 h-16 border-2 border-background shadow-lg relative z-10">
                     <AvatarImage 
-                      src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
+                      src={participant.avatar}
                       alt={participant.username}
                       onError={(e) => {
                         e.currentTarget.src = '/placeholder-avatar.jpg';
@@ -374,7 +374,7 @@ export function GiveawayRoulette({
                   >
                     <Avatar className="w-5 h-5">
                       <AvatarImage 
-                        src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
+                        src={participant.avatar}
                         alt={participant.username}
                         onError={(e) => {
                           e.currentTarget.src = '/placeholder-avatar.jpg';
