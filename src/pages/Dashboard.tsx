@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole, isViewerRole } from "@/hooks/useUserRole";
 import ViewerDashboard from "@/components/ViewerDashboard";
 import { 
   Gift, 
@@ -23,9 +24,10 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { role } = useUserRole();
   
-  // Show viewer dashboard if user is not a streamer
-  if (!profile?.is_streamer) {
+  // Show viewer dashboard for viewer roles, streamer dashboard for all others
+  if (isViewerRole(role)) {
     return <ViewerDashboard />;
   }
   
