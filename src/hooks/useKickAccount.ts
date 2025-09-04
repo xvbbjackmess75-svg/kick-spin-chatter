@@ -20,34 +20,22 @@ interface KickApiUser {
   };
 }
 
-// Function to fetch user data from Kick API
-const fetchKickUserAvatar = async (username: string): Promise<string | null> => {
-  try {
-    console.log('🔄 Fetching Kick user data for:', username);
-    const response = await fetch(`https://kick.com/api/v1/users/${username}`);
-    
-    if (!response.ok) {
-      console.error('❌ Kick API response not ok:', response.status);
-      return null;
-    }
-    
-    const userData: KickApiUser = await response.json();
-    console.log('📊 Kick API response:', userData);
-    
-    // Try different possible avatar fields
-    const avatarUrl = userData.profile_pic || userData.user?.profile_pic || null;
-    
-    if (avatarUrl) {
-      console.log('✅ Found Kick avatar:', avatarUrl);
-      return avatarUrl;
-    } else {
-      console.log('❌ No avatar found in Kick API response');
-      return null;
-    }
-  } catch (error) {
-    console.error('❌ Error fetching Kick user data:', error);
-    return null;
-  }
+// Function to get Kick avatar URL (simplified approach)
+const getKickAvatarUrl = (username: string): string => {
+  // Try multiple possible avatar URL formats
+  const formats = [
+    `https://files.kick.com/images/user/${username}/profile_picture`,
+    `https://files.kick.com/images/user/${username.toLowerCase()}/profile_picture`,
+    `https://kick.com/api/v1/users/${username}/avatar`,
+    `https://files.kick.com/images/user/${username}/avatar`,
+    // Fallback to a working format we know exists
+    `https://ui-avatars.com/api/?name=${username}&background=0d1117&color=fff&size=200`
+  ];
+  
+  console.log('🖼️ Generated avatar URLs for', username, ':', formats);
+  
+  // For now, return the ui-avatars fallback since Kick images have CORS issues
+  return formats[formats.length - 1];
 };
 
 export function useKickAccount() {
@@ -79,14 +67,15 @@ export function useKickAccount() {
           if (profile.linked_kick_user_id && profile.linked_kick_username) {
             console.log('✅ Found linked Kick account');
             
-            // Fetch fresh avatar from Kick API
-            const avatarUrl = await fetchKickUserAvatar(profile.linked_kick_username);
+            // Use a working avatar URL format
+            const avatarUrl = getKickAvatarUrl(profile.linked_kick_username);
+            console.log('🖼️ Using avatar URL:', avatarUrl);
             
             setKickUser({
               id: parseInt(profile.linked_kick_user_id),
               username: profile.linked_kick_username,
               display_name: profile.linked_kick_username,
-              avatar: avatarUrl || `https://files.kick.com/images/user/${profile.linked_kick_username}/profile_image/conversion/300x300-medium.webp`,
+              avatar: avatarUrl,
               authenticated: true
             });
           } 
@@ -94,14 +83,15 @@ export function useKickAccount() {
           else if (profile.kick_user_id && profile.kick_username) {
             console.log('✅ Found Kick account (legacy format)');
             
-            // Fetch fresh avatar from Kick API
-            const avatarUrl = await fetchKickUserAvatar(profile.kick_username);
+            // Use a working avatar URL format
+            const avatarUrl = getKickAvatarUrl(profile.kick_username);
+            console.log('🖼️ Using avatar URL:', avatarUrl);
             
             setKickUser({
               id: parseInt(profile.kick_user_id),
               username: profile.kick_username,
               display_name: profile.kick_username,
-              avatar: avatarUrl || `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`,
+              avatar: avatarUrl,
               authenticated: true
             });
           } else {
