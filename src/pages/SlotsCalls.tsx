@@ -50,11 +50,8 @@ export default function SlotsCalls() {
   const { canUseChatbot, isKickLinked, kickUser } = useKickAccount();
   const { startAutoMonitoring, monitorStatus } = useAutoMonitor();
   
-  // WebSocket connection state
-  const socketRef = useRef<WebSocket | null>(null);
-  const [isMonitoring, setIsMonitoring] = useState(false);
-  const [chatConnected, setChatConnected] = useState(false);
-  const [connectedChannel, setConnectedChannel] = useState("");
+  // Use auto-monitor instead of direct WebSocket
+  const [isManualMonitoring, setIsManualMonitoring] = useState(false);
   const { toast } = useToast();
   
   const [events, setEvents] = useState<SlotsEvent[]>([]);
@@ -148,28 +145,15 @@ export default function SlotsCalls() {
     }
   }, [user]);
 
-  // Restore monitoring state on component mount
+  // Check if auto-monitoring is already active
   const restoreMonitoringState = () => {
-    const savedMonitoringState = localStorage.getItem('slots_monitoring_state');
-    if (savedMonitoringState) {
-      const state = JSON.parse(savedMonitoringState);
-      if (state.isActive && state.channelName) {
-        console.log('🎰 Restoring slots monitoring for:', state.channelName);
-        setTimeout(() => {
-          initializeWebSocket();
-        }, 1000);
-      }
-    }
+    // Auto-monitor handles persistence automatically
+    console.log('🎰 Auto-monitor handles monitoring persistence');
   };
 
-  // Save monitoring state to localStorage
+  // Auto-monitor handles state persistence automatically
   const saveMonitoringState = (isActive: boolean, channelName?: string) => {
-    const state = {
-      isActive,
-      channelName: channelName || '',
-      timestamp: Date.now()
-    };
-    localStorage.setItem('slots_monitoring_state', JSON.stringify(state));
+    // No longer needed with auto-monitor
   };
 
   useEffect(() => {
@@ -178,9 +162,9 @@ export default function SlotsCalls() {
     }
   }, [selectedEvent]);
 
-  // Initialize WebSocket connection to kick-chat-monitor
-  const initializeWebSocket = () => {
-    if (!kickUser) {
+  // Start monitoring using auto-monitor system
+  const initializeMonitoring = async () => {
+    if (!canUseChatbot) {
       toast({
         title: "Error",
         description: "Please link your Kick account to use chat monitoring",
@@ -190,119 +174,38 @@ export default function SlotsCalls() {
     }
 
     try {
-      const wsUrl = `wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor`;
-      console.log('🎰 [SLOTS] Connecting to WebSocket:', wsUrl);
+      console.log('🎰 [SLOTS] Starting auto-monitoring for slots');
+      setIsManualMonitoring(true);
       
-      socketRef.current = new WebSocket(wsUrl);
-
-      socketRef.current.onopen = () => {
-        console.log("🎰 [SLOTS] Connected to chat monitor");
-        
-        // Join the channel for monitoring with slots identifier
-        if (kickUser) {
-          const joinMessage = {
-            type: 'join_channel',
-            channelName: typeof kickUser === 'string' ? kickUser : kickUser.username || kickUser.toString(),
-            source: 'slots'
-          };
-          console.log("🎰 [SLOTS] Sending join message:", joinMessage);
-          socketRef.current?.send(JSON.stringify(joinMessage));
-        }
-      };
-
-      socketRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log('🎰 [SLOTS] Received from chat monitor:', data);
-
-        switch (data.type) {
-          case 'connected':
-            setChatConnected(true);
-            setConnectedChannel(data.channelName);
-            setIsMonitoring(true);
-            saveMonitoringState(true, data.channelName); // Save persistent state
-            
-            // Setup auto-stop timer if enabled
-            if (autoStopEnabled && autoStopMinutes > 0) {
-              setupAutoStopTimer();
-            }
-            
-            toast({
-              title: "🎰 Slots Monitoring Active",
-              description: `Now monitoring ${data.channelName} chat for !kgs commands${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
-            });
-            console.log(`🎰 [SLOTS] Connected to chat for channel: ${data.channelName}`);
-            break;
-            
-          case 'chat_message':
-            console.log('🎰 [SLOTS] Received chat message:', data.data);
-            // The kick-chat-monitor already handles !kgs commands automatically
-            break;
-            
-          case 'disconnected':
-            setChatConnected(false);
-            setConnectedChannel("");
-            setIsMonitoring(false);
-            saveMonitoringState(false); // Clear persistent state
-            clearAutoStopTimer();
-            break;
-            
-          case 'error':
-            console.error('🎰 [SLOTS] WebSocket error:', data.message);
-            toast({
-              title: "Slots Connection Error",
-              description: data.message,
-              variant: "destructive"
-            });
-            break;
-
-          case 'slots_call_added':
-            console.log('🎰 [SLOTS] Slots call added:', data);
-            toast({
-              title: "🎰 New Slots Call!",
-              description: `${data.viewer_username} called ${data.slot_name}`,
-            });
-            // Refresh the calls list
-            if (selectedEvent) {
-              fetchCalls(selectedEvent.id);
-            }
-            break;
-        }
-      };
-
-      socketRef.current.onerror = (error) => {
-        console.error("🎰 [SLOTS] WebSocket error:", error);
-        toast({
-          title: "Slots Connection Error",
-          description: "Failed to connect to slots chat monitoring",
-          variant: "destructive",
-        });
-      };
-
-      socketRef.current.onclose = () => {
-        console.log("🎰 [SLOTS] WebSocket disconnected");
-        setChatConnected(false);
-        setConnectedChannel("");
-        setIsMonitoring(false);
-        saveMonitoringState(false); // Clear persistent state on disconnect
-        clearAutoStopTimer();
-      };
-
-    } catch (error) {
-      console.error("🎰 [SLOTS] Error connecting to WebSocket:", error);
+      // Start auto-monitoring if not already active
+      if (!monitorStatus?.is_active) {
+        await startAutoMonitoring();
+      }
+      
+      // Setup auto-stop timer if enabled
+      if (autoStopEnabled && autoStopMinutes > 0) {
+        setupAutoStopTimer();
+      }
+      
       toast({
-        title: "Slots Connection Error",
-        description: "Failed to initialize slots chat monitoring",
+        title: "🎰 Slots Monitoring Active",
+        description: `Now monitoring for !kgs commands using auto-monitor${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
+      });
+      
+    } catch (error) {
+      console.error("🎰 [SLOTS] Error starting monitoring:", error);
+      setIsManualMonitoring(false);
+      toast({
+        title: "Slots Monitoring Error",
+        description: "Failed to start slots monitoring",
         variant: "destructive",
       });
     }
   };
 
-  // Cleanup WebSocket and timer on unmount
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
       clearAutoStopTimer();
     };
   }, []);
@@ -325,13 +228,7 @@ export default function SlotsCalls() {
   };
 
   const stopMonitoring = (isAutoStop = false) => {
-    if (socketRef.current) {
-      socketRef.current.close();
-    }
-    setChatConnected(false);
-    setConnectedChannel("");
-    setIsMonitoring(false);
-    saveMonitoringState(false);
+    setIsManualMonitoring(false);
     clearAutoStopTimer();
     
     toast({
@@ -340,66 +237,41 @@ export default function SlotsCalls() {
     });
   };
 
-  // Handle !kgs command from chat (keeping for backwards compatibility)
-  const handleSlotsCallCommand = async (data: any) => {
-    if (!selectedEvent || selectedEvent.status !== 'active') return;
+  // Set up real-time subscription to detect new slots calls
+  useEffect(() => {
+    if (!selectedEvent) return;
 
-    const slotName = data.message.replace('!kgs ', '').trim();
-    const username = data.sender?.username;
-    const kickUserId = data.sender?.id?.toString();
+    console.log('🎰 Setting up realtime subscription for event:', selectedEvent.id);
+    
+    const channel = supabase
+      .channel('slots_calls_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'slots_calls',
+          filter: `event_id=eq.${selectedEvent.id}`
+        },
+        (payload) => {
+          console.log('🎰 New slots call detected:', payload.new);
+          const newCall = payload.new as SlotsCall;
+          
+          toast({
+            title: "🎰 New Slots Call!",
+            description: `${newCall.viewer_username} called ${newCall.slot_name}`,
+          });
+          
+          // Refresh the calls list
+          fetchCalls(selectedEvent.id);
+        }
+      )
+      .subscribe();
 
-    if (!slotName || !username) return;
-
-    try {
-      // Check if user has exceeded their call limit
-      const { count: userCallsCount } = await supabase
-        .from('slots_calls')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', selectedEvent.id)
-        .eq('viewer_username', username);
-
-      if ((userCallsCount || 0) >= selectedEvent.max_calls_per_user) {
-        toast({
-          title: "Call Limit Reached",
-          description: `${username} has reached the maximum calls limit`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get next call order
-      const { data: orderData } = await supabase
-        .rpc('get_next_call_order', { event_uuid: selectedEvent.id });
-
-      // Add the call to the database
-      const { error } = await supabase
-        .from('slots_calls')
-        .insert({
-          event_id: selectedEvent.id,
-          viewer_username: username,
-          viewer_kick_id: kickUserId,
-          slot_name: slotName,
-          bet_amount: selectedEvent.bet_size,
-          status: 'pending',
-          call_order: orderData || 1
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Slots Call Added",
-        description: `${username} called ${slotName}`,
-      });
-
-      // Refresh calls list
-      if (selectedEvent) {
-        fetchCalls(selectedEvent.id);
-      }
-
-    } catch (error) {
-      console.error("Error processing slots call:", error);
-    }
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedEvent?.id]);
 
   const fetchEvents = async () => {
     try {
@@ -573,12 +445,13 @@ export default function SlotsCalls() {
 
       if (error) throw error;
 
-      // Auto-start chat monitoring for slots events
-      console.log('🤖 Auto-starting chat monitoring for slots event...');
-      
-      setTimeout(() => {
-        initializeWebSocket();
-      }, 1000);
+      // Auto-start monitoring if enabled
+      if (autoStartMonitoring) {
+        console.log('🤖 Auto-starting monitoring for slots event...');
+        setTimeout(() => {
+          initializeMonitoring();
+        }, 1000);
+      }
 
       const successMessage = `🎰 Event "${title}" created for @${channelUsername} and monitoring started!`;
 
@@ -1160,19 +1033,19 @@ export default function SlotsCalls() {
                     {selectedEvent.status === 'active' && (
                       <>
                         <div className="flex items-center gap-2 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${chatConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-2 h-2 rounded-full ${(monitorStatus?.is_active && isManualMonitoring) ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-muted-foreground">
-                            {chatConnected ? `Monitoring ${connectedChannel}` : 'Not Connected'}
+                            {(monitorStatus?.is_active && isManualMonitoring) ? `Auto-Monitoring Active` : 'Monitoring Stopped'}
                           </span>
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={chatConnected ? () => stopMonitoring() : initializeWebSocket}
-                            variant={chatConnected ? "destructive" : "default"}
+                            onClick={(monitorStatus?.is_active && isManualMonitoring) ? () => stopMonitoring() : initializeMonitoring}
+                            variant={(monitorStatus?.is_active && isManualMonitoring) ? "destructive" : "default"}
                             size="sm"
                             className="gaming-button"
                           >
-                            {chatConnected ? (
+                            {(monitorStatus?.is_active && isManualMonitoring) ? (
                               <>
                                 <Square className="h-3 w-3 mr-1" />
                                 Stop Monitor
@@ -1237,7 +1110,7 @@ export default function SlotsCalls() {
                     
                     {calls.length === 0 ? (
                       <p className="text-muted-foreground text-center py-6">
-                        No calls yet. {selectedEvent.status === 'active' ? (chatConnected ? 'Monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Monitor" to begin tracking !kgs commands.') : ''}
+                        No calls yet. {selectedEvent.status === 'active' ? ((monitorStatus?.is_active && isManualMonitoring) ? 'Auto-monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Monitor" to begin tracking !kgs commands.') : ''}
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
