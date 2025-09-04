@@ -54,7 +54,10 @@ export function useAutoMonitor() {
         }
       });
 
+      console.log('✅ Start monitoring response:', response);
+
       if (response.error) {
+        console.error('❌ Edge function error:', response.error);
         throw response.error;
       }
 
@@ -69,6 +72,7 @@ export function useAutoMonitor() {
           checkMonitoringStatus();
         }, 2000);
       } else {
+        console.error('❌ Monitoring failed:', response.data);
         throw new Error(response.data?.error || 'Failed to start monitoring');
       }
 

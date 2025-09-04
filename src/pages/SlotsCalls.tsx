@@ -828,7 +828,21 @@ export default function SlotsCalls() {
                               // Stop monitoring logic can be added here if needed
                               console.log('Manual stop not implemented yet');
                             } else {
-                              await startAutoMonitoring();
+                              console.log('🔴 Starting monitoring manually...');
+                              try {
+                                await startAutoMonitoring();
+                                toast({
+                                  title: "Monitor Started",
+                                  description: "Chat monitoring is now active for !kgs commands",
+                                });
+                              } catch (error) {
+                                console.error('Failed to start monitoring:', error);
+                                toast({
+                                  title: "Monitor Failed",
+                                  description: "Failed to start chat monitoring. Check console for details.",
+                                  variant: "destructive"
+                                });
+                              }
                             }
                           }}
                           variant={monitorStatus?.is_active && monitorStatus?.is_connected ? "destructive" : "default"}
