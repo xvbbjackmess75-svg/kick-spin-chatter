@@ -117,7 +117,8 @@ export default function BonusHunt() {
       const { data, error } = await supabase
         .from('slots')
         .select('*')
-        .order('name');
+        .order('name')
+        .limit(6000); // Increase limit to get all slots
 
       console.log('Slots query result:', { data, error });
       if (error) {
