@@ -336,7 +336,7 @@ export default function SlotsCalls() {
           bet_size: parseFloat(betSize),
           prize: prize.trim(),
           status: 'active',
-          channel_id: typeof kickUser === 'string' ? kickUser : kickUser?.toString() || null
+          channel_id: typeof kickUser === 'string' ? kickUser : (kickUser?.toString() || null)
         });
 
       if (error) throw error;

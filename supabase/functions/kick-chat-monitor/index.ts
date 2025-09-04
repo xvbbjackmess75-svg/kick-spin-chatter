@@ -6,8 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Global variable to store bot token (you'll need to pass this when connecting)
+// Global variables to store bot token and channel name
 let botToken: string | null = null;
+let globalChannelName: string | null = null;
 
 async function processCommand(command: string, messageData: any, chatroomId: string, socket: WebSocket) {
   try {
@@ -26,7 +27,7 @@ async function processCommand(command: string, messageData: any, chatroomId: str
 
     // Special handling for slots calls (!kgs command)
     if (command === 'kgs') {
-      await processSlotsCall(messageData, chatroomId, socket, supabase);
+      await processSlotsCall(messageData, chatroomId, socket, supabase, globalChannelName);
       return;
     }
 
@@ -82,7 +83,7 @@ async function processCommand(command: string, messageData: any, chatroomId: str
   }
 }
 
-async function processSlotsCall(messageData: any, chatroomId: string, socket: WebSocket, supabase: any) {
+async function processSlotsCall(messageData: any, chatroomId: string, socket: WebSocket, supabase: any, channelName?: string) {
   try {
     console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
     
@@ -96,17 +97,17 @@ async function processSlotsCall(messageData: any, chatroomId: string, socket: We
       return;
     }
 
-    // Find active slots event for this channel
-    // We'll need to match by channel name to user mapping
+    // Find active slots event for this streamer's channel  
+    // Use the channel name (streamer username) to match events
     const { data: activeEvent, error: eventError } = await supabase
       .from('slots_events')
-      .select('*, profiles!inner(kick_username)')
+      .select('*')
       .eq('status', 'active')
-      .eq('profiles.kick_username', chatroomId) // Match by kick username
+      .eq('channel_id', channelName) // Use the channel name from WebSocket connection
       .single();
 
     if (eventError || !activeEvent) {
-      console.log(`❌ No active slots event found for channel: ${chatroomId}`);
+      console.log(`❌ No active slots event found for channel: ${channelName}`);
       return;
     }
 
@@ -261,7 +262,8 @@ serve(async (req) => {
         const { channelName, token } = data;
         console.log(`Attempting to join Kick channel: ${channelName}`);
         
-        // Store the bot token for command responses
+        // Store the channel name and bot token for command responses
+        globalChannelName = channelName;
         if (token) {
           botToken = token;
           console.log(`✅ Bot token received and stored`);
