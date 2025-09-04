@@ -13,7 +13,7 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
-import Commands from "./pages/Commands";
+
 import ChatMonitor from "./pages/ChatMonitor";
 import BotSettings from "./pages/BotSettings";
 import Account from "./pages/Account";
@@ -49,16 +49,6 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Giveaways />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commands"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Commands />
                   </Layout>
                 </ProtectedRoute>
               }

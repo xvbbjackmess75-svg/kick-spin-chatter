@@ -187,15 +187,6 @@ export function ChatBot() {
             </div>
             
             <div className="flex gap-2">
-              <Button 
-                onClick={() => window.location.href = '/commands'}
-                variant="outline"
-                size="sm"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Manage Commands
-              </Button>
-              
               {isActive && (
                 <Button 
                   onClick={stopMonitoring}

@@ -82,7 +82,7 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/giveaways", label: "Giveaways", icon: Gift },
-    { path: "/commands", label: "Commands", icon: Bot },
+    
     { path: "/chat-monitor", label: "Chat Monitor", icon: MonitorPlay },
     { path: "/bot-settings", label: "Bot Settings", icon: SettingsIcon },
     { path: "/history", label: "History", icon: Trophy },

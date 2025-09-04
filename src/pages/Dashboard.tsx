@@ -54,14 +54,6 @@ export default function Dashboard() {
       bgColor: "bg-accent/10",
       path: "/chat-monitor"
     },
-    {
-      icon: MessageSquare,
-      title: "Custom Commands",
-      description: "Set up custom chat commands and automated responses",
-      color: "text-purple-400",
-      bgColor: "bg-purple-400/10",
-      path: "/commands"
-    }
   ];
 
   return (
