@@ -264,41 +264,30 @@ export default function Account() {
     setLoading(true);
     try {
       const creds = JSON.parse(storedCreds!);
-      console.log('🔄 Attempting sign in with stored credentials for user:', creds.kick_user_id);
+      const userEmail = `kick_${kickUser.id}@kickuser.lovable.app`;
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: creds.email,
-        password: creds.password
+      console.log('🔄 Requesting password reset for:', userEmail);
+      
+      // Instead of trying to sign in with potentially wrong credentials, 
+      // request a password reset to get a magic link
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/account`
       });
       
-      if (error) {
-        console.error('❌ Sign in failed:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (data.user) {
-        console.log('✅ Successfully signed in:', data.user.email);
-        toast({
-          title: "Signed in successfully!",
-          description: "You can now access email and password management features.",
-        });
-        
-        // Refresh the page to update the UI
-        window.location.reload();
-      } else {
-        throw new Error('No user data returned');
-      }
+      toast({
+        title: "Password Reset Sent!",
+        description: "Check your email for a magic link to access your account. The email is: " + userEmail,
+      });
       
     } catch (error: any) {
-      console.error('❌ Sign in error:', error);
+      console.error('❌ Password reset error:', error);
       toast({
-        title: "Sign in failed",
-        description: "The stored credentials are no longer valid. Please sign in with Kick again.",
+        title: "Reset failed",
+        description: "Could not request password reset. Try clearing credentials and signing in with Kick again.",
         variant: "destructive"
       });
-      
-      // Clear invalid credentials
-      localStorage.removeItem('kick_hybrid_credentials');
     } finally {
       setLoading(false);
     }
@@ -306,9 +295,10 @@ export default function Account() {
 
   const handleClearCredentials = () => {
     localStorage.removeItem('kick_hybrid_credentials');
+    localStorage.removeItem('kick_hybrid_session');
     toast({
       title: "Credentials cleared",
-      description: "Please sign in with Kick again to generate new credentials.",
+      description: "Please sign in with Kick again to set up a fresh account.",
     });
     window.location.reload();
   };
@@ -406,7 +396,7 @@ export default function Account() {
                   onClick={handleSignInWithStoredCreds}
                   disabled={loading}
                 >
-                  {loading ? "Signing in..." : "Sign In to Manage Account"}
+                  {loading ? "Sending Reset Link..." : "Send Password Reset Email"}
                 </Button>
                 <Button 
                   variant="outline"
