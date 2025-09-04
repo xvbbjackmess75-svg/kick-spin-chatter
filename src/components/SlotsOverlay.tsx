@@ -266,8 +266,51 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const displayCalls = calls.slice(scrollOffset, scrollOffset + (overlaySettings.max_visible_calls || maxCalls));
   const winner = event?.status === 'completed' ? getWinner() : null;
 
+  // Calculate totals for summary
+  const totalCost = calls.reduce((sum, call) => sum + call.bet_amount, 0);
+  const totalWinnings = calls
+    .filter(call => call.status === 'completed' && call.win_amount)
+    .reduce((sum, call) => sum + (call.win_amount || 0), 0);
+  const overallMultiplier = totalCost > 0 ? totalWinnings / totalCost : 0;
+  const totalProfit = totalWinnings - totalCost;
+
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
+      {/* Summary Section */}
+      {calls.length > 0 && (
+        <Card 
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+          style={{
+            ...getOverlayStyle(),
+            background: overlaySettings.show_background ? 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' : 'transparent'
+          }}
+        >
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Cost</div>
+                <div className="font-bold" style={{color: overlaySettings.accent_color}}>${totalCost.toFixed(2)}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Winnings</div>
+                <div className="font-bold text-green-400">${totalWinnings.toFixed(2)}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Multiplier</div>
+                <div className={`font-bold ${overallMultiplier >= 1 ? 'text-green-400' : 'text-red-400'}`}>
+                  {overallMultiplier.toFixed(2)}x
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Net P/L</div>
+                <div className={`font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {/* Event Header */}
       <Card 
         className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
