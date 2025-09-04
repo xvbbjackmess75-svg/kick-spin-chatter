@@ -134,11 +134,28 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
+              {/* Debug info */}
+              <div className="text-xs text-muted-foreground mb-2">
+                Avatar URL: {kickUser?.avatar ? 'Available' : 'Missing'}
+                <br />
+                Length: {kickUser?.avatar?.length || 0}
+              </div>
+              
+              {/* Test with a simple div showing the URL */}
+              <div className="text-xs bg-gray-100 p-2 rounded max-w-xs overflow-hidden">
+                {kickUser?.avatar || 'No avatar URL'}
+              </div>
+              
               <img 
-                src={kickUser?.avatar} 
+                src={kickUser?.avatar || '/placeholder-avatar.jpg'} 
                 alt={kickUser?.username}
                 className="w-12 h-12 rounded-full border-2 border-kick-green/30"
+                onLoad={() => {
+                  console.log('✅ Avatar loaded successfully:', kickUser?.avatar);
+                }}
                 onError={(e) => {
+                  console.error('❌ Avatar failed to load:', kickUser?.avatar);
+                  console.error('Error details:', e);
                   e.currentTarget.src = '/placeholder-avatar.jpg';
                 }}
               />

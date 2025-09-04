@@ -535,6 +535,8 @@ export default function Giveaways() {
         avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
       }));
       
+      console.log('🎯 Giveaway participants with avatars:', giveawayParticipants.slice(0, 3));
+      
       if (giveawayParticipants.length === 0) {
         toast({
           title: "No Participants",

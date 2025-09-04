@@ -18,6 +18,7 @@ export function useKickAccount() {
   useEffect(() => {
     const checkKickAccount = async () => {
       if (!user) {
+        console.log('❌ No user, setting kickUser to null');
         setKickUser(null);
         setLoading(false);
         return;
@@ -96,6 +97,7 @@ export function useKickAccount() {
   console.log('🔧 useKickAccount debug:', {
     kickUser: kickUser?.username,
     kickUserAvatar: kickUser?.avatar,
+    avatarLength: kickUser?.avatar?.length,
     supabaseUser: user?.email,
     isKickLinked,
     hasSupabaseAccount,

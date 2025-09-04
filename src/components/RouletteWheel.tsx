@@ -89,7 +89,11 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
                       }}
                     >
                       <Avatar className="w-full h-full border-2 border-background shadow-lg">
-                        <AvatarImage src={participant.avatar} />
+                        <AvatarImage 
+                          src={participant.avatar} 
+                          onLoad={() => console.log('✅ RouletteWheel avatar loaded:', participant.avatar)}
+                          onError={(e) => console.error('❌ RouletteWheel avatar failed:', participant.avatar, e)}
+                        />
                         <AvatarFallback className="bg-kick-green text-kick-dark text-xs font-bold">
                           {participant.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
