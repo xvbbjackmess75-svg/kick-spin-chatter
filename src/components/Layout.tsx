@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { Link, useLocation } from "react-router-dom";
+import { useKickAccount } from "@/hooks/useKickAccount";
 import { 
   Settings, 
   LogOut, 
@@ -23,16 +24,15 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
   const { profile } = useProfile();
+  const { kickUser } = useKickAccount();
   const location = useLocation();
 
-  // Check for Kick authentication
-  const kickUserData = localStorage.getItem('kick_user');
-  const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
   // Determine current user info
   const getCurrentUserInfo = () => {
     if (kickUser?.authenticated) {
+      console.log('📱 Layout using Kick user:', kickUser);
       return {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
@@ -42,6 +42,7 @@ export function Layout({ children }: LayoutProps) {
     } else if (user) {
       // Use profile display_name if available, otherwise fall back to email
       const displayName = profile?.display_name || user.email?.split('@')[0] || 'User';
+      console.log('👤 Layout using Supabase user:', { displayName, avatar: profile?.avatar_url });
       return {
         username: user.email?.split('@')[0] || 'User',
         displayName: displayName,
@@ -132,7 +133,15 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
                 {userInfo.avatar ? (
-                  <AvatarImage src={userInfo.avatar} alt={userInfo.username} />
+                  <AvatarImage 
+                    src={userInfo.avatar} 
+                    alt={userInfo.username}
+                    onLoad={() => console.log('✅ Header avatar loaded:', userInfo.avatar)}
+                    onError={(e) => {
+                      console.error('❌ Header avatar failed:', userInfo.avatar);
+                      // Don't replace src here, let AvatarFallback handle it
+                    }}
+                  />
                 ) : null}
                 <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
                   {userInfo.initials}
