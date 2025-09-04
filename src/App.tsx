@@ -1,4 +1,3 @@
-import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,11 +19,17 @@ import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
 
-const App = () => {
-  // Initialize QueryClient inside component to ensure React is available
-  const queryClient = React.useMemo(() => new QueryClient(), []);
+// Create QueryClient at module level with proper configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
-  return (
+const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -90,8 +95,7 @@ const App = () => {
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
+  </QueryClientProvider>
+);
 
 export default App;
