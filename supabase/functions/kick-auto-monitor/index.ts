@@ -461,11 +461,16 @@ async function sendUserMessage(message: string, token: string, userId: string, s
     console.log(`🤖 Sending bot message: ${message.substring(0, 50)}...`);
     
     // Get the user's chatroom ID from their profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('kick_channel_id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+    
+    if (profileError) {
+      console.error(`❌ Database error fetching profile:`, profileError);
+      throw new Error(`Database error: ${profileError.message}`);
+    }
     
     if (!profile?.kick_channel_id) {
       throw new Error('No chatroom ID found for user');
