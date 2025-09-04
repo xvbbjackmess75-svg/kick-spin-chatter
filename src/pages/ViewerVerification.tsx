@@ -41,8 +41,7 @@ export default function ViewerVerification() {
     if (!user) return;
     
     try {
-      // This would check your Discord integration
-      // For now, we'll simulate it with localStorage
+      // Check if Discord is linked via localStorage
       const discordStatus = localStorage.getItem(`discord_linked_${user.id}`);
       setDiscordLinked(!!discordStatus);
     } catch (error) {
@@ -54,30 +53,30 @@ export default function ViewerVerification() {
     setLoading(true);
     
     try {
-      // Simulate Discord OAuth flow
-      // In a real implementation, you'd redirect to Discord OAuth
-      toast({
-        title: "Discord Integration",
-        description: "Discord linking would redirect to Discord OAuth here",
+      // Generate state for security
+      const state = crypto.randomUUID();
+      sessionStorage.setItem('discord_oauth_state', state);
+
+      // Get Discord OAuth URL from our edge function
+      const { data, error } = await supabase.functions.invoke('discord-oauth', {
+        body: {
+          action: 'authorize',
+          state
+        }
       });
-      
-      // For demo purposes, mark as linked
-      if (user) {
-        localStorage.setItem(`discord_linked_${user.id}`, 'true');
-        setDiscordLinked(true);
-        
-        toast({
-          title: "Discord Linked!",
-          description: "Your Discord account has been successfully linked",
-        });
-      }
+
+      if (error) throw error;
+
+      // Redirect to Discord OAuth
+      window.location.href = data.url;
+
     } catch (error) {
+      console.error('Discord OAuth error:', error);
       toast({
         title: "Discord Linking Failed",
-        description: "Failed to link Discord account",
+        description: "Failed to initiate Discord authentication",
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };

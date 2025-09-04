@@ -11,6 +11,7 @@ import History from "./pages/History";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import DiscordCallback from "./pages/DiscordCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/upgrade-to-streamer" element={<UpgradeToStreamer />} />
             <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/discord/callback" element={<DiscordCallback />} />
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
             <Route
               path="/"
