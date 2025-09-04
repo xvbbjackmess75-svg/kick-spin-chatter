@@ -25,6 +25,16 @@ interface UserWithProfile {
   email: string;
   role: 'user' | 'premium' | 'vip_plus' | 'admin';
   display_name?: string;
+  kick_username?: string;
+  kick_user_id?: string;
+  created_at: string;
+}
+
+interface ProfileData {
+  user_id: string;
+  display_name?: string;
+  kick_username?: string;
+  kick_user_id?: string;
   created_at: string;
 }
 
@@ -71,6 +81,8 @@ export default function Admin() {
         .select(`
           user_id,
           display_name,
+          kick_username,
+          kick_user_id,
           created_at
         `);
 
@@ -87,15 +99,17 @@ export default function Admin() {
       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       if (authError) throw authError;
 
-      // Combine the data
+      // Combine the data - always use user ID as the primary key
       const usersWithRoles = authData.users.map(authUser => {
         const profile = profilesData?.find(p => p.user_id === authUser.id);
         const role = rolesData?.find(r => r.user_id === authUser.id);
         
         return {
-          id: authUser.id,
+          id: authUser.id, // This is the primary identifier - never changes
           email: authUser.email || '',
           display_name: profile?.display_name,
+          kick_username: profile?.kick_username,
+          kick_user_id: profile?.kick_user_id,
           role: role?.role || 'user' as 'user' | 'premium' | 'vip_plus' | 'admin',
           created_at: authUser.created_at
         };
@@ -264,17 +278,24 @@ export default function Admin() {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                User Management
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  User Management
+                </CardTitle>
+                <Button variant="outline" onClick={loadUsers} size="sm">
+                  Refresh Users
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>User ID</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Display Name</TableHead>
+                    <TableHead>Kick Account</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Actions</TableHead>
@@ -283,8 +304,19 @@ export default function Admin() {
                 <TableBody>
                   {users.map((usr) => (
                     <TableRow key={usr.id}>
+                      <TableCell className="font-mono text-xs">{usr.id.substring(0, 8)}...</TableCell>
                       <TableCell className="font-medium">{usr.email}</TableCell>
                       <TableCell>{usr.display_name || 'Not set'}</TableCell>
+                      <TableCell>
+                        {usr.kick_username ? (
+                          <div className="space-y-1">
+                            <div className="font-medium">{usr.kick_username}</div>
+                            <div className="text-xs text-muted-foreground">ID: {usr.kick_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Not connected</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={getRoleBadgeVariant(usr.role)}>
                           {usr.role.replace('_', ' ').toUpperCase()}
