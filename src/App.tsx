@@ -14,6 +14,7 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
+import BonusHunt from "./pages/BonusHunt";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
@@ -70,6 +71,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <SlotsCalls />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bonus-hunt"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <BonusHunt />
                   </Layout>
                 </ProtectedRoute>
               }

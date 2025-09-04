@@ -48,7 +48,15 @@ export type Database = {
           slot_id?: string
           starting_balance?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_bonus_hunt_bets_slot_id"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bonus_hunt_overlay_settings: {
         Row: {

@@ -132,14 +132,30 @@ export default function BonusHunt() {
       const { data, error } = await supabase
         .from('bonus_hunt_bets')
         .select(`
-          *,
-          slots!inner (*)
+          id,
+          session_id,
+          slot_id,
+          bet_size,
+          starting_balance,
+          ending_balance,
+          bonus_multiplier,
+          pnl,
+          created_at,
+          slots!slot_id (
+            id,
+            name,
+            provider,
+            rtp,
+            max_multiplier,
+            theme,
+            is_user_added
+          )
         `)
         .eq('session_id', activeSession.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSessionBets(data || []);
+      setSessionBets((data || []) as BonusHuntBet[]);
     } catch (error) {
       console.error('Error loading session bets:', error);
     }

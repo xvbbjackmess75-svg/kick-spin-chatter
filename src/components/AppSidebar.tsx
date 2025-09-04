@@ -26,7 +26,8 @@ import {
 const mainItems = [
   { title: "Giveaways", url: "/", icon: Gift },
   { title: "Slots Calls", url: "/slots-calls", icon: Dices },
-  { title: "History", url: "/history", icon: Trophy },
+  { title: "Bonus Hunt", url: "/bonus-hunt", icon: Trophy },
+  { title: "History", url: "/history", icon: History },
 ];
 
 export function AppSidebar() {
