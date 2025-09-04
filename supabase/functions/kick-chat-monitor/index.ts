@@ -86,14 +86,18 @@ async function processCommand(command: string, messageData: any, chatroomId: str
 async function processSlotsCall(messageData: any, chatroomId: string, socket: WebSocket, supabase: any, channelName?: string) {
   try {
     console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
+    console.log(`🎰 Full message content: "${messageData.content}"`);
     
     // Extract slot name from message (everything after !kgs )
-    const slotName = messageData.content?.replace('!kgs ', '').trim();
+    const messageContent = messageData.content || '';
+    const slotName = messageContent.replace(/^!kgs\s*/, '').trim();
     const username = messageData.sender?.username;
     const kickUserId = messageData.sender?.id?.toString();
     
+    console.log(`🎰 Extracted slot name: "${slotName}"`);
+    
     if (!slotName || !username) {
-      console.log(`❌ Invalid slots call: missing slot name or username`);
+      console.log(`❌ Invalid slots call: missing slot name or username. Content: "${messageContent}"`);
       return;
     }
 

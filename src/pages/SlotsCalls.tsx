@@ -114,25 +114,28 @@ export default function SlotsCalls() {
 
     try {
       const wsUrl = `wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor`;
+      console.log('🎰 [SLOTS] Connecting to WebSocket:', wsUrl);
+      
       socketRef.current = new WebSocket(wsUrl);
 
       socketRef.current.onopen = () => {
-        console.log("Connected to chat monitor");
+        console.log("🎰 [SLOTS] Connected to chat monitor");
         
-        // Join the channel for monitoring
+        // Join the channel for monitoring with slots identifier
         if (kickUser) {
           const joinMessage = {
             type: 'join_channel',
-            channel: typeof kickUser === 'string' ? kickUser : kickUser.username || kickUser.toString()
+            channelName: typeof kickUser === 'string' ? kickUser : kickUser.username || kickUser.toString(),
+            source: 'slots'
           };
-          console.log("Sending join message:", joinMessage);
+          console.log("🎰 [SLOTS] Sending join message:", joinMessage);
           socketRef.current?.send(JSON.stringify(joinMessage));
         }
       };
 
       socketRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('Received from chat monitor:', data);
+        console.log('🎰 [SLOTS] Received from chat monitor:', data);
 
         switch (data.type) {
           case 'connected':
@@ -140,14 +143,14 @@ export default function SlotsCalls() {
             setConnectedChannel(data.channelName);
             setIsMonitoring(true);
             toast({
-              title: "✅ Chat Connected",
+              title: "🎰 Slots Monitoring Active",
               description: `Now monitoring ${data.channelName} chat for !kgs commands`,
             });
-            console.log(`Connected to chat for channel: ${data.channelName}`);
+            console.log(`🎰 [SLOTS] Connected to chat for channel: ${data.channelName}`);
             break;
             
           case 'chat_message':
-            console.log('Received chat message:', data.data);
+            console.log('🎰 [SLOTS] Received chat message:', data.data);
             // The kick-chat-monitor already handles !kgs commands automatically
             break;
             
@@ -158,19 +161,19 @@ export default function SlotsCalls() {
             break;
             
           case 'error':
-            console.error('WebSocket error:', data.message);
+            console.error('🎰 [SLOTS] WebSocket error:', data.message);
             toast({
-              title: "Connection Error",
+              title: "Slots Connection Error",
               description: data.message,
               variant: "destructive"
             });
             break;
 
-          case 'slots_call':
-            console.log('Slots call received:', data);
+          case 'slots_call_added':
+            console.log('🎰 [SLOTS] Slots call added:', data);
             toast({
               title: "🎰 New Slots Call!",
-              description: `${data.username} called ${data.slotName}`,
+              description: `${data.viewer_username} called ${data.slot_name}`,
             });
             // Refresh the calls list
             if (selectedEvent) {
@@ -181,26 +184,26 @@ export default function SlotsCalls() {
       };
 
       socketRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        console.error("🎰 [SLOTS] WebSocket error:", error);
         toast({
-          title: "Connection Error",
-          description: "Failed to connect to chat monitoring",
+          title: "Slots Connection Error",
+          description: "Failed to connect to slots chat monitoring",
           variant: "destructive",
         });
       };
 
       socketRef.current.onclose = () => {
-        console.log("WebSocket disconnected");
+        console.log("🎰 [SLOTS] WebSocket disconnected");
         setChatConnected(false);
         setConnectedChannel("");
         setIsMonitoring(false);
       };
 
     } catch (error) {
-      console.error("Error connecting to WebSocket:", error);
+      console.error("🎰 [SLOTS] Error connecting to WebSocket:", error);
       toast({
-        title: "Connection Error",
-        description: "Failed to initialize chat monitoring",
+        title: "Slots Connection Error",
+        description: "Failed to initialize slots chat monitoring",
         variant: "destructive",
       });
     }
