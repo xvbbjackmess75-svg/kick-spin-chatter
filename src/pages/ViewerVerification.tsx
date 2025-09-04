@@ -24,13 +24,24 @@ export default function ViewerVerification() {
   const [discordLinked, setDiscordLinked] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading, isAdmin } = useUserRole();
   const { isKickLinked } = useKickAccount();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const isVerified = role === 'verified_viewer';
   const canGetVerified = isKickLinked && discordLinked;
+  
+  // Redirect admins and higher roles away from viewer verification
+  useEffect(() => {
+    if (!roleLoading && (isAdmin() || ['premium', 'vip_plus'].includes(role))) {
+      toast({
+        title: "Access Denied",
+        description: `You already have ${role} access. Redirecting to dashboard.`,
+      });
+      navigate('/');
+    }
+  }, [role, roleLoading, isAdmin, navigate, toast]);
 
   useEffect(() => {
     // Check if Discord is already linked (you can implement this based on your Discord integration)
