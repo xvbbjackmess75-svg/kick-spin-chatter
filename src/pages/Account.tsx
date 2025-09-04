@@ -252,32 +252,53 @@ export default function Account() {
   };
 
   const handleSignInWithStoredCreds = async () => {
-    if (!hasStoredCreds) return;
+    if (!hasStoredCreds) {
+      toast({
+        title: "No credentials found",
+        description: "Please sign in with Kick first to set up your account.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setLoading(true);
     try {
       const creds = JSON.parse(storedCreds!);
+      console.log('🔄 Attempting sign in with stored credentials for user:', creds.kick_user_id);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: creds.email,
         password: creds.password
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Sign in failed:', error);
+        throw error;
+      }
       
-      toast({
-        title: "Signed in successfully!",
-        description: "You can now access email and password management features.",
-      });
-      
-      // Refresh the page to update the UI
-      window.location.reload();
+      if (data.user) {
+        console.log('✅ Successfully signed in:', data.user.email);
+        toast({
+          title: "Signed in successfully!",
+          description: "You can now access email and password management features.",
+        });
+        
+        // Refresh the page to update the UI
+        window.location.reload();
+      } else {
+        throw new Error('No user data returned');
+      }
       
     } catch (error: any) {
+      console.error('❌ Sign in error:', error);
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description: "The stored credentials are no longer valid. Please sign in with Kick again.",
         variant: "destructive"
       });
+      
+      // Clear invalid credentials
+      localStorage.removeItem('kick_hybrid_credentials');
     } finally {
       setLoading(false);
     }
