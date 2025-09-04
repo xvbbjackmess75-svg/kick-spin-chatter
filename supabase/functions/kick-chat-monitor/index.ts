@@ -1,9 +1,134 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Global variable to store bot token (you'll need to pass this when connecting)
+let botToken: string | null = null;
+
+async function processCommand(command: string, messageData: any, chatroomId: string, socket: WebSocket) {
+  try {
+    console.log(`🔧 Processing command: !${command}`);
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("❌ Missing Supabase environment variables");
+      return;
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Look up command in database
+    const { data: commands, error } = await supabase
+      .from('commands')
+      .select('*')
+      .eq('command', command)
+      .eq('enabled', true)
+      .single();
+
+    if (error || !commands) {
+      console.log(`❌ Command not found: !${command}`);
+      return;
+    }
+
+    console.log(`✅ Found command: !${commands.command} - Response: ${commands.response}`);
+
+    // Check user level permissions (simplified for now)
+    const userLevel = getUserLevel(messageData.sender);
+    const hasPermission = checkUserPermission(userLevel, commands.user_level);
+    
+    if (!hasPermission) {
+      console.log(`🚫 Permission denied for user ${messageData.sender?.username} (${userLevel})`);
+      return;
+    }
+
+    // Send command response if we have a bot token
+    if (botToken) {
+      await sendBotMessage(commands.response, botToken);
+      
+      // Update command usage count
+      await supabase
+        .from('commands')
+        .update({ uses: commands.uses + 1 })
+        .eq('id', commands.id);
+
+      // Notify client that command was processed
+      socket.send(JSON.stringify({
+        type: 'command_processed',
+        command: commands.command,
+        response: commands.response,
+        user: messageData.sender?.username
+      }));
+
+      console.log(`📈 Command !${command} processed and response sent`);
+    } else {
+      console.log(`⚠️ No bot token available, cannot send response`);
+    }
+
+  } catch (error) {
+    console.error(`❌ Error processing command !${command}:`, error);
+  }
+}
+
+async function sendBotMessage(message: string, token: string) {
+  try {
+    const response = await fetch('https://api.kick.com/public/v1/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'bot',
+        content: message
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Kick API error: ${response.status} - ${errorText}`);
+    }
+
+    console.log(`✅ Bot message sent: ${message.substring(0, 50)}...`);
+  } catch (error) {
+    console.error(`❌ Failed to send bot message:`, error);
+  }
+}
+
+function getUserLevel(sender: any): string {
+  // Simplified user level detection - you can enhance this
+  if (sender?.identity?.badges?.some((badge: any) => badge.type === 'broadcaster')) {
+    return 'owner';
+  }
+  if (sender?.identity?.badges?.some((badge: any) => badge.type === 'moderator')) {
+    return 'moderator';
+  }
+  if (sender?.identity?.badges?.some((badge: any) => badge.type === 'subscriber')) {
+    return 'subscriber';
+  }
+  return 'viewer';
+}
+
+function checkUserPermission(userLevel: string, requiredLevel: string): boolean {
+  const levels = {
+    'viewer': 0,
+    'subscriber': 1,
+    'moderator': 2,
+    'owner': 3
+  };
+
+  const userLevelNum = levels[userLevel as keyof typeof levels] || 0;
+  const requiredLevelNum = levels[requiredLevel as keyof typeof levels] || 0;
+
+  return userLevelNum >= requiredLevelNum;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -33,8 +158,14 @@ serve(async (req) => {
       console.log("Received from client:", data);
 
       if (data.type === 'join_channel') {
-        const { channelName } = data;
+        const { channelName, token } = data;
         console.log(`Attempting to join Kick channel: ${channelName}`);
+        
+        // Store the bot token for command responses
+        if (token) {
+          botToken = token;
+          console.log(`✅ Bot token received and stored`);
+        }
 
         try {
           // Get channel info to find chatroom ID
@@ -84,7 +215,7 @@ serve(async (req) => {
             }));
           };
 
-          kickSocket.onmessage = (event) => {
+          kickSocket.onmessage = async (event) => {
             try {
               const pusherData = JSON.parse(event.data);
               console.log("Received from Kick:", pusherData);
@@ -94,17 +225,29 @@ serve(async (req) => {
                 const messageData = JSON.parse(pusherData.data);
                 console.log("Chat message:", messageData);
 
+                const chatMessage = {
+                  id: messageData.id,
+                  content: messageData.content,
+                  username: messageData.sender?.username,
+                  userId: messageData.sender?.id,
+                  timestamp: messageData.created_at,
+                  chatroomId: chatroomId
+                };
+
                 // Forward chat message to client
                 socket.send(JSON.stringify({
                   type: 'chat_message',
-                  data: {
-                    id: messageData.id,
-                    content: messageData.content,
-                    username: messageData.sender?.username,
-                    userId: messageData.sender?.id,
-                    timestamp: messageData.created_at
-                  }
+                  data: chatMessage
                 }));
+
+                // Check if message is a command (starts with !)
+                if (messageData.content?.startsWith('!')) {
+                  const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
+                  console.log(`🎯 Command detected: !${command} from user: ${messageData.sender?.username}`);
+
+                  // Process command
+                  await processCommand(command, messageData, chatroomId, socket);
+                }
               }
             } catch (error) {
               console.error("Error parsing Kick message:", error);

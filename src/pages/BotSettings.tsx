@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ChatBot } from "@/components/ChatBot";
 import { 
   Bot, 
   Shield, 
@@ -92,6 +93,9 @@ export default function BotSettings() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* ChatBot Monitor */}
+      <ChatBot />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* General Settings */}
