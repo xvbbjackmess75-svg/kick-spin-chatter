@@ -14,7 +14,9 @@ import {
   Settings as SettingsIcon,
   Bot,
   MonitorPlay,
-  Trophy
+  Trophy,
+  Zap,
+  Phone
 } from "lucide-react";
 
 interface LayoutProps {
@@ -99,6 +101,8 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/giveaways", label: "Giveaways", icon: Gift },
+    { path: "/bonus-hunt", label: "Bonus Hunt", icon: Zap },
+    { path: "/slots-calls", label: "Slots Calls", icon: Phone },
     { path: "/history", label: "History", icon: Trophy },
   ];
 
