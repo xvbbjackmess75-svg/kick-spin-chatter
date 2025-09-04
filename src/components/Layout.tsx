@@ -143,20 +143,30 @@ export function Layout({ children }: LayoutProps) {
             </Badge>
             
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
+              {/* Simple img-based avatar instead of complex Avatar component */}
+              <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
+                <img 
                   src={userInfo.avatar} 
                   alt={userInfo.username}
-                  onLoad={() => console.log('✅ Header avatar loaded successfully:', userInfo.avatar)}
+                  className="h-full w-full object-cover"
+                  onLoad={() => {
+                    console.log('✅ Header avatar loaded successfully:', userInfo.avatar);
+                  }}
                   onError={(e) => {
                     console.error('❌ Header avatar failed to load:', userInfo.avatar);
-                    console.error('Trying to load:', e.currentTarget.src);
+                    // Hide the img and show fallback text
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
                   }}
                 />
-                <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
+                <div 
+                  className="absolute inset-0 flex items-center justify-center text-primary-foreground text-sm font-semibold"
+                  style={{ display: 'none' }}
+                >
                   {userInfo.initials}
-                </AvatarFallback>
-              </Avatar>
+                </div>
+              </div>
               <Link 
                 to="/account" 
                 className="text-sm font-medium hidden sm:block hover:text-primary transition-colors cursor-pointer"
