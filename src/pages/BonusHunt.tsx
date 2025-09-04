@@ -113,20 +113,36 @@ export default function BonusHunt() {
 
   const loadSlots = async () => {
     try {
-      console.log('Loading slots...');
-      const { data, error } = await supabase
-        .from('slots')
-        .select('*')
-        .order('name')
-        .limit(6000); // Increase limit to get all slots
+      console.log('Loading all slots...');
+      let allSlots: Slot[] = [];
+      let start = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      console.log('Slots query result:', { data, error });
-      if (error) {
-        console.error('Error loading slots:', error);
-        throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('slots')
+          .select('*')
+          .order('name')
+          .range(start, start + batchSize - 1);
+
+        if (error) {
+          console.error('Error loading slots batch:', error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          allSlots = [...allSlots, ...data];
+          start += batchSize;
+          hasMore = data.length === batchSize; // Continue if we got a full batch
+          console.log(`Loaded batch: ${data.length} slots, total so far: ${allSlots.length}`);
+        } else {
+          hasMore = false;
+        }
       }
-      console.log('Setting slots data:', data?.length || 0, 'slots');
-      setSlots(data || []);
+
+      console.log('Final slots loaded:', allSlots.length);
+      setSlots(allSlots);
     } catch (error) {
       console.error('Error loading slots:', error);
     }
