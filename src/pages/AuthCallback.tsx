@@ -124,6 +124,20 @@ export default function AuthCallback() {
 
                 console.log('✅ Kick account linked successfully');
                 
+                // Store Kick user info in localStorage for immediate use
+                localStorage.setItem('kick_user', JSON.stringify({
+                  id: user.id,
+                  username: user.username,
+                  display_name: user.display_name,
+                  avatar: user.avatar,
+                  authenticated: true,
+                  provider: 'kick'
+                }));
+
+                if (token_info) {
+                  localStorage.setItem('kick_token', JSON.stringify(token_info));
+                }
+                
                 toast({
                   title: "Account Linked!",
                   description: `Kick account @${user.username} linked successfully!`,
@@ -144,59 +158,13 @@ export default function AuthCallback() {
               }
             }
 
-            // Check if a Supabase user exists with linked Kick account
-            const { data: existingProfile, error: profileError } = await supabase
-              .from('profiles')
-              .select('user_id, linked_kick_username')
-              .eq('linked_kick_user_id', user.id.toString())
-              .single();
-
-            if (!profileError && existingProfile) {
-              console.log('🔗 Found existing linked account, signing in user...');
-              
-              // User exists with this Kick account linked, but we can't auto-login them
-              // Instead, show them a helpful message
-              toast({
-                title: "Account Found",
-                description: `This Kick account is linked to an existing user. Please sign in with your email and password.`,
-              });
-              navigate('/auth');
-              return;
-            }
-
-            // Create standalone Kick account (old behavior for new users)
-            console.log('🔄 Creating standalone Kick account...');
-
-            // Store Kick user info
-            console.log('✅ Kick authentication successful');
-            
+            // If no user is logged in, redirect to auth page
+            console.log('❌ No user logged in - cannot link Kick account');
             toast({
-              title: "Welcome!",
-              description: `Successfully signed in as ${user.username}`,
+              title: "Sign In Required",
+              description: "Please create an account with email/password first, then link your Kick account from the Account page.",
             });
-
-            const successMessage = isLinkingMode 
-              ? `Kick account @${user.username} linked successfully!`
-              : `Successfully signed in as ${user.username} with enhanced security!`;
-
-            if (!isLinkingMode) {
-              toast({
-                title: "Welcome!",
-                description: successMessage,
-              });
-            }
-            
-            // Check if user needs onboarding
-            const needsOnboarding = !localStorage.getItem('kick_onboarding_completed');
-            
-            // Redirect based on mode and onboarding status
-            if (isLinkingMode) {
-              navigate('/account');
-            } else if (needsOnboarding) {
-              navigate('/kick-onboarding');
-            } else {
-              navigate('/');
-            }
+            navigate('/auth');
           } else {
             throw new Error('OAuth exchange failed - no user data received');
           }
