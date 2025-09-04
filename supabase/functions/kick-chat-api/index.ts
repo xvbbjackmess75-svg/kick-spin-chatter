@@ -92,87 +92,44 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
     token_access_token: token_info?.access_token ? 'present' : 'missing'
   });
   
-  if (!channel_id || !message || !token_info?.access_token) {
-    const error = `Missing required parameters: channel_id=${!!channel_id}, message=${!!message}, token_info=${!!token_info}, access_token=${!!token_info?.access_token}`;
+  if (!message || !token_info?.access_token) {
+    const error = `Missing required parameters: message=${!!message}, access_token=${!!token_info?.access_token}`;
     console.error('❌', error);
     throw new Error(error);
   }
 
-  console.log(`📤 Sending message to channel ${channel_id}: ${message.substring(0, 50)}...`);
+  console.log(`🤖 Sending message as bot: ${message.substring(0, 50)}...`);
 
   try {
-    // First, let's verify the token is valid by checking user info
-    console.log(`🔍 Validating token first...`);
-    const userResponse = await fetch('https://api.kick.com/public/v1/users', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token_info.access_token}`,
-        'Accept': 'application/json',
-      }
-    });
-
-    console.log(`🔍 Token validation response status: ${userResponse.status}`);
-    if (!userResponse.ok) {
-      const userError = await userResponse.text();
-      console.log(`❌ Token validation failed: ${userError}`);
-      throw new Error(`Token validation failed: ${userResponse.status} - ${userError}`);
-    }
-
-    const userData = await userResponse.json();
-    console.log(`✅ Token validated for user: ${userData.data?.[0]?.name || 'unknown'}`);
-    
-    // Now try to send message as bot
-    console.log(`🤖 Attempting to send message as bot...`);
-    console.log(`🔍 Using token: ${token_info.access_token.substring(0, 10)}...`);
-    
-    const requestBody = {
-      type: 'bot',
-      content: message
-    };
-    console.log(`📦 Request body:`, JSON.stringify(requestBody));
-    
     const response = await fetch('https://api.kick.com/public/v1/chat', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token_info.access_token}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'KickChatBot/1.0'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        type: 'bot',
+        content: message
+      })
     });
 
-    console.log(`🔍 Chat API response status: ${response.status}`);
-    console.log(`🔍 Chat API response headers:`, JSON.stringify(Object.fromEntries(response.headers.entries())));
-    
+    console.log(`🔍 Kick API response status: ${response.status}`);
     const responseText = await response.text();
-    console.log(`🔍 Chat API response body: ${responseText}`);
+    console.log(`🔍 Kick API response: ${responseText}`);
 
     if (!response.ok) {
-      console.error(`❌ Chat API error: ${response.status}`);
-      throw new Error(`Chat API error: ${response.status} - ${responseText}`);
+      throw new Error(`Kick API error: ${response.status} - ${responseText}`);
     }
 
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error(`❌ Failed to parse response JSON:`, parseError);
-      throw new Error(`Invalid JSON response: ${responseText}`);
-    }
-    
-    console.log(`✅ Message sent successfully:`, data);
+    const data = JSON.parse(responseText);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         is_sent: data.data?.is_sent,
         message_id: data.data?.message_id,
-        content: message,
-        debug: {
-          user: userData.data?.[0]?.name,
-          response_data: data.data
-        }
+        content: message
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
