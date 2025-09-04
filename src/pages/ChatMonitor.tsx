@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LiveChatFeed } from "@/components/LiveChatFeed";
+import { ChatBot } from "@/components/ChatBot";
 import { 
   MessageSquare, 
   Users, 
@@ -196,90 +198,15 @@ export default function ChatMonitor() {
         </Card>
       </div>
 
+      {/* ChatBot Monitor */}
+      <div className="mb-6">
+        <ChatBot />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-4">
-        {/* Chat Feed */}
+        {/* Live Chat Feed with Bot Controls */}
         <div className="lg:col-span-3">
-          <Card className="gaming-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  Live Chat Feed
-                  {isPaused && <Badge variant="secondary">Paused</Badge>}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search messages..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-48 bg-secondary/30"
-                    />
-                  </div>
-                  <select 
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="px-3 py-2 rounded-md bg-secondary/30 border border-border text-foreground text-sm"
-                  >
-                    <option value="all">All Messages</option>
-                    <option value="commands">Commands Only</option>
-                    <option value="moderators">Moderators</option>
-                    <option value="subscribers">Subscribers</option>
-                  </select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[600px]">
-                <div className="p-4 space-y-3">
-                  {filteredMessages.map((message) => (
-                    <div 
-                      key={message.id} 
-                      className={`flex gap-3 p-3 rounded-lg transition-all duration-200 chat-message ${
-                        message.isCommand ? 'bg-primary/5 border-l-2 border-primary' : 'hover:bg-secondary/20'
-                      }`}
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={message.avatar} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
-                          {message.username.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground text-sm">
-                            {message.username}
-                          </span>
-                          {getUserTypeIcon(message.userType)}
-                          {message.userType !== "viewer" && (
-                            <Badge className={`text-xs ${getUserTypeBadge(message.userType)}`}>
-                              {message.userType}
-                            </Badge>
-                          )}
-                          {message.isCommand && (
-                            <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
-                              <Gift className="h-3 w-3 mr-1" />
-                              Command
-                            </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {message.timestamp}
-                          </span>
-                        </div>
-                        <p className={`text-sm break-words ${
-                          message.isCommand ? 'font-mono text-primary' : 'text-foreground'
-                        }`}>
-                          {message.message}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <LiveChatFeed />
         </div>
 
         {/* Side Panel */}

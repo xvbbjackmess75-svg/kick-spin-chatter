@@ -98,32 +98,35 @@ export function useAutoMonitor() {
     }
   };
 
-  const stopMonitoring = async () => {
-    if (!user) return;
+  const sendBotMessage = async (message: string) => {
+    if (!user || !kickToken?.access_token) return;
 
     try {
       const response = await supabase.functions.invoke('kick-auto-monitor', {
         body: {
-          action: 'stop_monitoring',
-          user_id: user.id
+          action: 'send_message',
+          user_id: user.id,
+          message: message,
+          token: kickToken.access_token
         }
       });
 
       if (response.data?.success) {
-        setMonitorStatus(null);
         toast({
-          title: "ChatBot Stopped",
-          description: "Automatic monitoring has been disabled",
+          title: "Message Sent",
+          description: `Bot message sent successfully`,
         });
+        return true;
       }
 
     } catch (error: any) {
-      console.error('❌ Failed to stop monitoring:', error);
+      console.error('❌ Failed to send bot message:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to stop monitoring",
+        title: "Failed to Send Message",
+        description: error.message || "Failed to send bot message",
         variant: "destructive"
       });
+      return false;
     }
   };
 
@@ -156,7 +159,7 @@ export function useAutoMonitor() {
     isActive: monitorStatus?.is_active || false,
     canUseChatbot,
     startAutoMonitoring,
-    stopMonitoring,
+    sendBotMessage,
     checkMonitoringStatus
   };
 }

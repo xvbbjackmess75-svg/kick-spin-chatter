@@ -48,6 +48,9 @@ const handler = async (req: Request): Promise<Response> => {
         
       case 'heartbeat':
         return await updateHeartbeat(body.user_id, supabase);
+        
+      case 'send_message':
+        return await sendUserMessage(body.message, body.token, supabase);
       
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -449,6 +452,46 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
     );
 
   } catch (error: any) {
+    throw error;
+  }
+}
+
+async function sendUserMessage(message: string, token: string, supabase: any): Promise<Response> {
+  try {
+    console.log(`🤖 Sending user message: ${message.substring(0, 50)}...`);
+    
+    const response = await fetch('https://api.kick.com/public/v1/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'message',
+        content: message
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Kick API error: ${response.status} - ${errorText}`);
+    }
+
+    console.log(`✅ User message sent successfully: ${message.substring(0, 50)}...`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: "Message sent successfully"
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+
+  } catch (error: any) {
+    console.error(`❌ Failed to send user message:`, error);
     throw error;
   }
 }

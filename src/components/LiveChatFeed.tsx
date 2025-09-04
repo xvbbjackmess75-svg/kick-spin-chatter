@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAutoMonitor } from "@/hooks/useAutoMonitor";
+import { useKickAccount } from "@/hooks/useKickAccount";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MessageSquare, 
   Send,
@@ -12,7 +15,8 @@ import {
   Gift,
   Crown,
   Shield,
-  Heart
+  Heart,
+  Bot
 } from "lucide-react";
 
 interface ChatMessage {
@@ -27,6 +31,9 @@ interface ChatMessage {
 }
 
 export function LiveChatFeed() {
+  const { toast } = useToast();
+  const { kickUser } = useKickAccount();
+  const { sendBotMessage } = useAutoMonitor();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -130,27 +137,32 @@ export function LiveChatFeed() {
     }
   }, [messages, isAutoScroll]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    const timestamp = new Date().toLocaleTimeString('en-US', { 
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    const success = await sendBotMessage(newMessage);
+    
+    if (success) {
+      const timestamp = new Date().toLocaleTimeString('en-US', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
 
-    const message: ChatMessage = {
-      id: Date.now(),
-      username: "StreamerName",
-      message: newMessage,
-      timestamp,
-      userType: "moderator",
-      avatar: "/streamer-avatar.jpg"
-    };
+      const message: ChatMessage = {
+        id: Date.now(),
+        username: kickUser?.username || "Bot",
+        message: newMessage,
+        timestamp,
+        userType: "moderator",
+        avatar: "/bot-avatar.jpg",
+        isBot: true
+      };
 
-    setMessages(prev => [...prev, message]);
-    setNewMessage("");
+      setMessages(prev => [...prev, message]);
+      setNewMessage("");
+    }
   };
 
   const getUserTypeIcon = (userType: string, isBot?: boolean) => {
@@ -238,13 +250,18 @@ export function LiveChatFeed() {
           </div>
         </ScrollArea>
 
-        {/* Message Input */}
+        {/* Bot Message Input */}
         <div className="border-t border-border/50 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Bot className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">Send as Bot</span>
+            <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">@{kickUser?.username}</Badge>
+          </div>
           <div className="flex gap-2">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder="Type a bot message to send to chat..."
               className="bg-secondary/30 flex-1"
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             />
@@ -258,11 +275,8 @@ export function LiveChatFeed() {
             </Button>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Smile className="h-4 w-4" />
-            </Button>
-            <div className="text-xs text-muted-foreground ml-auto">
-              {messages.length} messages • Auto-scroll {isAutoScroll ? 'on' : 'off'}
+            <div className="text-xs text-muted-foreground">
+              Messages sent through your Kick bot • {messages.length} total messages
             </div>
           </div>
         </div>

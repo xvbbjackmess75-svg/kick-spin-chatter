@@ -26,7 +26,7 @@ interface CommandProcessed {
 export function ChatBot() {
   const { toast } = useToast();
   const { kickUser, canUseChatbot } = useKickAccount();
-  const { monitorStatus, isLoading, isActive, stopMonitoring } = useAutoMonitor();
+  const { monitorStatus, isLoading, isActive } = useAutoMonitor();
 
   const getUptime = () => {
     if (!monitorStatus?.started_at) return "0m";
@@ -180,23 +180,10 @@ export function ChatBot() {
             </div>
           )}
 
-          {/* Controls */}
-          <div className="mt-6 flex items-center justify-between">
+          {/* Info */}
+          <div className="mt-6">
             <div className="text-sm text-muted-foreground">
               🤖 <strong>Always-On Mode:</strong> The chatbot automatically monitors your chat and responds to commands 24/7. No manual intervention required!
-            </div>
-            
-            <div className="flex gap-2">
-              {isActive && (
-                <Button 
-                  onClick={stopMonitoring}
-                  size="sm"
-                  variant="destructive"
-                >
-                  <Square className="h-4 w-4 mr-2" />
-                  Disable Auto-Monitor
-                </Button>
-              )}
             </div>
           </div>
         </CardContent>
