@@ -27,6 +27,42 @@ export function LinkKickAccount() {
     try {
       console.log('🔗 Starting Kick account linking...');
       
+      // First check if there's already a Kick user in localStorage that can be linked
+      const existingKickUserData = localStorage.getItem('kick_user');
+      if (existingKickUserData) {
+        try {
+          const existingKickUser = JSON.parse(existingKickUserData);
+          if (existingKickUser.authenticated) {
+            console.log('🔗 Found existing Kick user, attempting to link:', existingKickUser.username);
+            
+            // Try to link the existing Kick account
+            const { error: linkError } = await supabase.rpc('link_kick_account_to_profile', {
+              profile_user_id: user.id,
+              kick_user_id: existingKickUser.id.toString(),
+              kick_username: existingKickUser.username,
+              kick_avatar: existingKickUser.avatar || ''
+            });
+
+            if (!linkError) {
+              toast({
+                title: "Account Linked!",
+                description: `Kick account @${existingKickUser.username} linked successfully!`,
+              });
+              setLoading(false);
+              return;
+            } else {
+              console.log('❌ Failed to link existing account:', linkError);
+              // Continue with OAuth flow if direct linking fails
+            }
+          }
+        } catch (parseError) {
+          console.log('❌ Failed to parse existing Kick user data:', parseError);
+        }
+      }
+      
+      // If no existing account or linking failed, start OAuth flow
+      console.log('🔗 Starting OAuth flow for new Kick account...');
+      
       // Set linking mode flag
       sessionStorage.setItem('kick_linking_mode', 'true');
       

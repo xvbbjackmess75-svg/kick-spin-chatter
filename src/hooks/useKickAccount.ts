@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface KickUser {
   id: number;
@@ -23,24 +24,63 @@ export function useKickAccount() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkKickAccount = () => {
+    const checkKickAccount = async () => {
       try {
-        // Get Kick user data
-        const kickUserData = localStorage.getItem('kick_user');
-        if (kickUserData) {
-          const parsedKickUser = JSON.parse(kickUserData);
-          if (parsedKickUser.authenticated) {
-            setKickUser(parsedKickUser);
+        // First check if user has a linked Kick account in their profile
+        if (user) {
+          console.log('🔍 Checking database for linked Kick account...');
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('linked_kick_user_id, linked_kick_username, linked_kick_avatar, kick_username, kick_user_id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (!error && profile) {
+            console.log('📊 Profile data found:', profile);
+            
+            // Check if we have linked Kick data in the database
+            if (profile.linked_kick_user_id && profile.linked_kick_username) {
+              console.log('✅ Found linked Kick account in database');
+              setKickUser({
+                id: parseInt(profile.linked_kick_user_id),
+                username: profile.linked_kick_username,
+                display_name: profile.linked_kick_username,
+                avatar: profile.linked_kick_avatar || '',
+                authenticated: true
+              });
+            } else if (profile.kick_user_id && profile.kick_username) {
+              // Fallback to old kick_username field
+              console.log('✅ Found Kick account in old fields');
+              setKickUser({
+                id: parseInt(profile.kick_user_id),
+                username: profile.kick_username,
+                display_name: profile.kick_username,
+                avatar: '',
+                authenticated: true
+              });
+            }
           }
         }
 
-        // Get Kick token data
+        // Also check localStorage for token data
         const kickTokenData = localStorage.getItem('kick_token');
         if (kickTokenData) {
           setKickToken(JSON.parse(kickTokenData));
         }
+
+        // If no database link found, check localStorage (for standalone Kick users)
+        if (!kickUser) {
+          const kickUserData = localStorage.getItem('kick_user');
+          if (kickUserData) {
+            const parsedKickUser = JSON.parse(kickUserData);
+            if (parsedKickUser.authenticated) {
+              console.log('📱 Found Kick user in localStorage only');
+              setKickUser(parsedKickUser);
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error parsing Kick account data:', error);
+        console.error('Error checking Kick account:', error);
         setKickUser(null);
         setKickToken(null);
       } finally {
@@ -59,9 +99,9 @@ export function useKickAccount() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [user]);
 
-  const isKickLinked = !!(kickUser?.authenticated && kickToken?.access_token);
+  const isKickLinked = !!(kickUser?.authenticated && (user || kickToken?.access_token));
   
   // Check for hybrid session even if Supabase user is not confirmed
   const hybridSession = localStorage.getItem('kick_hybrid_session');
@@ -79,7 +119,8 @@ export function useKickAccount() {
     hybridSession: !!hybridSession,
     isKickLinked,
     hasSupabaseAccount,
-    canUseChatbot
+    canUseChatbot,
+    userHasProfile: !!user
   });
 
   const getChannelInfo = () => {
