@@ -23,15 +23,6 @@ export function LinkKickAccount() {
       return;
     }
 
-    if (isKickLinked) {
-      toast({
-        title: "Already Linked",
-        description: "Your Kick account is already linked!",
-        variant: "default"
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       console.log('🔗 Starting Kick account linking...');

@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
       console.log('🔧 Authorize action')
       
       const clientId = Deno.env.get('KICK_CLIENT_ID')
+      console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
       const frontendUrl = 'https://kick-spin-chatter.lovable.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
@@ -83,6 +84,8 @@ Deno.serve(async (req) => {
       console.log('🔧 Starting Kick token exchange...')
       const clientId = Deno.env.get('KICK_CLIENT_ID')
       const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')
+      console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
+      console.log('🔧 Using KICK_CLIENT_SECRET:', clientSecret ? 'PRESENT' : 'MISSING')
       const redirectUri = `${origin}/auth/callback`
 
       const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
