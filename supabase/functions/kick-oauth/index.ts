@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
       authUrl.searchParams.set('code_challenge_method', 'S256')
 
       console.log('🔗 Authorization URL created successfully')
+      console.log('🔗 Redirect URI being used:', redirectUri)
+      console.log('🔗 Full auth URL:', authUrl.toString())
 
       return new Response(JSON.stringify({ 
         authUrl: authUrl.toString(),

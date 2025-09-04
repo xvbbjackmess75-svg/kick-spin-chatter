@@ -54,7 +54,7 @@ export default function AuthCallback() {
               code: code,
               state: state,
               code_verifier: codeVerifier,
-              origin: window.location.origin
+              origin: 'https://kick-spin-chatter.lovable.app'
             }
           });
 
