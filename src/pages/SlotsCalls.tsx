@@ -180,11 +180,9 @@ export default function SlotsCalls() {
       console.log('🎰 [SLOTS] Starting comprehensive monitoring');
       setIsManualMonitoring(true);
       
-      // Start auto-monitoring for command processing (if not already active)
-      if (!monitorStatus?.is_active) {
-        console.log('🤖 Starting auto-monitor for command processing');
-        await startAutoMonitoring();
-      }
+      // Always restart auto-monitoring to ensure it's properly connected
+      console.log('🤖 Restarting auto-monitor for fresh connection');
+      await startAutoMonitoring();
       
       // Start WebSocket for real-time chat display (no command processing)
       initializeChatDisplay();
