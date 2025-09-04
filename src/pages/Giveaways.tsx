@@ -409,12 +409,13 @@ export default function Giveaways() {
       }
 
       console.log('Creating giveaway with user ID:', user.id);
+      console.log('Channel info:', channelInfo);
 
       const { data, error } = await supabase
         .from('giveaways')
         .insert({
           title: title.trim(),
-          channel_id: channelInfo?.channelId || null,
+          channel_id: null, // Don't use channelInfo.channelId as it may not be a proper UUID
           description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
           user_id: user.id,
           status: 'active'
