@@ -93,41 +93,33 @@ export default function UpgradeToStreamer() {
   const isAlreadyStreamer = profile?.is_streamer || role === 'admin';
   const hasKickLinked = profile?.kick_username && profile?.kick_user_id;
 
-  const handleUpgradeToStreamer = async () => {
-    if (!user || !hasKickLinked) {
-      toast({
-        title: "Kick Account Required",
-        description: "Please link your Kick account first to upgrade to streamer",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleRequestStreamerUpgrade = async () => {
+    if (!user) return;
 
     setLoading(true);
     
     try {
-      // Update profile to mark as streamer
+      // For viewer-to-streamer upgrade, we need admin approval
+      // Update profile to indicate pending streamer request
       const { error } = await updateProfile({
-        is_streamer: true
+        display_name: `${profile?.display_name || user.email?.split('@')[0]} (Pending Streamer)`
       });
 
       if (error) throw error;
 
       toast({
-        title: "🎉 Upgrade Successful!",
-        description: "You now have access to all streamer features!",
+        title: "Upgrade request submitted!",
+        description: "An admin will review your request and approve your streamer upgrade.",
       });
 
-      // Redirect to dashboard after successful upgrade
-      setTimeout(() => {
-        navigate('/?upgraded=true');
-      }, 2000);
+      // Redirect to the request page
+      navigate('/streamer-upgrade-request');
 
     } catch (error) {
-      console.error('Upgrade error:', error);
+      console.error('Upgrade request error:', error);
       toast({
-        title: "Upgrade Failed",
-        description: "Failed to upgrade to streamer account. Please try again.",
+        title: "Request Failed",
+        description: "Failed to submit upgrade request. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -187,13 +179,13 @@ export default function UpgradeToStreamer() {
           </div>
           
           <h2 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-            Unlock
-            <span className="bg-gradient-primary bg-clip-text text-transparent"> Creator Power</span>
+            Request
+            <span className="bg-gradient-primary bg-clip-text text-transparent"> Streamer Upgrade</span>
           </h2>
           
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Transform your viewer account into a full streamer account and access powerful tools 
-            to grow your community, run engaging events, and manage your Kick channel like a pro.
+            Already have a viewer account? Request an upgrade to unlock streaming features.
+            An admin will review and approve your request.
           </p>
           
           <div className="flex items-center justify-center gap-4 mb-8">
@@ -208,67 +200,68 @@ export default function UpgradeToStreamer() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {hasKickLinked ? (
-              <Button 
-                size="lg" 
-                className="gaming-button text-lg px-8 py-6"
-                onClick={handleUpgradeToStreamer}
-                disabled={loading}
-              >
-                <ArrowRight className="h-5 w-5 mr-2" />
-                {loading ? 'Upgrading...' : 'Upgrade Now'}
-              </Button>
-            ) : (
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 py-6 border-border/50"
-                onClick={() => navigate('/account')}
-              >
-                <MessageSquare className="h-5 w-5 mr-2" />
-                Link Kick Account First
-              </Button>
-            )}
+            <Button 
+              size="lg" 
+              className="gaming-button text-lg px-8 py-6"
+              onClick={handleRequestStreamerUpgrade}
+              disabled={loading}
+            >
+              <ArrowRight className="h-5 w-5 mr-2" />
+              {loading ? 'Submitting Request...' : 'Request Streamer Upgrade'}
+            </Button>
             <Button 
               size="lg" 
               variant="outline" 
               className="text-lg px-8 py-6 border-border/50"
-              onClick={() => navigate('/account')}
+              onClick={() => navigate('/streamer-auth')}
             >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to Account
+              <Crown className="h-5 w-5 mr-2" />
+              Create New Streamer Account
             </Button>
           </div>
+          
+          <p className="text-sm text-muted-foreground mt-4 max-w-2xl mx-auto">
+            Need a new account instead? Create a streamer account directly with instant access to all features.
+          </p>
         </div>
       </section>
 
-      {/* Requirements Section */}
-      {!hasKickLinked && (
-        <section className="py-12 px-4 bg-red-500/10">
-          <div className="max-w-4xl mx-auto">
-            <Card className="gaming-card border-red-500/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                  <Shield className="h-5 w-5" />
-                  Requirements Not Met
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  To upgrade to a streamer account, you need to have a Kick channel linked to your account.
-                </p>
+      {/* Admin Approval Notice Section */}
+      <section className="py-12 px-4 bg-orange-500/10">
+        <div className="max-w-4xl mx-auto">
+          <Card className="gaming-card border-orange-500/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                <Shield className="h-5 w-5" />
+                Admin Approval Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Upgrading from a viewer account to streamer requires admin approval to ensure account security.
+                New streamer accounts can be created instantly on the streamer portal.
+              </p>
+              <div className="flex gap-3">
                 <Button 
-                  onClick={() => navigate('/account')}
+                  onClick={handleRequestStreamerUpgrade}
+                  disabled={loading}
                   className="gaming-button"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Link Your Kick Account
+                  <Crown className="h-4 w-4 mr-2" />
+                  {loading ? 'Submitting...' : 'Request Upgrade'}
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      )}
+                <Button 
+                  onClick={() => navigate('/streamer-auth')}
+                  variant="outline"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Create New Streamer Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       {/* Benefits Section */}
       <section className="py-20 px-4">
@@ -307,10 +300,10 @@ export default function UpgradeToStreamer() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold text-foreground mb-4">
-              How It Works
+              How Viewer-to-Streamer Upgrade Works
             </h3>
             <p className="text-lg text-muted-foreground">
-              Simple 3-step process to unlock streamer features
+              Simple process to upgrade your existing viewer account
             </p>
           </div>
           
@@ -349,29 +342,28 @@ export default function UpgradeToStreamer() {
               Ready to Start Streaming?
             </h3>
             <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of streamers who use our platform to power their communities.
+              Request an upgrade from your viewer account, or create a new streamer account for instant access.
             </p>
-            {hasKickLinked ? (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
                 className="gaming-button text-lg px-8 py-6"
-                onClick={handleUpgradeToStreamer}
+                onClick={handleRequestStreamerUpgrade}
                 disabled={loading}
               >
                 <Crown className="h-5 w-5 mr-2" />
-                {loading ? 'Upgrading Account...' : 'Upgrade to Streamer'}
+                {loading ? 'Submitting Request...' : 'Request Upgrade (Requires Approval)'}
               </Button>
-            ) : (
               <Button 
                 size="lg" 
                 variant="outline"
                 className="text-lg px-8 py-6"
-                onClick={() => navigate('/account')}
+                onClick={() => navigate('/streamer-auth')}
               >
                 <MessageSquare className="h-5 w-5 mr-2" />
-                Link Kick Account to Continue
+                Create New Streamer Account (Instant)
               </Button>
-            )}
+            </div>
           </div>
         </div>
       </section>

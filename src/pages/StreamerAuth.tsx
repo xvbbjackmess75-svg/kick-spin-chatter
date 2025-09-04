@@ -71,7 +71,7 @@ export default function StreamerAuth() {
         variant: "destructive"
       });
     } else {
-      // After successful signup, create streamer profile but don't set is_streamer yet
+      // After successful signup, create streamer profile immediately
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -80,7 +80,7 @@ export default function StreamerAuth() {
           .upsert({
             user_id: user.id,
             display_name: email.split('@')[0],
-            is_streamer: false // Start as regular user, needs admin approval
+            is_streamer: true // Set as streamer immediately
           });
 
         if (profileError) {
@@ -89,12 +89,11 @@ export default function StreamerAuth() {
       }
 
       toast({
-        title: "Account created!",
-        description: "Your account needs admin approval to become a streamer. Please contact an admin."
+        title: "Streamer account created!",
+        description: "Welcome! You now have access to all streaming features."
       });
       
-      // Redirect to upgrade page
-      navigate('/streamer-upgrade-request');
+      navigate('/');
     }
     
     setLoading(false);
@@ -176,19 +175,12 @@ export default function StreamerAuth() {
               
               <TabsContent value="signup" className="space-y-4">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-foreground">Apply for Streamer Access</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Create Streamer Account</h3>
                   <p className="text-sm text-muted-foreground">
-                    Create account and request streamer approval
+                    Get instant access to all streaming features
                   </p>
                 </div>
                 
-                <div className="text-xs text-muted-foreground bg-orange-500/10 p-3 rounded border border-orange-500/20 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                    <span className="font-semibold text-orange-400">Admin Approval Required</span>
-                  </div>
-                  <div>Your account will be created as a regular user. Contact an admin to upgrade to streamer status.</div>
-                </div>
                 
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
@@ -225,7 +217,7 @@ export default function StreamerAuth() {
                   </div>
                   
                   <Button type="submit" disabled={loading} className="gaming-button w-full">
-                    {loading ? 'Creating account...' : 'Apply for Streamer Access'}
+                    {loading ? 'Creating account...' : 'Create Streamer Account'}
                   </Button>
                 </form>
               </TabsContent>
