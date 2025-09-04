@@ -119,6 +119,7 @@ export default function AuthCallback() {
 
                 if (linkError) {
                   console.error('❌ Failed to link Kick account:', linkError);
+                  console.error('❌ Link error details:', JSON.stringify(linkError, null, 2));
                   throw linkError;
                 }
 
@@ -149,8 +150,8 @@ export default function AuthCallback() {
               } catch (linkError) {
                 console.error('❌ Account linking failed:', linkError);
                 toast({
-                  title: "Linking Failed",
-                  description: "Failed to link Kick account. It may already be linked to another user.",
+                  title: "Linking Failed", 
+                  description: "Failed to link Kick account. Please try again.",
                   variant: "destructive"
                 });
                 navigate('/account');
