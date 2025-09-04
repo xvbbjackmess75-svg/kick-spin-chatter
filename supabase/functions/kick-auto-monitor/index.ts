@@ -184,7 +184,23 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
 async function runChatMonitor(userId: string, kickUsername: string, channelId: string, tokenInfo: any, supabase: any) {
   console.log(`🤖 Starting persistent chat monitor for @${kickUsername}`);
   
+  // CRITICAL: Prevent multiple instances
+  if (activeMonitors.has(userId)) {
+    console.log(`⚠️ Monitor already exists for user ${userId}, terminating existing one`);
+    const existing = activeMonitors.get(userId);
+    if (existing?.socket) {
+      existing.socket.close();
+    }
+    activeMonitors.delete(userId);
+    // Give time for cleanup
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  let isShuttingDown = false;
+  
   const connectToChat = async (retryCount = 0): Promise<void> => {
+    if (isShuttingDown) return;
+    
     try {
       // Get channel info to find chatroom ID
       const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUsername}`);
@@ -206,14 +222,15 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
       const pusherUrl = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false";
       const kickSocket = new WebSocket(pusherUrl);
 
-      // Store active monitor
-      activeMonitors.set(userId, {
+      // Store active monitor IMMEDIATELY to prevent race conditions
+      const monitorInfo = {
         socket: kickSocket,
         userId,
         kickUsername,
         channelId,
         lastHeartbeat: new Date()
-      });
+      };
+      activeMonitors.set(userId, monitorInfo);
 
       kickSocket.onopen = () => {
         console.log(`✅ Connected to Kick WebSocket for @${kickUsername}`);
@@ -770,7 +787,7 @@ setInterval(async () => {
     
     if (activeDbMonitors) {
       for (const monitor of activeDbMonitors) {
-        // Check if monitor is connected in memory
+        // CRITICAL: Only restart if truly disconnected AND not already starting
         const isConnected = activeMonitors.has(monitor.user_id);
         
         if (!isConnected) {
@@ -784,16 +801,7 @@ setInterval(async () => {
             .single();
           
           if (profile && profile.kick_username) {
-            // Add a temporary entry to prevent concurrent starts
-            activeMonitors.set(monitor.user_id, {
-              socket: null as any,
-              userId: monitor.user_id,
-              kickUsername: monitor.kick_username,
-              channelId: monitor.channel_id,
-              lastHeartbeat: new Date()
-            });
-            
-            // Restart the monitor with stored info
+            // Restart the monitor with stored info - the monitor function will handle duplicate prevention
             EdgeRuntime.waitUntil(runChatMonitor(
               monitor.user_id, 
               monitor.kick_username, 

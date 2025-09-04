@@ -1210,77 +1210,95 @@ export default function SlotsCalls() {
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {calls.map((call, index) => (
-                          <Card key={call.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                      #{index + 1}
-                                    </span>
-                                    <span className="font-semibold">{call.viewer_username}</span>
-                                    <span className="text-muted-foreground">→</span>
-                                    <span className="text-primary">{call.slot_name}</span>
-                                  </div>
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    Bet: ${call.bet_amount} • 
-                                    {call.status === 'completed' ? (
-                                      <span className="text-green-400 ml-1">
-                                        Win: ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
+                        {(() => {
+                          // Group calls by user and only show up to max_calls_per_user
+                          const userCallCounts = new Map<string, number>();
+                          const filteredCalls = calls.filter(call => {
+                            const currentCount = userCallCounts.get(call.viewer_username) || 0;
+                            if (currentCount < selectedEvent.max_calls_per_user) {
+                              userCallCounts.set(call.viewer_username, currentCount + 1);
+                              return true;
+                            }
+                            return false;
+                          });
+
+                          return filteredCalls.map((call, index) => (
+                            <Card key={call.id} className="hover:shadow-md transition-shadow">
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                                        #{index + 1}
                                       </span>
-                                    ) : (
-                                      <Badge className={getStatusColor(call.status)}>
-                                        {call.status}
-                                      </Badge>
-                                    )}
+                                      <span className="font-semibold">{call.viewer_username}</span>
+                                      <span className="text-muted-foreground">→</span>
+                                      <span className="text-primary">{call.slot_name}</span>
+                                      {userCallCounts.get(call.viewer_username)! > 1 && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {calls.filter(c => c.viewer_username === call.viewer_username).indexOf(call) + 1}/{selectedEvent.max_calls_per_user}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground mt-1">
+                                      Bet: ${call.bet_amount} • 
+                                      {call.status === 'completed' ? (
+                                        <span className="text-green-400 ml-1">
+                                          Win: ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
+                                        </span>
+                                      ) : (
+                                        <Badge className={getStatusColor(call.status)}>
+                                          {call.status}
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                                
-                                {call.status === 'pending' && selectedEvent.status !== 'completed' && (
-                                  <div className="flex items-center gap-2">
-                                    {selectedCallId === call.id ? (
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          placeholder="Win amount"
-                                          value={winAmount}
-                                          onChange={(e) => setWinAmount(e.target.value)}
-                                          className="w-24 h-8"
-                                        />
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => addResult(call.id)}
-                                        >
-                                          Save
-                                        </Button>
+                                  
+                                  {call.status === 'pending' && selectedEvent.status !== 'completed' && (
+                                    <div className="flex items-center gap-2">
+                                      {selectedCallId === call.id ? (
+                                        <div className="flex items-center gap-2">
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="Win amount"
+                                            value={winAmount}
+                                            onChange={(e) => setWinAmount(e.target.value)}
+                                            className="w-24 h-8"
+                                          />
+                                          <Button 
+                                            size="sm" 
+                                            onClick={() => addResult(call.id)}
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={() => {
+                                              setSelectedCallId(null);
+                                              setWinAmount("");
+                                            }}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
                                         <Button 
                                           size="sm" 
                                           variant="outline"
-                                          onClick={() => {
-                                            setSelectedCallId(null);
-                                            setWinAmount("");
-                                          }}
+                                          onClick={() => setSelectedCallId(call.id)}
                                         >
-                                          Cancel
+                                          Add Result
                                         </Button>
-                                      </div>
-                                    ) : (
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => setSelectedCallId(call.id)}
-                                      >
-                                        Add Result
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ));
+                        })()}
                       </div>
                     )}
                   </div>
