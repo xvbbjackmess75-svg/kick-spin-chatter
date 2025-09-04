@@ -374,14 +374,23 @@ export default function SlotsCalls() {
 
       if (error) throw error;
 
-      // Auto-start monitoring for slots events
-      if (!monitorStatus?.is_active || !monitorStatus?.is_connected) {
-        console.log('🤖 Auto-starting monitoring for slots event...');
-        try {
-          await startAutoMonitoring();
-        } catch (error) {
-          console.error('Failed to start auto monitoring:', error);
-        }
+      // Auto-start monitoring for slots events - this is critical for !kgs commands to work
+      console.log('🤖 Auto-starting monitoring for slots event...');
+      console.log('Monitor status:', { 
+        is_active: monitorStatus?.is_active, 
+        is_connected: monitorStatus?.is_connected 
+      });
+      
+      try {
+        await startAutoMonitoring();
+        console.log('✅ Auto-monitoring started successfully');
+      } catch (error) {
+        console.error('❌ Failed to start auto monitoring:', error);
+        toast({
+          title: "Warning",
+          description: "Event created but monitoring failed to start. Try manually starting monitoring.",
+          variant: "destructive"
+        });
       }
 
       const successMessage = `🎰 Event "${title}" created for @${channelUsername} and monitoring started!`;

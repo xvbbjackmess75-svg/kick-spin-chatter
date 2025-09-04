@@ -145,7 +145,9 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
 
     // Use bot token for monitoring (since user doesn't have Kick token)
     const botToken = Deno.env.get('KICK_BOT_TOKEN');
-    const monitoringTokenInfo = tokenInfo?.access_token ? tokenInfo : { access_token: botToken };
+    const monitoringTokenInfo = { access_token: botToken };
+
+    console.log(`🚀 Starting chat monitor with bot token for @${kickUsername}`);
 
     // Start background monitoring task
     EdgeRuntime.waitUntil(runChatMonitor(userId, kickUsername, kickUserId?.toString(), monitoringTokenInfo, supabase));
@@ -243,7 +245,7 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
             // Check if message is a command
             if (messageData.content?.startsWith('!')) {
               const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
-              console.log(`🎯 Auto-processing command: !${command} from @${messageData.sender?.username}`);
+              console.log(`🎯 Auto-processing command: !${command} from @${messageData.sender?.username} in channel @${kickUsername}`);
 
               await processCommandBackground(command, messageData, userId, tokenInfo, chatroomId, supabase);
             }
@@ -310,10 +312,11 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
 
 async function processCommandBackground(command: string, messageData: any, userId: string, tokenInfo: any, chatroomId: string, supabase: any) {
   try {
-    console.log(`🎯 Processing command: !${command} from @${messageData.sender?.username}`);
+    console.log(`🎯 Processing command: !${command} from @${messageData.sender?.username} for user: ${userId}`);
 
     // Special handling for slots calls (!kgs command)
     if (command === 'kgs') {
+      console.log(`🎰 Handling slots call !kgs`);
       await processSlotsCall(messageData, chatroomId, userId, supabase);
       return;
     }
@@ -392,7 +395,8 @@ async function sendBotMessage(message: string, token: string, chatroomId: string
 
 async function processSlotsCall(messageData: any, chatroomId: string, userId: string, supabase: any) {
   try {
-    console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
+    console.log(`🎰 Processing slots call from ${messageData.sender?.username} for user ${userId}`);
+    console.log(`🎰 Message content: "${messageData.content}"`);
     
     // Extract slot name from message (everything after !kgs )
     const slotName = messageData.content?.replace('!kgs ', '').trim();
