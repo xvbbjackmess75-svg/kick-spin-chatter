@@ -493,8 +493,8 @@ async function sendUserMessage(message: string, token: string, userId: string, s
       throw new Error('No chatroom ID found for user');
     }
     
-    // Use the correct Kick Chat API endpoint with chatroom ID
-    const response = await fetch(`https://kick.com/api/v2/messages/send/${profile.kick_channel_id}`, {
+    // Use the correct Kick Chat API endpoint
+    const response = await fetch(`https://kick.com/api/v1/chat-messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -502,6 +502,7 @@ async function sendUserMessage(message: string, token: string, userId: string, s
         'Accept': 'application/json',
       },
       body: JSON.stringify({
+        chatroom_id: profile.kick_channel_id,
         content: message
       })
     });
