@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download } from 'lucide-react';
+import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BonusHuntSession {
@@ -73,7 +73,6 @@ export default function BonusHunt() {
   const [newSlotRtp, setNewSlotRtp] = useState<string>('');
   const [newSlotMaxMultiplier, setNewSlotMaxMultiplier] = useState<string>('');
   const [newSlotTheme, setNewSlotTheme] = useState('');
-  const [importingSlots, setImportingSlots] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -223,30 +222,6 @@ export default function BonusHunt() {
     } catch (error) {
       console.error('Error adding slot:', error);
       toast({ title: 'Error adding slot', variant: 'destructive' });
-    }
-  };
-
-  const importSlotsFromAboutSlots = async () => {
-    setImportingSlots(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('import-slots');
-      
-      if (error) throw error;
-      
-      toast({ 
-        title: 'Slots imported successfully!', 
-        description: `${data.new_slots_added} new slots added to database`
-      });
-      loadSlots(); // Refresh the slots list
-    } catch (error) {
-      console.error('Error importing slots:', error);
-      toast({ 
-        title: 'Error importing slots', 
-        description: 'Failed to import slots from aboutslots.com',
-        variant: 'destructive' 
-      });
-    } finally {
-      setImportingSlots(false);
     }
   };
 
@@ -575,15 +550,6 @@ export default function BonusHunt() {
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Button 
-                      variant="outline" 
-                      onClick={importSlotsFromAboutSlots}
-                      disabled={importingSlots}
-                      size="sm"
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      {importingSlots ? 'Importing...' : 'Import'}
-                    </Button>
                   </div>
                 </div>
 
