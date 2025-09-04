@@ -33,19 +33,19 @@ export default function StreamerAuth() {
         variant: "destructive"
       });
     } else {
-      // Check if user is a streamer after sign in
+      // Check if user has streamer panel access based on role
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_streamer')
-          .eq('user_id', user.id)
-          .single();
+        const { data: userRoleData } = await supabase
+          .rpc('get_user_role', { _user_id: user.id });
           
-        if (!profile?.is_streamer) {
+        const userRole = userRoleData || 'user';
+        
+        // Allow access for users, premium, vip_plus, and admin roles
+        if (!['user', 'premium', 'vip_plus', 'admin'].includes(userRole)) {
           toast({
-            title: "Access Denied",
-            description: "This login is for streamers only. Please use the viewer login or upgrade your account.",
+            title: "Access Denied", 
+            description: "This portal is for streamers. Please use the viewer portal.",
             variant: "destructive"
           });
           await supabase.auth.signOut();
@@ -71,20 +71,29 @@ export default function StreamerAuth() {
         variant: "destructive"
       });
     } else {
-      // After successful signup, create streamer profile immediately
+      // After successful signup, create profile and assign premium role for streamer access
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // Create/update profile
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             user_id: user.id,
             display_name: email.split('@')[0],
-            is_streamer: true // Set as streamer immediately
+            is_streamer: true
           });
 
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
+        // Assign premium role for streamer panel access
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: user.id,
+            role: 'premium'
+          });
+
+        if (profileError || roleError) {
+          console.error('Error creating profile or role:', { profileError, roleError });
         }
       }
 

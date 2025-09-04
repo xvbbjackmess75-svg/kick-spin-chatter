@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { isAdminRole } from '@/hooks/useUserRole';
+import { canAccessAdminPanel } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -286,7 +286,7 @@ export default function Admin() {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
-  if (!userRole || !isAdminRole(userRole)) {
+  if (!userRole || !canAccessAdminPanel(userRole)) {
     return (
       <div className="container mx-auto p-4">
         <Card>

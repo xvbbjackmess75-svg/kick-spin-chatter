@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole, isViewerRole } from '@/hooks/useUserRole';
 import { useKickAccount } from '@/hooks/useKickAccount';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -24,7 +24,7 @@ export default function ViewerVerification() {
   const [discordLinked, setDiscordLinked] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { role, loading: roleLoading, isAdmin, shouldUseAdminPanel } = useUserRole();
+  const { role, loading: roleLoading, isAdmin, hasStreamerAccess, hasAdminAccess } = useUserRole();
   const { isKickLinked } = useKickAccount();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,26 +32,30 @@ export default function ViewerVerification() {
   const isVerified = role === 'verified_viewer';
   const canGetVerified = isKickLinked && discordLinked;
   
-  // Redirect admin roles to admin panel, only allow viewer roles here
+  // Redirect non-viewer roles to appropriate panels
   useEffect(() => {
     if (!roleLoading && user) {
-      if (shouldUseAdminPanel()) {
-        const destination = isAdmin() ? '/admin' : '/';
-        const accessLevel = isAdmin() ? 'admin' : role;
-        
+      if (hasAdminAccess()) {
         toast({
           title: "Admin Access",
-          description: `You have ${accessLevel} access. Redirecting to ${isAdmin() ? 'admin panel' : 'dashboard'}.`,
+          description: "Redirecting to admin panel...",
         });
-        navigate(destination);
+        navigate('/admin');
+        return;
+      }
+      
+      if (hasStreamerAccess() && !isViewerRole(role)) {
+        toast({
+          title: "Streamer Access",
+          description: `You have ${role} access. Redirecting to dashboard.`,
+        });
+        navigate('/');
         return;
       }
       
       // Only 'user' and 'verified_viewer' roles should access this viewer portal
-      // - 'user' role can complete verification to become 'verified_viewer'
-      // - 'verified_viewer' role can see their verification status
     }
-  }, [role, roleLoading, isAdmin, shouldUseAdminPanel, navigate, toast, user]);
+  }, [role, roleLoading, hasAdminAccess, hasStreamerAccess, navigate, toast, user]);
 
   useEffect(() => {
     // Check if Discord is already linked (you can implement this based on your Discord integration)
