@@ -494,7 +494,7 @@ async function sendUserMessage(message: string, token: string, userId: string, s
     }
     
     // Use the correct Kick Chat API endpoint with chatroom ID
-    const response = await fetch(`https://api.kick.com/public/v1/chat/send/${profile.kick_channel_id}`, {
+    const response = await fetch(`https://kick.com/api/v2/messages/send/${profile.kick_channel_id}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
