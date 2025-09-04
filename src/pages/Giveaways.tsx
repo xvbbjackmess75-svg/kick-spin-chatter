@@ -291,14 +291,14 @@ export default function Giveaways() {
             continue;
           }
 
-          const { data: participants } = await supabase
+          const { data: participantsData } = await supabase
             .from('giveaway_participants')
             .select('id')
             .eq('giveaway_id', giveaway.id);
 
           await supabase
             .from('giveaways')
-            .update({ participants_count: participants?.length || 0 })
+            .update({ participants_count: participantsData?.length || 0 })
             .eq('id', giveaway.id);
 
           fetchGiveaways();
@@ -834,14 +834,14 @@ export default function Giveaways() {
       if (error) throw error;
       
       // Update participant count
-      const { data: participants } = await supabase
+      const { data: participantsData } = await supabase
         .from('giveaway_participants')
         .select('id')
         .eq('giveaway_id', giveawayId);
       
       await supabase
         .from('giveaways')
-        .update({ participants_count: participants?.length || 0 })
+        .update({ participants_count: participantsData?.length || 0 })
         .eq('id', giveawayId);
       
       fetchGiveaways();
