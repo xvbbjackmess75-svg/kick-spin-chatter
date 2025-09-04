@@ -68,8 +68,17 @@ const handler = async (req: Request): Promise<Response> => {
 async function sendMessage(body: KickChatRequest): Promise<Response> {
   const { channel_id, message, token_info } = body;
   
+  console.log(`🔍 sendMessage called with:`, {
+    channel_id,
+    message: message?.substring(0, 50),
+    has_token_info: !!token_info,
+    token_access_token: token_info?.access_token ? 'present' : 'missing'
+  });
+  
   if (!channel_id || !message || !token_info?.access_token) {
-    throw new Error("Missing required parameters for send_message");
+    const error = `Missing required parameters: channel_id=${!!channel_id}, message=${!!message}, token_info=${!!token_info}, access_token=${!!token_info?.access_token}`;
+    console.error('❌', error);
+    throw new Error(error);
   }
 
   console.log(`📤 Sending message to channel ${channel_id}: ${message.substring(0, 50)}...`);
