@@ -44,11 +44,25 @@ export function RouletteModal({
 
   // Sync participants when modal opens or participants change
   useEffect(() => {
-    console.log("🔄 RouletteModal: Updating participants", participants.length);
+    console.log("🔄 RouletteModal: Updating participants", {
+      participantsLength: participants.length,
+      participants: participants.map(p => p.username)
+    });
     setCurrentParticipants(participants);
     setPendingWinners([]); // Reset winners when participants change
     setShowStartButton(true);
   }, [participants]);
+
+  // Debug log when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log("🎯 RouletteModal opened with:", {
+        giveawayTitle: giveaway?.title,
+        participantsCount: participants.length,
+        currentParticipantsCount: currentParticipants.length
+      });
+    }
+  }, [isOpen, giveaway, participants, currentParticipants]);
 
   // Handle adding a winner to pending list
   const handlePendingWinner = (winner: Participant, result: any) => {

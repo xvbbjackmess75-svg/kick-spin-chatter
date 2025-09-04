@@ -497,11 +497,14 @@ export default function Giveaways() {
       }
 
       console.log("🎰 Starting winner selection for giveaway:", giveaway.title);
-      console.log("👥 Participants:", giveawayParticipants.map(p => p.username));
+      console.log("👥 Participants fetched:", giveawayParticipants.map(p => p.username));
+      console.log("📊 Setting participants state:", giveawayParticipants.length);
       
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
       setPendingWinners([]); // Reset pending winners
+      
+      console.log("🎪 Opening roulette modal...");
       setIsRouletteModalOpen(true); // Open modal
       
     } catch (error) {
