@@ -45,7 +45,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
@@ -106,17 +106,22 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     }
   }, [userId, event?.id]);
 
-  // Auto-scroll effect for OBS overlay
+  // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
     if (calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled) {
       const interval = setInterval(() => {
-        setScrollOffset(prev => {
-          const maxOffset = calls.length - (overlaySettings.max_visible_calls || maxCalls);
-          return prev >= maxOffset ? 0 : prev + 1;
+        setScrollPosition(prev => {
+          // Smooth continuous scroll - move by small increments
+          const newPosition = prev + 1;
+          // Reset to 0 when we've scrolled past all items to create infinite loop
+          const maxScroll = calls.length * 60; // Assuming ~60px per call item
+          return newPosition >= maxScroll ? 0 : newPosition;
         });
-      }, 3000); // Scroll every 3 seconds
+      }, 50); // Smooth 50ms intervals for fluid animation
 
       return () => clearInterval(interval);
+    } else {
+      setScrollPosition(0);
     }
   }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled]);
 
@@ -263,8 +268,12 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     );
   }
 
-  const displayCalls = calls.slice(scrollOffset, scrollOffset + (overlaySettings.max_visible_calls || maxCalls));
   const winner = event?.status === 'completed' ? getWinner() : null;
+
+  // Create duplicated calls for infinite scroll effect when needed
+  const infiniteScrollCalls = calls.length > (overlaySettings.max_visible_calls || maxCalls) 
+    ? [...calls, ...calls] // Duplicate the calls array for seamless loop
+    : calls;
 
   // Calculate totals for summary
   const totalCost = calls.reduce((sum, call) => sum + call.bet_amount, 0);
@@ -372,81 +381,79 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             <h3 className="font-semibold" style={{color: overlaySettings.text_color}}>Calls Queue ({calls.length})</h3>
           </div>
           
-          {displayCalls.length === 0 ? (
+          {calls.length === 0 ? (
             <p className="text-center py-4 text-sm opacity-70" style={{color: overlaySettings.text_color}}>
               No calls yet
             </p>
           ) : (
             <div 
-              ref={scrollContainerRef}
-              className="space-y-2 transition-all duration-1000 ease-in-out"
-              style={{
-                transform: `translateY(0px)` // Smooth auto-scroll
-              }}
+              className="relative overflow-hidden"
+              style={{ height: `${(overlaySettings.max_visible_calls || maxCalls) * 60}px` }}
             >
-              {displayCalls.map((call, index) => (
-                <div
-                  key={`${call.id}-${scrollOffset}`}
-                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-500 ${overlaySettings.animation_enabled ? 'animate-fade-in' : ''}`}
-                  style={{
-                    backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                    borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
-                  }}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span 
-                        className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
-                        style={{
-                          backgroundColor: overlaySettings.accent_color + '40',
-                          color: overlaySettings.accent_color
-                        }}
-                      >
-                        #{scrollOffset + index + 1}
-                      </span>
-                      <span className="font-semibold text-sm truncate max-w-[80px]" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
-                      <span style={{color: overlaySettings.text_color}}>→</span>
-                      <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
-                    </div>
-                    <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
-                      <span className="whitespace-nowrap">${call.bet_amount} bet</span>
-                      <span>•</span>
-                      {call.status === 'completed' ? (
-                        <span className="text-green-400 whitespace-nowrap">
-                          ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
+              <div 
+                ref={scrollContainerRef}
+                className="space-y-2 transition-transform duration-75 ease-linear"
+                style={{
+                  transform: `translateY(-${scrollPosition}px)`,
+                  willChange: 'transform'
+                }}
+              >
+                {infiniteScrollCalls.map((call, index) => (
+                  <div
+                    key={`${call.id}-${Math.floor(index / calls.length)}`}
+                    className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-500`}
+                    style={{
+                      backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                      borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
+                      minHeight: '56px' // Consistent height for smooth scrolling
+                    }}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span 
+                          className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
+                          style={{
+                            backgroundColor: overlaySettings.accent_color + '40',
+                            color: overlaySettings.accent_color
+                          }}
+                        >
+                          #{(index % calls.length) + 1}
                         </span>
-                      ) : (
-                        <Badge className={`${getStatusColor(call.status)} text-xs px-1 py-0`}>
-                          {call.status}
-                        </Badge>
-                      )}
+                        <span className="font-semibold text-sm truncate max-w-[80px]" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
+                        <span style={{color: overlaySettings.text_color}}>→</span>
+                        <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
+                      </div>
+                      <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
+                        <span className="whitespace-nowrap">${call.bet_amount} bet</span>
+                        <span>•</span>
+                        {call.status === 'completed' ? (
+                          <span className="text-green-400 whitespace-nowrap">
+                            ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
+                          </span>
+                        ) : (
+                          <Badge className={`${getStatusColor(call.status)} text-xs px-1 py-0`}>
+                            {call.status}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
               
-              {calls.length > (overlaySettings.max_visible_calls || maxCalls) && (
-                <div className="text-center py-2 border-t border-white/10">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="flex space-x-1">
-                      {Array.from({ length: Math.min(5, Math.ceil(calls.length / (overlaySettings.max_visible_calls || maxCalls))) }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            i === Math.floor(scrollOffset / (overlaySettings.max_visible_calls || maxCalls)) 
-                              ? 'bg-current' 
-                              : 'bg-current opacity-30'
-                          }`}
-                          style={{ color: overlaySettings.accent_color }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs opacity-70 ml-2" style={{color: overlaySettings.text_color}}>
-                      Showing {scrollOffset + 1}-{Math.min(scrollOffset + (overlaySettings.max_visible_calls || maxCalls), calls.length)} of {calls.length}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {/* Gradient overlay for smooth fade effect */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-4 pointer-events-none"
+                style={{
+                  background: `linear-gradient(to bottom, ${overlaySettings.background_color}, transparent)`
+                }}
+              />
+              <div 
+                className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none"
+                style={{
+                  background: `linear-gradient(to top, ${overlaySettings.background_color}, transparent)`
+                }}
+              />
             </div>
           )}
         </CardContent>
