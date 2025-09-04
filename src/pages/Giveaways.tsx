@@ -568,11 +568,22 @@ export default function Giveaways() {
 
   // Accept all pending winners and end giveaway
   const handleAcceptAllWinners = async () => {
-    if (!currentGiveaway || pendingWinners.length === 0) return;
+    if (!currentGiveaway || pendingWinners.length === 0) {
+      console.log("❌ Cannot accept winners:", {
+        hasCurrentGiveaway: !!currentGiveaway,
+        pendingWinnersCount: pendingWinners.length
+      });
+      return;
+    }
 
     console.log("🏆 ACCEPTING ALL WINNERS:", {
       giveaway: currentGiveaway.title,
-      pendingWinners: pendingWinners.map(w => w.username)
+      giveawayId: currentGiveaway.id,
+      pendingWinners: pendingWinners.map(w => ({
+        username: w.username,
+        winningTicket: w.winningTicket,
+        totalTickets: w.totalTickets
+      }))
     });
 
     try {
@@ -585,32 +596,47 @@ export default function Giveaways() {
         tickets_per_participant: winner.ticketsPerParticipant
       }));
 
+      console.log("💾 Inserting winners into database:", winnersToInsert);
+
       const { error: winnersError } = await supabase
         .from('giveaway_winners')
         .insert(winnersToInsert);
 
-      if (winnersError) throw winnersError;
+      if (winnersError) {
+        console.error("❌ Error inserting winners:", winnersError);
+        throw winnersError;
+      }
+
+      console.log("✅ Winners inserted successfully");
 
       // Mark giveaway as completed
+      console.log("🔄 Updating giveaway status to completed...");
       const { error: giveawayError } = await supabase
         .from('giveaways')
         .update({ status: 'completed' })
         .eq('id', currentGiveaway.id);
 
-      if (giveawayError) throw giveawayError;
+      if (giveawayError) {
+        console.error("❌ Error updating giveaway status:", giveawayError);
+        throw giveawayError;
+      }
+
+      console.log("✅ Giveaway status updated successfully");
 
       toast({
         title: "Giveaway Completed!",
         description: `${pendingWinners.length} winners have been saved and the giveaway is now completed.`,
       });
 
-      // Reset all states
+      // Reset all states after successful save
       setCurrentGiveaway(null);
       setParticipants([]);
       setPendingWinners([]);
-      // Winners accepted
+      setSavedPendingWinners([]);
+      setSavedParticipants([]);
       
       // Refresh giveaways list
+      console.log("🔄 Refreshing giveaways list...");
       await fetchGiveaways();
       
     } catch (error) {
