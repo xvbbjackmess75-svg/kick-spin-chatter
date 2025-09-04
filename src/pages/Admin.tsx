@@ -74,51 +74,30 @@ export default function Admin() {
   const loadUsers = async () => {
     if (!user) return;
 
+    setLoading(true);
     try {
-      // Get all users with their profiles and roles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          user_id,
-          display_name,
-          kick_username,
-          kick_user_id,
-          created_at
-        `);
-
-      if (profilesError) throw profilesError;
-
-      // Get user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      if (rolesError) throw rolesError;
-
-      // Get auth users (admin only)
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
-
-      // Combine the data - always use user ID as the primary key
-      const usersWithRoles = authData.users.map(authUser => {
-        const profile = profilesData?.find(p => p.user_id === authUser.id);
-        const role = rolesData?.find(r => r.user_id === authUser.id);
-        
-        return {
-          id: authUser.id, // This is the primary identifier - never changes
-          email: authUser.email || '',
-          display_name: profile?.display_name,
-          kick_username: profile?.kick_username,
-          kick_user_id: profile?.kick_user_id,
-          role: role?.role || 'user' as 'user' | 'premium' | 'vip_plus' | 'admin',
-          created_at: authUser.created_at
-        };
+      // Use the admin edge function to get users
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: new URLSearchParams({ action: 'list-users' })
       });
 
-      setUsers(usersWithRoles);
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setUsers(data.users || []);
     } catch (error) {
       console.error('Error loading users:', error);
-      toast({ title: 'Error loading users', variant: 'destructive' });
+      toast({
+        title: "Error Loading Users",
+        description: error instanceof Error ? error.message : "Failed to load users",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,31 +121,37 @@ export default function Admin() {
   };
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'premium' | 'vip_plus' | 'admin') => {
-    if (!user) return;
-
     try {
-      // Delete existing role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      // Insert new role
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: newRole,
-          granted_by: user.id
-        });
+      // Use the admin edge function to update user role
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          action: 'update-role',
+          userId: userId,
+          role: newRole 
+        })
+      });
 
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      toast({ title: 'User role updated successfully!' });
-      loadUsers();
+      // Refresh the users list
+      await loadUsers();
+      
+      toast({
+        title: "Role Updated",
+        description: `User role has been updated to ${newRole}`,
+      });
     } catch (error) {
       console.error('Error updating user role:', error);
-      toast({ title: 'Error updating user role', variant: 'destructive' });
+      toast({
+        title: "Error Updating Role",
+        description: error instanceof Error ? error.message : "Failed to update user role",
+        variant: "destructive"
+      });
     }
   };
 
