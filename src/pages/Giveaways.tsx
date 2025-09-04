@@ -397,13 +397,22 @@ export default function Giveaways() {
     }
 
     try {
+      if (!user?.id) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to create giveaways",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('giveaways')
         .insert({
           title: title.trim(),
           channel_id: channelInfo?.channelId || null,
           description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
-          user_id: user?.id, // Use the current authenticated user ID
+          user_id: user.id,
           status: 'active'
         })
         .select()
