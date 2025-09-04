@@ -111,12 +111,18 @@ export default function Giveaways() {
     }
     
     try {
+      console.log('🔍 Fetching giveaways for user:', user?.id);
       const { data, error } = await supabase
         .from('giveaways')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching giveaways:', error);
+        throw error;
+      }
+      console.log('✅ Fetched giveaways:', data);
       setGiveaways(data || []);
     } catch (error) {
       console.error('Error fetching giveaways:', error);
