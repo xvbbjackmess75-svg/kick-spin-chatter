@@ -360,6 +360,7 @@ function getUserLevel(sender: any): string {
 function checkUserPermission(userLevel: string, requiredLevel: string): boolean {
   const levels = {
     'viewer': 0,
+    'everyone': 0,  // everyone = viewer level
     'subscriber': 1,
     'moderator': 2,
     'owner': 3
