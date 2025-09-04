@@ -386,10 +386,14 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_kick_hybrid: boolean | null
           is_streamer: boolean | null
           kick_channel_id: string | null
           kick_user_id: string | null
           kick_username: string | null
+          linked_kick_avatar: string | null
+          linked_kick_user_id: string | null
+          linked_kick_username: string | null
           updated_at: string
           user_id: string
         }
@@ -398,10 +402,14 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_kick_hybrid?: boolean | null
           is_streamer?: boolean | null
           kick_channel_id?: string | null
           kick_user_id?: string | null
           kick_username?: string | null
+          linked_kick_avatar?: string | null
+          linked_kick_user_id?: string | null
+          linked_kick_username?: string | null
           updated_at?: string
           user_id: string
         }
@@ -410,10 +418,14 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_kick_hybrid?: boolean | null
           is_streamer?: boolean | null
           kick_channel_id?: string | null
           kick_user_id?: string | null
           kick_username?: string | null
+          linked_kick_avatar?: string | null
+          linked_kick_user_id?: string | null
+          linked_kick_username?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -427,6 +439,15 @@ export type Database = {
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      link_kick_account_to_profile: {
+        Args: {
+          kick_avatar: string
+          kick_user_id: string
+          kick_username: string
+          profile_user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

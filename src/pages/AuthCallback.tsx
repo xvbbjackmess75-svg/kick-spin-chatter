@@ -102,54 +102,70 @@ export default function AuthCallback() {
               localStorage.setItem('kick_token', JSON.stringify(token_info));
             }
 
-            // Always create a Supabase account for Kick users for seamless experience
-            try {
-              console.log('🔄 Creating Supabase account for Kick user...');
+            // Check if user is logged in and wants to link account
+            const currentUser = (await supabase.auth.getUser()).data.user;
+            
+            if (currentUser && isLinkingMode) {
+              console.log('🔗 Linking Kick account to existing user:', currentUser.id);
               
-              // Create a unique email for the Kick user using a valid domain
-              const userEmail = `kick-user-${user.id}@example.com`;
-              
-              // Generate a secure temporary password
-              const tempPassword = `KickUser_${user.id}_${Date.now()}`;
-              
-              console.log('🔄 Attempting to create/sign in to Supabase account...');
-              
-              // Try to create the account
-              const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: userEmail,
-                password: tempPassword,
-                options: {
-                  emailRedirectTo: `${window.location.origin}/`,
-                  data: {
-                    kick_username: user.username,
-                    kick_user_id: user.id.toString(),
-                    kick_avatar: user.avatar,
-                    display_name: user.display_name || user.username,
-                    is_hybrid_account: true,
-                    created_via_kick: true
-                  }
-                }
-              });
-
-              if (signUpError && signUpError.message.includes('already registered')) {
-                console.log('🔄 Account exists, signing in...');
-                // Account exists, sign in with the temporary password approach
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                  email: userEmail,
-                  password: tempPassword
+              try {
+                // Link Kick account to existing profile
+                const { error: linkError } = await supabase.rpc('link_kick_account_to_profile', {
+                  profile_user_id: currentUser.id,
+                  kick_user_id: user.id.toString(),
+                  kick_username: user.username,
+                  kick_avatar: user.avatar
                 });
-                
-                if (signInError) {
-                  console.log('🔄 Sign in failed, probably password mismatch - that\'s ok');
-                  // Password doesn't match, but account exists - user can manage it on account page
+
+                if (linkError) {
+                  console.error('❌ Failed to link Kick account:', linkError);
+                  throw linkError;
                 }
+
+                console.log('✅ Kick account linked successfully');
+                
+                toast({
+                  title: "Account Linked!",
+                  description: `Kick account @${user.username} linked successfully!`,
+                });
+
+                navigate('/account');
+                return;
+                
+              } catch (linkError) {
+                console.error('❌ Account linking failed:', linkError);
+                toast({
+                  title: "Linking Failed",
+                  description: "Failed to link Kick account. It may already be linked to another user.",
+                  variant: "destructive"
+                });
+                navigate('/account');
+                return;
               }
-              
-              console.log('✅ Supabase account ready');
-              
-            } catch (hybridError) {
-              console.error('❌ Hybrid account setup failed:', hybridError);
             }
+
+            // Check if a Supabase user exists with linked Kick account
+            const { data: existingProfile, error: profileError } = await supabase
+              .from('profiles')
+              .select('user_id, linked_kick_username')
+              .eq('linked_kick_user_id', user.id.toString())
+              .single();
+
+            if (!profileError && existingProfile) {
+              console.log('🔗 Found existing linked account, signing in user...');
+              
+              // User exists with this Kick account linked, but we can't auto-login them
+              // Instead, show them a helpful message
+              toast({
+                title: "Account Found",
+                description: `This Kick account is linked to an existing user. Please sign in with your email and password.`,
+              });
+              navigate('/auth');
+              return;
+            }
+
+            // Create standalone Kick account (old behavior for new users)
+            console.log('🔄 Creating standalone Kick account...');
 
             // Store Kick user info
             console.log('✅ Kick authentication successful');

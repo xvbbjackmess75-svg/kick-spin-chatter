@@ -1,115 +1,60 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Link, 
-  CheckCircle, 
-  ArrowLeft,
-  Settings
-} from 'lucide-react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useProfile } from '@/hooks/useProfile';
+import { LinkKickAccount } from '@/components/LinkKickAccount';
 import { supabase } from '@/integrations/supabase/client';
+import { User, Mail, Save, LogOut } from 'lucide-react';
 
 export default function Account() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState(user?.email || '');
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // For Kick users adding email/password
-  const [kickUserEmail, setKickUserEmail] = useState('');
-  const [kickUserPassword, setKickUserPassword] = useState('');
-  const [kickUserConfirmPassword, setKickUserConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  // Check authentication method
-  const kickUserData = localStorage.getItem('kick_user');
-  const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
-  const isKickAuthenticated = kickUser?.authenticated;
-  
-  const isEmailAuthenticated = !!user && !isKickAuthenticated;
-  const isHybridAccount = !!user && isKickAuthenticated; // Kick user with active Supabase session
-  const isKickOnly = !user && isKickAuthenticated; // Kick user without Supabase session
-
-  const getCurrentUserInfo = () => {
-    if (isHybridAccount) {
-      // Kick user with active Supabase session
-      return {
-        username: kickUser.username,
-        displayName: kickUser.display_name || kickUser.username,
-        avatar: kickUser.avatar,
-        email: user?.email || 'Auto-generated email',
-        provider: 'Kick + Email (Hybrid)'
-      };
-    } else if (isKickOnly) {
-      // Kick-only user (no active Supabase session but has Kick account)
-      return {
-        username: kickUser.username,
-        displayName: kickUser.display_name || kickUser.username,
-        avatar: kickUser.avatar,
-        email: `kick-user-${kickUser.id}@example.com`,
-        provider: 'Kick (Add Email & Password Available)'
-      };
-    } else if (user) {
-      // Email-only user
-      return {
-        username: user.email?.split('@')[0] || 'User',
-        displayName: user.email?.split('@')[0] || 'User',
-        avatar: null,
-        email: user.email,
-        provider: 'Email'
-      };
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || '');
     }
-    return null;
-  };
+  }, [profile]);
 
-  const userInfo = getCurrentUserInfo();
+  const handleUpdateProfile = async () => {
+    if (!profile) return;
 
-  const handleEmailUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+    setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ email });
-      
-      if (error) throw error;
-
-      toast({
-        title: "Email updated",
-        description: "Please check your new email to confirm the change.",
+      await updateProfile({
+        display_name: displayName
       });
-    } catch (error: any) {
+      
       toast({
-        title: "Update failed",
-        description: error.message,
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handlePasswordUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Password mismatch",
-        description: "New passwords don't match",
+        title: "Password Mismatch",
+        description: "The passwords don't match.",
         variant: "destructive"
       });
       return;
@@ -117,534 +62,179 @@ export default function Account() {
 
     if (newPassword.length < 6) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
         variant: "destructive"
       });
       return;
     }
 
-    setLoading(true);
-
+    setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ 
-        password: newPassword 
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
-      
+
       if (error) throw error;
 
       toast({
-        title: "Password updated",
-        description: "Your password has been successfully changed.",
+        title: "Password Updated",
+        description: "Your password has been changed successfully.",
       });
-      
-      setCurrentPassword('');
+
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
+      console.error('Error changing password:', error);
       toast({
-        title: "Update failed",
-        description: error.message,
+        title: "Password Change Failed",
+        description: error.message || "Failed to change password. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleKickOAuth = async () => {
-    setLoading(true);
-    try {
-      const response = await supabase.functions.invoke('kick-oauth', {
-        body: { 
-          action: 'authorize',
-          origin: window.location.origin
-        }
-      });
-
-      if (response.error) {
-        throw response.error;
-      }
-
-      const { authUrl, codeVerifier } = response.data;
-      
-      if (authUrl) {
-        sessionStorage.setItem('kick_code_verifier', codeVerifier);
-        sessionStorage.setItem('kick_linking_mode', 'true'); // Flag for account linking
-        window.location.href = authUrl;
-      } else {
-        throw new Error('No authorization URL received');
-      }
-    } catch (error) {
-      console.error('Kick OAuth error:', error);
-      toast({
-        title: "Authentication failed",
-        description: "Failed to start Kick authentication. Please try again.",
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed Out",
+      description: "You have been signed out successfully.",
+    });
   };
 
-  const handleKickUserEmailSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (kickUserPassword !== kickUserConfirmPassword) {
-      toast({
-        title: "Password mismatch",
-        description: "Passwords don't match",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (kickUserPassword.length < 6) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Create Supabase account for Kick user
-      const { data, error } = await supabase.auth.signUp({
-        email: kickUserEmail,
-        password: kickUserPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            kick_username: kickUser?.username,
-            kick_user_id: kickUser?.id?.toString(),
-            kick_avatar: kickUser?.avatar,
-            display_name: kickUser?.display_name || kickUser?.username,
-            is_hybrid_account: true
-          }
-        }
-      });
-      
-      if (error) throw error;
-
-      toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account. You can now use both Kick and email login.",
-      });
-      
-      // Clear form
-      setKickUserEmail('');
-      setKickUserPassword('');
-      setKickUserConfirmPassword('');
-      
-    } catch (error: any) {
-      toast({
-        title: "Signup failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateSupabaseAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (kickUserPassword !== kickUserConfirmPassword) {
-      toast({
-        title: "Password mismatch",
-        description: "Passwords don't match",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (kickUserPassword.length < 6) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Create/update Supabase account with user's preferred email and password
-      const { data, error } = await supabase.auth.signUp({
-        email: kickUserEmail,
-        password: kickUserPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            kick_username: kickUser?.username,
-            kick_user_id: kickUser?.id?.toString(),
-            kick_avatar: kickUser?.avatar,
-            display_name: kickUser?.display_name || kickUser?.username,
-            is_hybrid_account: true
-          }
-        }
-      });
-      
-      if (error && !error.message.includes('already registered')) {
-        throw error;
-      }
-
-      toast({
-        title: "Account setup complete!",
-        description: error?.message.includes('already registered') 
-          ? "Account updated! Please check your email to verify the new email address." 
-          : "Account created! Please check your email to verify your account.",
-      });
-      
-      // Clear form
-      setKickUserEmail('');
-      setKickUserPassword('');
-      setKickUserConfirmPassword('');
-
-      // Refresh page to update UI
-      setTimeout(() => window.location.reload(), 1000);
-      
-    } catch (error: any) {
-      toast({
-        title: "Setup failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!userInfo) {
+  if (profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Please sign in to access your account.</p>
-          </CardContent>
-        </Card>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green mx-auto" />
+          <p className="text-muted-foreground">Loading account...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <RouterLink to="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </RouterLink>
-          </Button>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="text-center py-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account information and connected services
+          </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Settings className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Account Settings</h1>
-            <p className="text-muted-foreground">Manage your account preferences and security</p>
-          </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Profile Information */}
+          <Card className="gaming-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Profile Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email || ''}
+                  disabled
+                  className="bg-secondary/30"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter your display name"
+                  className="bg-secondary/30"
+                />
+              </div>
+
+              <Button
+                onClick={handleUpdateProfile}
+                disabled={saving}
+                className="gaming-button w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? 'Saving...' : 'Save Profile'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Kick Account Integration */}
+          <LinkKickAccount />
+
+          {/* Change Password */}
+          <Card className="gaming-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-accent" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="bg-secondary/30"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="bg-secondary/30"
+                />
+              </div>
+
+              <Button
+                onClick={handleChangePassword}
+                disabled={saving || !newPassword || !confirmPassword}
+                className="gaming-button w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? 'Updating...' : 'Change Password'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Account Actions */}
+          <Card className="gaming-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LogOut className="h-5 w-5 text-red-400" />
+                Account Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={handleSignOut}
+                variant="outline"
+                className="w-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Profile Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {userInfo.avatar ? (
-                  <AvatarImage src={userInfo.avatar} alt={userInfo.username} />
-                ) : null}
-                <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-lg font-semibold">
-                  {userInfo.username?.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold">{userInfo.displayName}</h3>
-                <p className="text-muted-foreground">@{userInfo.username}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant={userInfo.provider === 'Kick' ? 'default' : 'secondary'}>
-                    {userInfo.provider} Account
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Add Email & Password - For Kick-only users */}
-        {isKickOnly && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Add Email & Password
-              </CardTitle>
-              <CardDescription>
-                Add your own email and password to access your account from any device
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>Current status:</strong> Signed in with Kick only
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Add email and password to sign in from any device and manage your account.
-                </p>
-              </div>
-              <form onSubmit={handleCreateSupabaseAccount} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="kick-email">Your Email Address</Label>
-                  <Input
-                    id="kick-email"
-                    type="email"
-                    value={kickUserEmail}
-                    onChange={(e) => setKickUserEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kick-password">Choose Password</Label>
-                  <Input
-                    id="kick-password"
-                    type="password"
-                    value={kickUserPassword}
-                    onChange={(e) => setKickUserPassword(e.target.value)}
-                    placeholder="Choose a password"
-                    minLength={6}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kick-confirm-password">Confirm Password</Label>
-                  <Input
-                    id="kick-confirm-password"
-                    type="password"
-                    value={kickUserConfirmPassword}
-                    onChange={(e) => setKickUserConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    minLength={6}
-                    required
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={loading || !kickUserEmail || !kickUserPassword || kickUserPassword !== kickUserConfirmPassword}
-                  className="w-full"
-                >
-                  {loading ? "Setting up..." : "Add Email & Password"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Email Management - For email authenticated users AND hybrid accounts */}
-        {(isEmailAuthenticated || isHybridAccount) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Email Address
-              </CardTitle>
-              <CardDescription>
-                {isHybridAccount 
-                  ? "Update your email address from the auto-generated one to your preferred email."
-                  : "Update your email address. You'll need to verify the new email."
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleEmailUpdate} className="space-y-4">
-                {isHybridAccount && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
-                    <p className="text-sm text-blue-900 dark:text-blue-100">
-                      <strong>Current email:</strong> {user?.email}
-                    </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      This was auto-generated when you signed in with Kick. You can change it to your preferred email.
-                    </p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <Button type="submit" disabled={loading || email === user?.email}>
-                  {loading ? "Updating..." : "Update Email"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Password Management - For email authenticated users AND hybrid accounts */}
-        {(isEmailAuthenticated || isHybridAccount) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                Password
-              </CardTitle>
-              <CardDescription>
-                {isHybridAccount 
-                  ? "Set a password you can remember. Currently using an auto-generated secure password."
-                  : "Change your account password. Make sure it's strong and unique."
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                {isHybridAccount && (
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
-                    <p className="text-sm text-yellow-900 dark:text-yellow-100">
-                      <strong>Auto-generated password:</strong> For security, we created a secure password when you signed in with Kick.
-                    </p>
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                      Set your own password below to log in from other devices.
-                    </p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    minLength={6}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    minLength={6}
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={loading || !newPassword || newPassword !== confirmPassword}
-                >
-                  {loading ? "Updating..." : "Update Password"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-
-        {/* Kick Account Linking */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Link className="h-5 w-5" />
-              Kick Account
-            </CardTitle>
-            <CardDescription>
-              {isKickAuthenticated 
-                ? "Your Kick account is connected and active." 
-                : "Link your Kick account for enhanced features and streaming integration."
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isKickAuthenticated ? (
-              <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                <div className="flex-1">
-                  <p className="font-medium text-green-900 dark:text-green-100">
-                    Kick Account Connected
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Signed in as @{kickUser.username}
-                  </p>
-                </div>
-                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                  Already Linked
-                </Badge>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Linking your Kick account will allow you to:
-                  </p>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>• Access advanced streaming features</li>
-                    <li>• Manage your channel settings</li>
-                    <li>• View detailed analytics</li>
-                    <li>• Use chat moderation tools</li>
-                  </ul>
-                </div>
-                <Button 
-                  onClick={handleKickOAuth}
-                  disabled={loading}
-                  className="gaming-button"
-                >
-                  <Link className="h-4 w-4 mr-2" />
-                  {loading ? "Connecting..." : "Link Kick Account"}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Separator />
-
-        {/* Danger Zone - Only for email authenticated users */}
-        {isEmailAuthenticated && (
-          <Card className="border-destructive/20">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible and destructive actions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Delete Account</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all associated data.
-                    </p>
-                  </div>
-                  <Button variant="destructive" size="sm">
-                    Delete Account
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
