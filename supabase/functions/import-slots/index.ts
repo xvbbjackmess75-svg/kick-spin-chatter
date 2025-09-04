@@ -25,73 +25,53 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting slot data import from aboutslots.com');
+    console.log('Starting comprehensive slot data import from ALL pages of aboutslots.com');
 
-    // Fetch the aboutslots.com page
-    const response = await fetch('https://www.aboutslots.com/all-casino-slots');
-    const html = await response.text();
+    const allSlots: SlotData[] = [];
+    const maxPages = 200; // Based on user info
+    const batchSize = 10; // Process pages in batches to avoid timeouts
 
-    console.log('Fetched HTML content, length:', html.length);
+    // Process pages in batches
+    for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
+      const startPage = batch * batchSize + 1;
+      const endPage = Math.min((batch + 1) * batchSize, maxPages);
+      
+      console.log(`Processing batch ${batch + 1}: pages ${startPage}-${endPage}`);
 
-    // Parse slot data from HTML
-    const slots: SlotData[] = [];
-    
-    // Extract slot information using regex patterns
-    // Look for patterns that contain slot names and providers
-    const slotMatches = html.matchAll(/"casino-slots\/([^"]+)"/g);
-    const uniqueSlots = new Set<string>();
+      // Process pages in this batch concurrently
+      const pagePromises = [];
+      for (let page = startPage; page <= endPage; page++) {
+        pagePromises.push(scrapePage(page));
+      }
 
-    for (const match of slotMatches) {
-      const urlSlug = match[1];
-      if (urlSlug && !uniqueSlots.has(urlSlug)) {
-        uniqueSlots.add(urlSlug);
+      try {
+        const batchResults = await Promise.allSettled(pagePromises);
         
-        // Convert URL slug to readable name
-        const name = urlSlug
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, l => l.toUpperCase())
-          .replace(/And/g, '&');
-
-        // Try to extract provider from the surrounding context
-        let provider = 'Unknown';
-        
-        // Look for provider names commonly found on the site
-        const providers = [
-          'Pragmatic Play', 'NetEnt', 'Play\'n GO', 'Microgaming', 'Evolution',
-          'Red Tiger', 'Push Gaming', 'Big Time Gaming', 'Blueprint Gaming',
-          'Yggdrasil', 'Quickspin', 'Nolimit City', 'Relax Gaming', 'Hacksaw Gaming',
-          'Print Studios', 'Elk Studios', 'Thunderkick', 'IGT', 'WMS', 'Bally',
-          'Scientific Games', 'Aristocrat', 'Novomatic', 'Merkur', 'Gamomat',
-          'Iron Dog Studio', 'Fantasma Games', 'Northern Lights Gaming',
-          'Skywind Group', 'Spinomenal', 'Booming Games', 'Endorphina',
-          'BGaming', 'Wazdan', 'Playson', 'Tom Horn Gaming', 'Kalamba Games',
-          'Octoplay'
-        ];
-
-        // Try to extract provider from page context around the slot
-        const slotIndex = html.indexOf(urlSlug);
-        const contextBefore = html.substring(Math.max(0, slotIndex - 1000), slotIndex);
-        const contextAfter = html.substring(slotIndex, slotIndex + 1000);
-        const context = contextBefore + contextAfter;
-
-        for (const providerName of providers) {
-          if (context.toLowerCase().includes(providerName.toLowerCase())) {
-            provider = providerName;
-            break;
+        for (let i = 0; i < batchResults.length; i++) {
+          const result = batchResults[i];
+          const pageNum = startPage + i;
+          
+          if (result.status === 'fulfilled') {
+            const pageSlots = result.value;
+            console.log(`Page ${pageNum}: Found ${pageSlots.length} slots`);
+            allSlots.push(...pageSlots);
+          } else {
+            console.error(`Page ${pageNum} failed:`, result.reason);
           }
         }
+      } catch (error) {
+        console.error(`Error processing batch ${batch + 1}:`, error);
+      }
 
-        slots.push({
-          name,
-          provider,
-          theme: extractTheme(name),
-        });
+      // Small delay between batches to be respectful to the server
+      if (batch < Math.ceil(maxPages / batchSize) - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    console.log(`Extracted ${slots.length} unique slots`);
+    console.log(`Total slots found across all pages: ${allSlots.length}`);
 
-    if (slots.length === 0) {
+    if (allSlots.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No slots found to import' }),
         { 
@@ -100,6 +80,13 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    // Remove duplicates based on name + provider combination
+    const uniqueSlots = Array.from(
+      new Map(allSlots.map(slot => [`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`, slot])).values()
+    );
+
+    console.log(`Unique slots after deduplication: ${uniqueSlots.length}`);
 
     // Get existing slots to avoid duplicates
     const { data: existingSlots } = await supabase
@@ -111,17 +98,17 @@ Deno.serve(async (req) => {
     );
 
     // Filter out duplicates
-    const newSlots = slots.filter(slot => 
+    const newSlots = uniqueSlots.filter(slot => 
       !existingSlotKeys.has(`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`)
     );
 
-    console.log(`Found ${newSlots.length} new slots to insert`);
+    console.log(`New slots to insert: ${newSlots.length}`);
 
     if (newSlots.length === 0) {
       return new Response(
         JSON.stringify({ 
           message: 'No new slots to import - all slots already exist',
-          total_processed: slots.length 
+          total_processed: uniqueSlots.length 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -129,12 +116,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert new slots in batches to avoid timeouts
-    const batchSize = 100;
+    // Insert new slots in batches
+    const insertBatchSize = 100;
     let insertedCount = 0;
 
-    for (let i = 0; i < newSlots.length; i += batchSize) {
-      const batch = newSlots.slice(i, i + batchSize);
+    for (let i = 0; i < newSlots.length; i += insertBatchSize) {
+      const batch = newSlots.slice(i, i + insertBatchSize);
       
       const { error } = await supabase
         .from('slots')
@@ -150,16 +137,17 @@ Deno.serve(async (req) => {
       }
 
       insertedCount += batch.length;
-      console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}, total inserted: ${insertedCount}`);
+      console.log(`Inserted batch ${Math.floor(i / insertBatchSize) + 1}, total inserted: ${insertedCount}`);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully imported ${insertedCount} new slots`,
-        total_processed: slots.length,
+        message: `Successfully imported ${insertedCount} new slots from ${maxPages} pages`,
+        total_found: allSlots.length,
+        unique_slots: uniqueSlots.length,
         new_slots_added: insertedCount,
-        existing_slots_skipped: slots.length - insertedCount
+        existing_slots_skipped: uniqueSlots.length - insertedCount
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -181,22 +169,185 @@ Deno.serve(async (req) => {
   }
 });
 
+async function scrapePage(pageNumber: number): Promise<SlotData[]> {
+  try {
+    const url = pageNumber === 1 
+      ? 'https://www.aboutslots.com/all-casino-slots'
+      : `https://www.aboutslots.com/all-casino-slots?page=${pageNumber}`;
+    
+    console.log(`Scraping page ${pageNumber}: ${url}`);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch page ${pageNumber}: ${response.status}`);
+      return [];
+    }
+    
+    const html = await response.text();
+    return parseSlotData(html, pageNumber);
+  } catch (error) {
+    console.error(`Error scraping page ${pageNumber}:`, error);
+    return [];
+  }
+}
+
+function parseSlotData(html: string, pageNumber: number): SlotData[] {
+  const slots: SlotData[] = [];
+  
+  try {
+    // Look for slot links in the HTML
+    const slotLinkRegex = /href="\/casino-slots\/([^"]+)"/g;
+    const slotMatches = Array.from(html.matchAll(slotLinkRegex));
+    
+    console.log(`Page ${pageNumber}: Found ${slotMatches.length} slot links`);
+    
+    // Also look for slot data in script tags or data attributes
+    const scriptDataRegex = /"slug":"([^"]+)"[^}]*"title":"([^"]+)"[^}]*"provider":"([^"]+)"/g;
+    const scriptMatches = Array.from(html.matchAll(scriptDataRegex));
+    
+    console.log(`Page ${pageNumber}: Found ${scriptMatches.length} slot data entries`);
+    
+    // Process slot links
+    for (const match of slotMatches) {
+      const slug = match[1];
+      if (slug && slug.length > 2) {
+        const name = slugToName(slug);
+        const provider = extractProviderFromContext(html, slug);
+        
+        if (name && provider !== 'Unknown') {
+          slots.push({
+            name,
+            provider,
+            theme: extractTheme(name),
+          });
+        }
+      }
+    }
+    
+    // Process script data (more reliable when available)
+    for (const match of scriptMatches) {
+      const [, slug, title, provider] = match;
+      if (title && provider) {
+        slots.push({
+          name: title,
+          provider: provider,
+          theme: extractTheme(title),
+        });
+      }
+    }
+    
+    // Look for provider information in the page
+    const providerRegex = /data-provider="([^"]+)"/g;
+    const providerMatches = Array.from(html.matchAll(providerRegex));
+    
+    // Also look for game titles in various formats
+    const titleRegex = /(?:title|alt)="([^"]*(?:slot|game)[^"]*)"/gi;
+    const titleMatches = Array.from(html.matchAll(titleRegex));
+    
+    // Parse JSON-LD structured data if present
+    const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis;
+    const jsonLdMatches = Array.from(html.matchAll(jsonLdRegex));
+    
+    for (const match of jsonLdMatches) {
+      try {
+        const jsonData = JSON.parse(match[1]);
+        if (jsonData && Array.isArray(jsonData)) {
+          for (const item of jsonData) {
+            if (item.name && item.provider) {
+              slots.push({
+                name: item.name,
+                provider: item.provider,
+                theme: extractTheme(item.name),
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore JSON parsing errors
+      }
+    }
+    
+    // Remove duplicates from this page
+    const uniqueSlots = Array.from(
+      new Map(slots.map(slot => [`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`, slot])).values()
+    );
+    
+    console.log(`Page ${pageNumber}: Parsed ${uniqueSlots.length} unique slots`);
+    return uniqueSlots;
+    
+  } catch (error) {
+    console.error(`Error parsing page ${pageNumber}:`, error);
+    return [];
+  }
+}
+
+function slugToName(slug: string): string {
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase())
+    .replace(/\bAnd\b/g, '&')
+    .replace(/\bOf\b/g, 'of')
+    .replace(/\bThe\b/g, 'the')
+    .replace(/\bIn\b/g, 'in')
+    .replace(/\bOn\b/g, 'on')
+    .replace(/\bAt\b/g, 'at')
+    .replace(/\bTo\b/g, 'to')
+    .replace(/\bFor\b/g, 'for');
+}
+
+function extractProviderFromContext(html: string, slug: string): string {
+  const providers = [
+    'Pragmatic Play', 'NetEnt', 'Play\'n GO', 'Microgaming', 'Evolution',
+    'Red Tiger', 'Push Gaming', 'Big Time Gaming', 'Blueprint Gaming',
+    'Yggdrasil', 'Quickspin', 'Nolimit City', 'Relax Gaming', 'Hacksaw Gaming',
+    'Print Studios', 'Elk Studios', 'Thunderkick', 'IGT', 'WMS', 'Bally',
+    'Scientific Games', 'Aristocrat', 'Novomatic', 'Merkur', 'Gamomat',
+    'Iron Dog Studio', 'Fantasma Games', 'Northern Lights Gaming',
+    'Skywind Group', 'Spinomenal', 'Booming Games', 'Endorphina',
+    'BGaming', 'Wazdan', 'Playson', 'Tom Horn Gaming', 'Kalamba Games',
+    'Octoplay', 'Habanero', 'Betsoft', 'Pragmatic', 'Evoplay',
+    'Mascot Gaming', 'Fugaso', 'GameArt', 'iSoftBet', 'Platipus Gaming'
+  ];
+
+  // Look for provider in the vicinity of the slot
+  const slotIndex = html.toLowerCase().indexOf(slug.toLowerCase());
+  if (slotIndex !== -1) {
+    const contextStart = Math.max(0, slotIndex - 2000);
+    const contextEnd = Math.min(html.length, slotIndex + 2000);
+    const context = html.substring(contextStart, contextEnd).toLowerCase();
+    
+    for (const provider of providers) {
+      if (context.includes(provider.toLowerCase())) {
+        return provider;
+      }
+    }
+  }
+  
+  return 'Unknown';
+}
+
 function extractTheme(name: string): string | undefined {
   const themes = {
-    'Egyptian': ['book', 'pharaoh', 'pyramid', 'cleopatra', 'anubis', 'osiris', 'egypt'],
-    'Adventure': ['quest', 'treasure', 'explorer', 'adventure', 'jungle', 'tomb'],
-    'Mythology': ['gods', 'olympus', 'thor', 'loki', 'mythology', 'divine', 'legendary'],
-    'Animals': ['wolf', 'bear', 'lion', 'tiger', 'dog', 'cat', 'wild', 'safari'],
-    'Fantasy': ['magic', 'wizard', 'dragon', 'fairy', 'enchanted', 'mystical'],
-    'Fruit': ['fruit', 'cherry', 'lemon', 'orange', 'grape', 'watermelon'],
-    'Classic': ['777', 'lucky', 'diamond', 'gold', 'classic', 'retro'],
-    'Ocean': ['ocean', 'sea', 'shark', 'fish', 'underwater', 'marine'],
-    'Space': ['star', 'cosmic', 'galaxy', 'space', 'planet', 'nebula'],
-    'Music': ['rock', 'music', 'band', 'concert', 'disco'],
-    'Horror': ['vampire', 'ghost', 'halloween', 'scary', 'dark'],
-    'Western': ['cowboy', 'sheriff', 'western', 'saloon', 'outlaw'],
-    'Asian': ['dragon', 'samurai', 'geisha', 'zen', 'temple'],
-    'Candy': ['sweet', 'candy', 'sugar', 'bonanza', 'chocolate']
+    'Egyptian': ['book', 'pharaoh', 'pyramid', 'cleopatra', 'anubis', 'osiris', 'egypt', 'dead', 'tomb'],
+    'Adventure': ['quest', 'treasure', 'explorer', 'adventure', 'jungle', 'hunter', 'temple'],
+    'Mythology': ['gods', 'olympus', 'thor', 'loki', 'mythology', 'divine', 'legendary', 'zeus'],
+    'Animals': ['wolf', 'bear', 'lion', 'tiger', 'dog', 'cat', 'wild', 'safari', 'rhino', 'elephant'],
+    'Fantasy': ['magic', 'wizard', 'dragon', 'fairy', 'enchanted', 'mystical', 'princess'],
+    'Fruit': ['fruit', 'cherry', 'lemon', 'orange', 'grape', 'watermelon', 'berry'],
+    'Classic': ['777', 'lucky', 'diamond', 'gold', 'classic', 'retro', 'joker'],
+    'Ocean': ['ocean', 'sea', 'shark', 'fish', 'underwater', 'marine', 'aqua'],
+    'Space': ['star', 'cosmic', 'galaxy', 'space', 'planet', 'nebula', 'alien'],
+    'Music': ['rock', 'music', 'band', 'concert', 'disco', 'dance'],
+    'Horror': ['vampire', 'ghost', 'halloween', 'scary', 'dark', 'devil', 'demon'],
+    'Western': ['cowboy', 'sheriff', 'western', 'saloon', 'outlaw', 'bandit'],
+    'Asian': ['dragon', 'samurai', 'geisha', 'zen', 'temple', 'chi', 'luck'],
+    'Candy': ['sweet', 'candy', 'sugar', 'bonanza', 'chocolate', 'rush'],
+    'Pirates': ['pirate', 'treasure', 'ship', 'captain', 'gold'],
+    'Mexican': ['mexican', 'mariachi', 'fiesta', 'chilli', 'pepper'],
+    'Mining': ['mine', 'mining', 'gold', 'diamond', 'gems', 'dig'],
+    'Fire': ['fire', 'flame', 'hot', 'burn', 'inferno'],
+    'Ice': ['ice', 'frozen', 'cold', 'winter', 'snow'],
+    'Money': ['money', 'cash', 'bank', 'rich', 'fortune', 'wealth']
   };
 
   const lowerName = name.toLowerCase();

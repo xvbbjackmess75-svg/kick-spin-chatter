@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy } from 'lucide-react';
+import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BonusHuntSession {
@@ -73,6 +73,7 @@ export default function BonusHunt() {
   const [newSlotRtp, setNewSlotRtp] = useState<string>('');
   const [newSlotMaxMultiplier, setNewSlotMaxMultiplier] = useState<string>('');
   const [newSlotTheme, setNewSlotTheme] = useState('');
+  const [importingAllSlots, setImportingAllSlots] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -228,6 +229,35 @@ export default function BonusHunt() {
     } catch (error) {
       console.error('Error adding slot:', error);
       toast({ title: 'Error adding slot', variant: 'destructive' });
+    }
+  };
+
+  const importAllSlotsFromAboutSlots = async () => {
+    setImportingAllSlots(true);
+    try {
+      toast({ 
+        title: 'Import started!', 
+        description: 'Scraping all 200 pages of slots from aboutslots.com. This may take several minutes...'
+      });
+
+      const { data, error } = await supabase.functions.invoke('import-slots');
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: 'All slots imported successfully!', 
+        description: `${data.new_slots_added} new slots added from ${data.total_found} total found across all pages`
+      });
+      loadSlots(); // Refresh the slots list
+    } catch (error) {
+      console.error('Error importing all slots:', error);
+      toast({ 
+        title: 'Error importing slots', 
+        description: 'Failed to import slots from aboutslots.com',
+        variant: 'destructive' 
+      });
+    } finally {
+      setImportingAllSlots(false);
     }
   };
 
@@ -556,6 +586,16 @@ export default function BonusHunt() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    <Button 
+                      variant="outline" 
+                      onClick={importAllSlotsFromAboutSlots}
+                      disabled={importingAllSlots}
+                      size="sm"
+                      className="min-w-32"
+                    >
+                      <Database className="h-4 w-4 mr-1" />
+                      {importingAllSlots ? 'Importing...' : 'Import All 200 Pages'}
+                    </Button>
                   </div>
                 </div>
 
