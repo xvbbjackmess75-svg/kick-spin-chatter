@@ -397,10 +397,21 @@ export default function Giveaways() {
     }
 
     try {
-      if (!user?.id) {
+      if (!user?.id && !isSupabaseUser) {
         toast({
           title: "Authentication Error",
-          description: "You must be logged in to create giveaways",
+          description: "You must be logged in with a Supabase account to create giveaways",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Ensure we have a valid user ID
+      const userId = user?.id;
+      if (!userId) {
+        toast({
+          title: "Authentication Error", 
+          description: "Unable to determine user ID",
           variant: "destructive"
         });
         return;
@@ -412,7 +423,7 @@ export default function Giveaways() {
           title: title.trim(),
           channel_id: channelInfo?.channelId || null,
           description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
-          user_id: user.id,
+          user_id: userId,
           status: 'active'
         })
         .select()
