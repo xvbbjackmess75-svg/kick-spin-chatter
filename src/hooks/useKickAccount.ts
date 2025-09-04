@@ -50,18 +50,9 @@ export function useKickAccount() {
           else if (profile.kick_user_id && profile.kick_username) {
             console.log('✅ Found Kick account (legacy format)');
             
-            // Try to get avatar from user metadata
-            let avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
-            
-            try {
-              const { data: userData } = await supabase.auth.getUser();
-              if (userData.user?.user_metadata?.kick_avatar) {
-                avatarUrl = userData.user.user_metadata.kick_avatar;
-                console.log('🖼️ Using avatar from metadata:', avatarUrl);
-              }
-            } catch (e) {
-              console.log('🖼️ Using default avatar format');
-            }
+            // Use publicly accessible Kick avatar URL format instead of private metadata URL
+            const avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
+            console.log('🖼️ Using public avatar format:', avatarUrl);
             
             setKickUser({
               id: parseInt(profile.kick_user_id),

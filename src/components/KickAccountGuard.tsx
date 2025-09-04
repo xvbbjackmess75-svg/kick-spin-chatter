@@ -134,18 +134,6 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              {/* Debug info */}
-              <div className="text-xs text-muted-foreground mb-2">
-                Avatar URL: {kickUser?.avatar ? 'Available' : 'Missing'}
-                <br />
-                Length: {kickUser?.avatar?.length || 0}
-              </div>
-              
-              {/* Test with a simple div showing the URL */}
-              <div className="text-xs bg-gray-100 p-2 rounded max-w-xs overflow-hidden">
-                {kickUser?.avatar || 'No avatar URL'}
-              </div>
-              
               <img 
                 src={kickUser?.avatar || '/placeholder-avatar.jpg'} 
                 alt={kickUser?.username}
@@ -155,8 +143,11 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
                 }}
                 onError={(e) => {
                   console.error('❌ Avatar failed to load:', kickUser?.avatar);
-                  console.error('Error details:', e);
-                  e.currentTarget.src = '/placeholder-avatar.jpg';
+                  // Try fallback avatar URL
+                  const fallbackUrl = kickUser?.username 
+                    ? `https://files.kick.com/images/user/${kickUser.username}/profile_image/conversion/150x150-small.webp`
+                    : '/placeholder-avatar.jpg';
+                  e.currentTarget.src = fallbackUrl;
                 }}
               />
               <div>
