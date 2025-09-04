@@ -30,23 +30,40 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log("🚀 Kick Chat API function started");
+    console.log("📥 Request method:", req.method);
+    console.log("📥 Request URL:", req.url);
     
-    const body: KickChatRequest = await req.json();
-    console.log("📦 Request body:", { action: body.action, channel_id: body.channel_id });
+    let body: KickChatRequest;
+    try {
+      body = await req.json();
+      console.log("📦 Request body parsed successfully:", { action: body.action, channel_id: body.channel_id });
+    } catch (parseError) {
+      console.error("❌ Failed to parse request body:", parseError);
+      throw new Error(`Invalid JSON in request body: ${parseError.message}`);
+    }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("❌ Missing Supabase environment variables");
+      throw new Error("Server configuration error: Missing Supabase credentials");
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     switch (body.action) {
       case 'send_message':
+        console.log("🔄 Calling sendMessage function");
         return await sendMessage(body);
       
       case 'process_command':
+        console.log("🔄 Calling processCommand function");
         return await processCommand(body, supabase);
       
       default:
+        console.error("❌ Unknown action:", body.action);
         throw new Error(`Unknown action: ${body.action}`);
     }
 
