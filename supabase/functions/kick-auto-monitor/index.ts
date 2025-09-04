@@ -471,9 +471,15 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
   }
 }
 
-async function sendUserMessage(message: string, token: string, userId: string, supabase: any): Promise<Response> {
+async function sendUserMessage(message: string, _userToken: string, userId: string, supabase: any): Promise<Response> {
   try {
     console.log(`🤖 Sending bot message: "${message.substring(0, 50)}..." for user: ${userId}`);
+    
+    // Get bot token from environment (APP token, not user token)
+    const botToken = Deno.env.get('KICK_BOT_TOKEN');
+    if (!botToken) {
+      throw new Error('Bot token not configured');
+    }
     
     // Get the user's chatroom ID from their profile
     const { data: profile, error: profileError } = await supabase
@@ -497,7 +503,7 @@ async function sendUserMessage(message: string, token: string, userId: string, s
     const response = await fetch(`https://kick.com/api/v1/chat-messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${botToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
