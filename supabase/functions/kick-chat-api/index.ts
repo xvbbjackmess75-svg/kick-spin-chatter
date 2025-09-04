@@ -93,18 +93,39 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
     const userData = await userResponse.json();
     console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
     
-    // IMPORTANT: Kick's public API doesn't currently support sending chat messages
-    // The API is mainly read-only. We'll need to inform the user about this limitation.
-    console.log("⚠️ Kick's public API doesn't support sending chat messages");
+    // Send message using Kick Chat API (correct endpoint)
+    const response = await fetch('https://api.kick.com/public/v1/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token_info.access_token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'bot', // Use bot type since we're sending as a bot
+        content: message
+        // broadcaster_user_id is not required for bot type and will be ignored
+      })
+    });
+
+    console.log(`🔍 Kick API response status: ${response.status}`);
+    const responseText = await response.text();
+    console.log(`🔍 Kick API response body: ${responseText.substring(0, 200)}...`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.status} - ${responseText}`);
+    }
+
+    const data = JSON.parse(responseText);
     
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: "Kick's public API doesn't currently support sending chat messages. This feature requires direct access to Kick's private API or using a bot account through their chat system.",
-        details: "The public API is primarily read-only and doesn't include endpoints for posting messages to chat."
+        success: true, 
+        is_sent: data.data?.is_sent,
+        message_id: data.data?.message_id,
+        content: message
       }),
       {
-        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
