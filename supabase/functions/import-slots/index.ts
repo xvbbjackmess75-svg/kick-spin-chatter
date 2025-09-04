@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
     console.log('Starting comprehensive slot data import from ALL pages of aboutslots.com');
 
     const allSlots: SlotData[] = [];
-    const maxPages = 200; // Based on user info
-    const batchSize = 10; // Process pages in batches to avoid timeouts
+    const maxPages = 50; // Reduced to avoid timeouts - will need multiple runs
+    const batchSize = 5; // Smaller batches to avoid CPU timeout
 
     // Process pages in batches
     for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
