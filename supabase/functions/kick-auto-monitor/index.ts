@@ -228,10 +228,16 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
             const messageData = JSON.parse(pusherData.data);
             
             // Update message count and heartbeat
+            const { data: currentMonitor } = await supabase
+              .from('chatbot_monitors')
+              .select('total_messages_processed')
+              .eq('user_id', userId)
+              .single();
+            
             await supabase
               .from('chatbot_monitors')
               .update({ 
-                total_messages_processed: supabase.raw('total_messages_processed + 1'),
+                total_messages_processed: (currentMonitor?.total_messages_processed || 0) + 1,
                 last_heartbeat: new Date().toISOString()
               })
               .eq('user_id', userId);
@@ -353,10 +359,16 @@ async function processCommandBackground(command: string, messageData: any, userI
       .update({ uses: commands.uses + 1 })
       .eq('id', commands.id);
 
+    const { data: currentMonitor } = await supabase
+      .from('chatbot_monitors')
+      .select('total_commands_processed')
+      .eq('user_id', userId)
+      .single();
+      
     await supabase
       .from('chatbot_monitors')
       .update({ 
-        total_commands_processed: supabase.raw('total_commands_processed + 1'),
+        total_commands_processed: (currentMonitor?.total_commands_processed || 0) + 1,
         last_heartbeat: new Date().toISOString()
       })
       .eq('user_id', userId);
@@ -492,10 +504,16 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
     console.log(`✅ Slots call recorded: ${username} called ${slotName} (order: ${callOrder})`);
 
     // Update command stats
+    const { data: currentMonitor } = await supabase
+      .from('chatbot_monitors')
+      .select('total_commands_processed')
+      .eq('user_id', userId)
+      .single();
+      
     await supabase
       .from('chatbot_monitors')
       .update({ 
-        total_commands_processed: supabase.raw('total_commands_processed + 1'),
+        total_commands_processed: (currentMonitor?.total_commands_processed || 0) + 1,
         last_heartbeat: new Date().toISOString()
       })
       .eq('user_id', userId);
