@@ -78,11 +78,14 @@ export default function Giveaways() {
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
   const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
-  // Store saved state per giveaway ID
+  // Store saved state per giveaway ID - persist in localStorage
   const [savedGiveawayStates, setSavedGiveawayStates] = useState<Record<string, {
     pendingWinners: PendingWinner[];
     participants: RouletteParticipant[];
-  }>>({});
+  }>>(() => {
+    const saved = localStorage.getItem('giveaway-states');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
@@ -640,11 +643,10 @@ export default function Giveaways() {
       
       // Clear saved state for this giveaway since it's completed
       if (currentGiveaway) {
-        setSavedGiveawayStates(prev => {
-          const newStates = { ...prev };
-          delete newStates[currentGiveaway.id];
-          return newStates;
-        });
+        const newStates = { ...savedGiveawayStates };
+        delete newStates[currentGiveaway.id];
+        setSavedGiveawayStates(newStates);
+        localStorage.setItem('giveaway-states', JSON.stringify(newStates));
       }
       
       // Refresh giveaways list
@@ -760,13 +762,16 @@ export default function Giveaways() {
     });
     
     // Save state for this specific giveaway
-    setSavedGiveawayStates(prev => ({
-      ...prev,
+    const newStates = {
+      ...savedGiveawayStates,
       [currentGiveaway.id]: {
         pendingWinners: winners,
         participants: remainingParticipants
       }
-    }));
+    };
+    
+    setSavedGiveawayStates(newStates);
+    localStorage.setItem('giveaway-states', JSON.stringify(newStates));
     
     // Update current state as well
     setPendingWinners(winners);
