@@ -10,7 +10,8 @@ import {
   CheckCircle,
   Star,
   Zap,
-  MessageSquare
+  MessageSquare,
+  Crown
 } from 'lucide-react';
 
 const benefits = [
@@ -106,9 +107,10 @@ export default function ViewerBenefits() {
               size="lg" 
               variant="outline" 
               className="text-lg px-8 py-6 border-border/50"
-              onClick={() => navigate('/landing')}
+              onClick={() => navigate('/streamer-auth')}
             >
-              Back to Home
+              <Crown className="h-5 w-5 mr-2" />
+              I'm a Streamer
             </Button>
           </div>
         </div>

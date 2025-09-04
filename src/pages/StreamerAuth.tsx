@@ -7,16 +7,18 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Zap, Mail, Lock, User, Crown, Users } from 'lucide-react';
+import { Zap, Mail, Lock, Crown, Users, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 
-export default function Auth() {
+export default function StreamerAuth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { role } = useUserRole();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      // Check if user is a streamer - if so, redirect to streamer portal
+      // Check if user is a streamer after sign in
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -40,15 +42,13 @@ export default function Auth() {
           .eq('user_id', user.id)
           .single();
           
-        if (profile?.is_streamer) {
+        if (!profile?.is_streamer) {
           toast({
-            title: "Redirecting to Streamer Portal",
-            description: "Use the streamer login for full access to streaming features.",
-            variant: "default"
+            title: "Access Denied",
+            description: "This login is for streamers only. Please use the viewer login or upgrade your account.",
+            variant: "destructive"
           });
           await supabase.auth.signOut();
-          navigate('/streamer-auth');
-          setLoading(false);
           return;
         }
       }
@@ -71,7 +71,7 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      // After successful signup, create viewer profile
+      // After successful signup, create streamer profile but don't set is_streamer yet
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -80,7 +80,7 @@ export default function Auth() {
           .upsert({
             user_id: user.id,
             display_name: email.split('@')[0],
-            is_streamer: false
+            is_streamer: false // Start as regular user, needs admin approval
           });
 
         if (profileError) {
@@ -89,27 +89,15 @@ export default function Auth() {
       }
 
       toast({
-        title: "Viewer account created!",
-        description: "You can now sign in and access viewer features."
+        title: "Account created!",
+        description: "Your account needs admin approval to become a streamer. Please contact an admin."
       });
-      // Auto-switch to sign in tab after successful signup
-      setTimeout(() => {
-        const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
-        signInTab?.click();
-      }, 1000);
+      
+      // Redirect to upgrade page
+      navigate('/streamer-upgrade-request');
     }
     
     setLoading(false);
-  };
-
-  const handleContinueAsGuest = () => {
-    localStorage.setItem('guest_mode', 'true');
-    toast({
-      title: "Guest Mode",
-      description: "You're now accessing the dashboard as a guest.",
-      variant: "default"
-    });
-    navigate('/');
   };
 
   return (
@@ -117,33 +105,33 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Users className="h-8 w-8 text-kick-green" />
-            <h1 className="text-2xl font-bold text-foreground">Viewer Login</h1>
+            <Crown className="h-8 w-8 text-kick-green" />
+            <h1 className="text-2xl font-bold text-foreground">Streamer Portal</h1>
           </div>
           <p className="text-muted-foreground">
-            Access viewer features and verification
+            Access your streaming tools and manage your community
           </p>
         </div>
 
         <Card className="gaming-card">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-xl flex items-center gap-2 justify-center">
-              <Users className="h-5 w-5" />
-              Viewer Access
+              <Crown className="h-5 w-5" />
+              Streamer Access
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signup">Apply</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin" className="space-y-4">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-foreground">Viewer Sign In</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Streamer Sign In</h3>
                   <p className="text-sm text-muted-foreground">
-                    Enter your viewer credentials
+                    Enter your streamer credentials
                   </p>
                 </div>
                 
@@ -181,17 +169,25 @@ export default function Auth() {
                   </div>
                   
                   <Button type="submit" disabled={loading} className="gaming-button w-full">
-                    {loading ? 'Signing in...' : 'Sign In as Viewer'}
+                    {loading ? 'Signing in...' : 'Sign In as Streamer'}
                   </Button>
                 </form>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-foreground">Create Viewer Account</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Apply for Streamer Access</h3>
                   <p className="text-sm text-muted-foreground">
-                    Join as a viewer - get verification benefits!
+                    Create account and request streamer approval
                   </p>
+                </div>
+                
+                <div className="text-xs text-muted-foreground bg-orange-500/10 p-3 rounded border border-orange-500/20 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    <span className="font-semibold text-orange-400">Admin Approval Required</span>
+                  </div>
+                  <div>Your account will be created as a regular user. Contact an admin to upgrade to streamer status.</div>
                 </div>
                 
                 <form onSubmit={handleSignUp} className="space-y-4">
@@ -228,42 +224,24 @@ export default function Auth() {
                     />
                   </div>
                   
-                  <div className="text-xs text-muted-foreground bg-primary/10 p-3 rounded border border-primary/20">
-                    <div className="font-semibold mb-1">Viewer Benefits:</div>
-                    <div className="space-y-1">
-                      <div>• Get verified status with Kick + Discord links</div>
-                      <div>• Extra chances in verified giveaways</div>
-                      <div>• Trust badges and community status</div>
-                    </div>
-                  </div>
-                  
                   <Button type="submit" disabled={loading} className="gaming-button w-full">
-                    {loading ? 'Creating account...' : 'Create Viewer Account'}
+                    {loading ? 'Creating account...' : 'Apply for Streamer Access'}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
             
-            <div className="mt-6 pt-4 border-t border-border space-y-3">
+            <div className="mt-6 pt-4 border-t border-border">
               <Button 
-                onClick={() => navigate('/streamer-auth')}
+                onClick={() => navigate('/viewer-benefits')}
                 variant="outline" 
                 className="w-full"
               >
-                <Crown className="h-4 w-4 mr-2" />
-                I'm a Streamer
+                <Users className="h-4 w-4 mr-2" />
+                I'm a Viewer
               </Button>
-              
-              <Button 
-                onClick={handleContinueAsGuest}
-                variant="outline" 
-                className="w-full"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Continue as Guest
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Access streamer tools or explore as guest
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Looking for viewer verification instead?
               </p>
             </div>
           </CardContent>

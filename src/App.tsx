@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import StreamerAuth from "./pages/StreamerAuth";
 import AuthCallback from "./pages/AuthCallback";
 import DiscordCallback from "./pages/DiscordCallback";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ import ViewerBenefits from "./pages/ViewerBenefits";
 import ViewerRegistration from "./pages/ViewerRegistration";
 import ViewerVerification from "./pages/ViewerVerification";
 import UpgradeToStreamer from "./pages/UpgradeToStreamer";
+import StreamerUpgradeRequest from "./pages/StreamerUpgradeRequest";
 
 // Create QueryClient at module level with minimal configuration
 const queryClient = new QueryClient();
@@ -38,10 +40,12 @@ const App = () => (
           <Routes>
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/streamer-auth" element={<StreamerAuth />} />
             <Route path="/viewer-benefits" element={<ViewerBenefits />} />
             <Route path="/viewer-registration" element={<ViewerRegistration />} />
             <Route path="/viewer-verification" element={<ViewerVerification />} />
             <Route path="/upgrade-to-streamer" element={<UpgradeToStreamer />} />
+            <Route path="/streamer-upgrade-request" element={<StreamerUpgradeRequest />} />
             <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/discord/callback" element={<DiscordCallback />} />
