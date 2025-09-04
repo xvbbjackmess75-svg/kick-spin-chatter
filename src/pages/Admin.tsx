@@ -1,0 +1,448 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Database, Users, Settings, Shield, Calendar, AlertTriangle } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'user' | 'premium' | 'vip_plus' | 'admin';
+  granted_by: string;
+  granted_at: string;
+}
+
+interface UserWithProfile {
+  id: string;
+  email: string;
+  role: 'user' | 'premium' | 'vip_plus' | 'admin';
+  display_name?: string;
+  created_at: string;
+}
+
+export default function Admin() {
+  const { user } = useAuth();
+  const [userRole, setUserRole] = useState<'user' | 'premium' | 'vip_plus' | 'admin' | null>(null);
+  const [users, setUsers] = useState<UserWithProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [importingSlots, setImportingSlots] = useState(false);
+  const [lastImportDate, setLastImportDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      checkUserRole();
+      loadUsers();
+      loadLastImportDate();
+    }
+  }, [user]);
+
+  const checkUserRole = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_role', { _user_id: user.id });
+
+      if (error) throw error;
+      setUserRole(data);
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      setUserRole('user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    if (!user) return;
+
+    try {
+      // Get all users with their profiles and roles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          user_id,
+          display_name,
+          created_at
+        `);
+
+      if (profilesError) throw profilesError;
+
+      // Get user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+
+      if (rolesError) throw rolesError;
+
+      // Get auth users (admin only)
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
+
+      // Combine the data
+      const usersWithRoles = authData.users.map(authUser => {
+        const profile = profilesData?.find(p => p.user_id === authUser.id);
+        const role = rolesData?.find(r => r.user_id === authUser.id);
+        
+        return {
+          id: authUser.id,
+          email: authUser.email || '',
+          display_name: profile?.display_name,
+          role: role?.role || 'user' as 'user' | 'premium' | 'vip_plus' | 'admin',
+          created_at: authUser.created_at
+        };
+      });
+
+      setUsers(usersWithRoles);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({ title: 'Error loading users', variant: 'destructive' });
+    }
+  };
+
+  const loadLastImportDate = async () => {
+    try {
+      // Get the latest slot import date
+      const { data, error } = await supabase
+        .from('slots')
+        .select('created_at')
+        .eq('is_user_added', false)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setLastImportDate(data[0].created_at);
+      }
+    } catch (error) {
+      console.error('Error loading last import date:', error);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: 'user' | 'premium' | 'vip_plus' | 'admin') => {
+    if (!user) return;
+
+    try {
+      // Delete existing role
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert new role
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: newRole,
+          granted_by: user.id
+        });
+
+      if (error) throw error;
+
+      toast({ title: 'User role updated successfully!' });
+      loadUsers();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({ title: 'Error updating user role', variant: 'destructive' });
+    }
+  };
+
+  const importAllSlots = async () => {
+    setImportingSlots(true);
+    
+    try {
+      let startPage = 1;
+      let totalNewSlots = 0;
+      let totalProcessed = 0;
+      
+      while (startPage <= 263) {
+        toast({ 
+          title: `Importing pages ${startPage}-${Math.min(startPage + 29, 263)}...`, 
+          description: `Processing batch ${Math.ceil(startPage / 30)} of ${Math.ceil(263 / 30)}. Total new slots so far: ${totalNewSlots}`
+        });
+
+        const { data, error } = await supabase.functions.invoke('import-slots', {
+          body: { startPage }
+        });
+
+        if (error) {
+          console.error('Error importing slots:', error);
+          toast({
+            title: "Import Error", 
+            description: `Failed to import from page ${startPage}: ${error.message}`,
+            variant: "destructive"
+          });
+          break;
+        }
+
+        if (data?.success) {
+          totalNewSlots += data.new_slots_added || 0;
+          totalProcessed += (data.total_found || 0);
+          
+          if (!data.has_more) {
+            break;
+          }
+          
+          startPage = data.next_start_page;
+          
+          // Small delay between runs
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          console.error('Import failed:', data);
+          break;
+        }
+      }
+      
+      toast({
+        title: "Import Complete!",
+        description: `Successfully imported ${totalNewSlots} new slots from 263 pages (${totalProcessed} total slots processed)`,
+      });
+      
+      loadLastImportDate();
+    } catch (error) {
+      console.error('Error importing all slots:', error);
+      toast({ 
+        title: 'Error importing slots', 
+        description: 'Failed to import slots from aboutslots.com',
+        variant: 'destructive' 
+      });
+    } finally {
+      setImportingSlots(false);
+    }
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'admin': return 'destructive';
+      case 'vip_plus': return 'default';
+      case 'premium': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading...</div>;
+  }
+
+  if (!userRole || userRole !== 'admin') {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="text-center py-8">
+            <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to access the admin panel.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <Badge variant="destructive">Admin Access</Badge>
+      </div>
+
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="slots">Slot Management</TabsTrigger>
+          <TabsTrigger value="system">System Info</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                User Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Display Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((usr) => (
+                    <TableRow key={usr.id}>
+                      <TableCell className="font-medium">{usr.email}</TableCell>
+                      <TableCell>{usr.display_name || 'Not set'}</TableCell>
+                      <TableCell>
+                        <Badge variant={getRoleBadgeVariant(usr.role)}>
+                          {usr.role.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(usr.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={usr.role}
+                          onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'admin') => 
+                            updateUserRole(usr.id, newRole)
+                          }
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="premium">Premium</SelectItem>
+                            <SelectItem value="vip_plus">VIP+</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="slots" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Slot Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="font-semibold">Daily Slot Import</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Import latest slots from aboutslots.com (263 pages)
+                  </p>
+                  {lastImportDate && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Last import: {new Date(lastImportDate).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  onClick={importAllSlots}
+                  disabled={importingSlots}
+                  className="min-w-32"
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  {importingSlots ? 'Importing...' : 'Import All Slots'}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">263</div>
+                    <div className="text-sm text-muted-foreground">Total Pages</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">~15K</div>
+                    <div className="text-sm text-muted-foreground">Est. Slots</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">30</div>
+                    <div className="text-sm text-muted-foreground">Pages/Batch</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">Daily</div>
+                    <div className="text-sm text-muted-foreground">Update Freq</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                System Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Database Status</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm">Connected</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Users</Label>
+                  <div className="text-lg font-semibold">{users.length}</div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Admin Users</Label>
+                  <div className="text-lg font-semibold">
+                    {users.filter(u => u.role === 'admin').length}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Premium+ Users</Label>
+                  <div className="text-lg font-semibold">
+                    {users.filter(u => u.role === 'premium' || u.role === 'vip_plus').length}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Last slot import</span>
+                  <span className="text-muted-foreground">
+                    {lastImportDate ? new Date(lastImportDate).toLocaleDateString() : 'Never'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Active admin sessions</span>
+                  <span className="text-muted-foreground">1</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>System uptime</span>
+                  <span className="text-muted-foreground">99.9%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

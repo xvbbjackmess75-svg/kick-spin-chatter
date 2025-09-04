@@ -18,6 +18,7 @@ import BonusHunt from "./pages/BonusHunt";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
+import Admin from "./pages/Admin";
 
 // Create QueryClient at module level with minimal configuration
 const queryClient = new QueryClient();
@@ -81,6 +82,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <BonusHunt />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Admin />
                   </Layout>
                 </ProtectedRoute>
               }

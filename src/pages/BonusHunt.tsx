@@ -646,16 +646,6 @@ export default function BonusHunt() {
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Button 
-                      variant="outline" 
-                      onClick={importAllSlotsFromAboutSlots}
-                      disabled={importingAllSlots}
-                      size="sm"
-                      className="min-w-32"
-                    >
-                      <Database className="h-4 w-4 mr-1" />
-                      {importingAllSlots ? 'Importing...' : 'Import All 200 Pages'}
-                    </Button>
                   </div>
                 </div>
 

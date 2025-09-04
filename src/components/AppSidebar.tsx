@@ -20,8 +20,10 @@ import {
   Trophy,
   History,
   Monitor,
-  Dices
+  Dices,
+  Shield
 } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const mainItems = [
   { title: "Giveaways", url: "/", icon: Gift },
@@ -35,6 +37,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
+  const { isAdmin } = useUserRole();
 
   const isActive = (path: string) => currentPath === path;
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
@@ -82,6 +85,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Section */}
+        {isAdmin() && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-destructive font-semibold">
+              {!collapsed && "Admin"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin" className={getNavClass}>
+                      <Shield className="h-5 w-5 mr-3" />
+                      {!collapsed && <span className="font-medium">Admin Panel</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
       </SidebarContent>
     </Sidebar>
