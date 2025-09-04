@@ -109,9 +109,14 @@ export default function AuthCallback() {
               // Create a unique email for the Kick user
               const userEmail = `kick_${user.id}@kickuser.lovable.app`;
               
-              // Generate a secure password
-              const randomPassword = crypto.getRandomValues(new Uint8Array(16));
-              const password = Array.from(randomPassword, byte => byte.toString(16).padStart(2, '0')).join('');
+              // Generate a DETERMINISTIC password based on user ID so it's always the same
+              const userIdString = user.id.toString();
+              const deterministicSeed = userIdString + "KICK_USER_SALT_2025";
+              const encoder = new TextEncoder();
+              const data = encoder.encode(deterministicSeed);
+              const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+              const hashArray = new Uint8Array(hashBuffer);
+              const password = Array.from(hashArray.slice(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');
               
               console.log('🔄 Attempting to create Supabase account...');
               

@@ -304,6 +304,15 @@ export default function Account() {
     }
   };
 
+  const handleClearCredentials = () => {
+    localStorage.removeItem('kick_hybrid_credentials');
+    toast({
+      title: "Credentials cleared",
+      description: "Please sign in with Kick again to generate new credentials.",
+    });
+    window.location.reload();
+  };
+
   if (!userInfo) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -392,12 +401,21 @@ export default function Account() {
                   Sign in to manage your email and password settings.
                 </p>
               </div>
-              <Button 
-                onClick={handleSignInWithStoredCreds}
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign In to Manage Account"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSignInWithStoredCreds}
+                  disabled={loading}
+                >
+                  {loading ? "Signing in..." : "Sign In to Manage Account"}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleClearCredentials}
+                  disabled={loading}
+                >
+                  Clear & Regenerate
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
