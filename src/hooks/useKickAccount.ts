@@ -58,13 +58,16 @@ export function useKickAccount() {
                 const { data: userData } = await supabase.auth.getUser();
                 if (userData.user?.user_metadata?.kick_avatar) {
                   avatarUrl = userData.user?.user_metadata?.kick_avatar;
+                  console.log('🖼️ Found avatar in user metadata:', avatarUrl);
                 } else {
                   // Fallback to standard Kick avatar URL format
                   avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
+                  console.log('🖼️ Using fallback avatar URL:', avatarUrl);
                 }
               } catch {
                 // Fallback to standard format if metadata access fails
                 avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
+                console.log('🖼️ Using fallback avatar URL (catch):', avatarUrl);
               }
               
               setKickUser({
@@ -75,6 +78,8 @@ export function useKickAccount() {
                 authenticated: true
               });
             }
+          } else {
+            console.log('❌ No profile found or error:', error);
           }
         }
 
@@ -115,7 +120,7 @@ export function useKickAccount() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [user]);
+  }, [user, kickUser]);
 
   const isKickLinked = !!(kickUser?.authenticated && (user || kickToken?.access_token));
   
@@ -129,6 +134,7 @@ export function useKickAccount() {
   // Debug logging
   console.log('🔧 useKickAccount debug:', {
     kickUser: kickUser?.username,
+    kickUserAvatar: kickUser?.avatar,
     hasKickToken: !!kickToken?.access_token,
     supabaseUser: user?.email,
     hasHybridAccount,
