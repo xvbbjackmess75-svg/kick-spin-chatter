@@ -87,7 +87,12 @@ export function RouletteModal({
       ticketsPerParticipant: result.ticketsPerParticipant
     };
 
-    setPendingWinners(prev => [...prev, newWinner]);
+    setPendingWinners(prev => {
+      const updatedWinners = [...prev, newWinner];
+      // Save immediately when winner is added
+      onSavePendingWinners(updatedWinners, currentParticipants.filter(p => p.username !== winner.username));
+      return updatedWinners;
+    });
     
     // Remove winner from available participants
     setCurrentParticipants(prev => prev.filter(p => p.username !== winner.username));
