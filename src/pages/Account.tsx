@@ -40,8 +40,12 @@ export default function Account() {
   const kickUserData = localStorage.getItem('kick_user');
   const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
   const isKickAuthenticated = kickUser?.authenticated;
+  const storedCreds = localStorage.getItem('kick_hybrid_credentials');
+  const hasStoredCreds = storedCreds && JSON.parse(storedCreds).kick_user_id.toString() === kickUser?.id?.toString();
+  
   const isEmailAuthenticated = !!user && !isKickAuthenticated;
   const isHybridAccount = !!user && isKickAuthenticated; // Kick user with Supabase account
+  const isKickOnlyWithCreds = !user && isKickAuthenticated && hasStoredCreds; // Kick user with stored credentials but no session
 
   const getCurrentUserInfo = () => {
     if (isHybridAccount) {
@@ -247,6 +251,38 @@ export default function Account() {
     }
   };
 
+  const handleSignInWithStoredCreds = async () => {
+    if (!hasStoredCreds) return;
+    
+    setLoading(true);
+    try {
+      const creds = JSON.parse(storedCreds!);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: creds.email,
+        password: creds.password
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Signed in successfully!",
+        description: "You can now access email and password management features.",
+      });
+      
+      // Refresh the page to update the UI
+      window.location.reload();
+      
+    } catch (error: any) {
+      toast({
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!userInfo) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -313,6 +349,37 @@ export default function Account() {
           </CardContent>
         </Card>
 
+
+        {/* Sign In Section - For Kick users with stored credentials but no session */}
+        {isKickOnlyWithCreds && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Account Access
+              </CardTitle>
+              <CardDescription>
+                Sign in to access email and password management features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Account Available:</strong> We've created a Supabase account for your Kick profile.
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Sign in to manage your email and password settings.
+                </p>
+              </div>
+              <Button 
+                onClick={handleSignInWithStoredCreds}
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Sign In to Manage Account"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Email Management - For email authenticated users AND hybrid accounts */}
         {(isEmailAuthenticated || isHybridAccount) && (
