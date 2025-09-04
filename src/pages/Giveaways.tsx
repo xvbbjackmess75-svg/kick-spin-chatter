@@ -104,7 +104,8 @@ export default function Giveaways() {
   }, [authLoading, canUseChatbot]);
 
   const fetchGiveaways = async () => {
-    if (!isSupabaseUser) {
+    // Only fetch giveaways for Supabase authenticated users
+    if (!user?.id || !isSupabaseUser) {
       setLoading(false);
       return;
     }
@@ -397,25 +398,17 @@ export default function Giveaways() {
     }
 
     try {
-      if (!user?.id && !isSupabaseUser) {
+      // Only allow Supabase authenticated users to create giveaways
+      if (!user?.id || !isSupabaseUser) {
         toast({
-          title: "Authentication Error",
-          description: "You must be logged in with a Supabase account to create giveaways",
+          title: "Authentication Required",
+          description: "You must be logged in with a Supabase account to create giveaways. Please sign up or log in.",
           variant: "destructive"
         });
         return;
       }
 
-      // Ensure we have a valid user ID
-      const userId = user?.id;
-      if (!userId) {
-        toast({
-          title: "Authentication Error", 
-          description: "Unable to determine user ID",
-          variant: "destructive"
-        });
-        return;
-      }
+      console.log('Creating giveaway with user ID:', user.id);
 
       const { data, error } = await supabase
         .from('giveaways')
@@ -423,7 +416,7 @@ export default function Giveaways() {
           title: title.trim(),
           channel_id: channelInfo?.channelId || null,
           description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
-          user_id: userId,
+          user_id: user.id,
           status: 'active'
         })
         .select()
