@@ -98,6 +98,8 @@ export default function Giveaways() {
   const [channelName, setChannelName] = useState("");
   const [keyword, setKeyword] = useState("");
   const [autoStartMonitoring, setAutoStartMonitoring] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [verifiedBonusChances, setVerifiedBonusChances] = useState(0);
 
   // Auto-populate user's channel when available
   useEffect(() => {
@@ -474,7 +476,9 @@ export default function Giveaways() {
           channel_id: null, // Don't use channelInfo.channelId as it may not be a proper UUID
           description: `Channel: ${targetChannel}, Keyword: ${keyword.trim()}`,
           user_id: user.id,
-          status: 'active'
+          status: 'active',
+          verified_only: verifiedOnly,
+          verified_bonus_chances: verifiedBonusChances
         })
         .select()
         .single();
@@ -507,6 +511,8 @@ export default function Giveaways() {
       setChannelName("");
       setKeyword("");
       setAutoStartMonitoring(false);
+      setVerifiedOnly(false);
+      setVerifiedBonusChances(0);
       setIsCreateDialogOpen(false);
       fetchGiveaways();
     } catch (error) {
@@ -1173,7 +1179,7 @@ export default function Giveaways() {
                   New Giveaway
                 </Button>
               </DialogTrigger>
-              <DialogContent className="gaming-card border-border/50 max-w-md">
+              <DialogContent className="gaming-card border-border/50 max-w-lg">{/* Increased width for verification options */}
                 <DialogHeader>
                   <DialogTitle className="text-foreground">Create New Giveaway</DialogTitle>
                 </DialogHeader>
@@ -1217,6 +1223,43 @@ export default function Giveaways() {
                       placeholder="!giveaway"
                       className="bg-secondary/30"
                     />
+                  </div>
+                  
+                  {/* Verification Options */}
+                  <div className="space-y-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                    <Label className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                      Verification Settings
+                    </Label>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="verified-only"
+                        checked={verifiedOnly}
+                        onCheckedChange={(checked) => setVerifiedOnly(checked === true)}
+                      />
+                      <Label htmlFor="verified-only" className="text-sm">
+                        Verified viewers only
+                      </Label>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="bonus-chances" className="text-sm">
+                        Extra chances for verified viewers
+                      </Label>
+                      <Input
+                        id="bonus-chances"
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={verifiedBonusChances}
+                        onChange={(e) => setVerifiedBonusChances(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="bg-secondary/30"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Number of extra chances verified viewers get (0-10)
+                      </p>
+                    </div>
                   </div>
                   
                   {/* Auto-start monitoring checkbox */}

@@ -378,22 +378,31 @@ export type Database = {
           entered_at: string
           giveaway_id: string
           id: string
+          is_verified: boolean | null
           kick_user_id: string
           kick_username: string
+          referral_link: string | null
+          user_id: string | null
         }
         Insert: {
           entered_at?: string
           giveaway_id: string
           id?: string
+          is_verified?: boolean | null
           kick_user_id: string
           kick_username: string
+          referral_link?: string | null
+          user_id?: string | null
         }
         Update: {
           entered_at?: string
           giveaway_id?: string
           id?: string
+          is_verified?: boolean | null
           kick_user_id?: string
           kick_username?: string
+          referral_link?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
