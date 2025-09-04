@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -96,6 +97,7 @@ export default function Giveaways() {
   const [title, setTitle] = useState("");
   const [channelName, setChannelName] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [autoStartMonitoring, setAutoStartMonitoring] = useState(false);
 
   // Auto-populate user's channel when available
   useEffect(() => {
@@ -451,14 +453,32 @@ export default function Giveaways() {
 
       if (error) throw error;
 
+      // Auto-start monitoring if checkbox was checked
+      if (autoStartMonitoring) {
+        // Initialize WebSocket if not already connected
+        if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+          initializeWebSocket();
+        }
+        
+        // Join the chat channel after WebSocket is ready
+        setTimeout(() => {
+          joinChatChannel(targetChannel);
+        }, 1000); // Give WebSocket time to connect
+      }
+
+      const successMessage = autoStartMonitoring 
+        ? `Giveaway "${title}" created and monitoring started!`
+        : `Giveaway "${title}" created for your channel! Click "Start Monitoring" to track chat.`;
+
       toast({
         title: "Success",
-        description: `Giveaway "${title}" created for your channel! Click "Start Monitoring" to track chat.`,
+        description: successMessage,
       });
 
       setTitle("");
       setChannelName("");
       setKeyword("");
+      setAutoStartMonitoring(false);
       setIsCreateDialogOpen(false);
       fetchGiveaways();
     } catch (error) {
@@ -1168,6 +1188,22 @@ export default function Giveaways() {
                       className="bg-secondary/30"
                     />
                   </div>
+                  
+                  {/* Auto-start monitoring checkbox */}
+                  <div className="flex items-center space-x-2 p-3 bg-secondary/20 rounded-lg border border-accent/20">
+                    <Checkbox 
+                      id="auto-start"
+                      checked={autoStartMonitoring}
+                      onCheckedChange={(checked) => setAutoStartMonitoring(checked === true)}
+                    />
+                    <Label htmlFor="auto-start" className="text-sm font-medium">
+                      Auto start keyword tracking
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, chat monitoring will start automatically after creating the giveaway
+                  </p>
+                  
                   <div className="flex gap-3 pt-4">
                     <Button onClick={createGiveaway} className="gaming-button flex-1">
                       Create Giveaway
