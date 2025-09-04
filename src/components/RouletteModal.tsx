@@ -82,7 +82,7 @@ export function RouletteModal({
     // Remove winner from available participants
     setCurrentParticipants(prev => prev.filter(p => p.username !== winner.username));
     
-    // Reset current winner state
+    // Reset current winner state and prepare for next selection
     setCurrentPendingWinner(null);
     setShowStartButton(true);
     setIsRolling(false);
@@ -108,7 +108,7 @@ export function RouletteModal({
   // Handle accepting all winners and ending giveaway
   const handleAcceptAllWinners = () => {
     onEndGiveaway(pendingWinners);
-    onClose();
+    // Modal will be closed by parent
   };
 
   // Handle adding another winner
@@ -121,6 +121,7 @@ export function RouletteModal({
     console.log("🎯 Adding another winner - available participants:", currentParticipants.length);
     setShowStartButton(false);
     setIsRolling(true);
+    setCurrentPendingWinner(null); // Clear any current selection
   };
 
   // Handle reroll
@@ -136,6 +137,7 @@ export function RouletteModal({
     console.log("🎰 Starting new roll");
     setShowStartButton(false);
     setIsRolling(true);
+    setCurrentPendingWinner(null); // Clear any current selection
   };
 
   return (

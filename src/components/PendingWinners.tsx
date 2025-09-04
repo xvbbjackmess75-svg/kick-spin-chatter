@@ -96,7 +96,7 @@ export function PendingWinners({
             className="flex-1"
           >
             <Crown className="h-4 w-4 mr-2" />
-            Add Another Winner
+            {pendingWinners.length === 1 ? 'Pick Another Winner' : 'Add More Winners'}
           </Button>
           
           <Button 
