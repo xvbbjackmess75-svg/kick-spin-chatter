@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,14 @@ export function RouletteModal({
   const [isRolling, setIsRolling] = useState(false);
   const [currentPendingWinner, setCurrentPendingWinner] = useState<Participant | null>(null);
   const [showStartButton, setShowStartButton] = useState(true);
+
+  // Sync participants when modal opens or participants change
+  useEffect(() => {
+    console.log("🔄 RouletteModal: Updating participants", participants.length);
+    setCurrentParticipants(participants);
+    setPendingWinners([]); // Reset winners when participants change
+    setShowStartButton(true);
+  }, [participants]);
 
   // Handle adding a winner to pending list
   const handlePendingWinner = (winner: Participant, result: any) => {
