@@ -148,6 +148,39 @@ export default function SlotsCalls() {
     }
   }, [user]);
 
+  // Fetch calls when selected event changes
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchCalls(selectedEvent.id);
+    }
+  }, [selectedEvent]);
+
+  // Set up real-time subscription for events list
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const eventsChannel = supabase
+      .channel(`events_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'slots_events',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('🎰 Events list changed, refreshing...');
+          fetchEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventsChannel);
+    };
+  }, [user?.id]);
+
   // Check if auto-monitoring is already active
   const restoreMonitoringState = () => {
     // Auto-monitor handles persistence automatically
@@ -340,7 +373,7 @@ export default function SlotsCalls() {
     console.log('🎰 Setting up realtime subscription for event:', selectedEvent.id);
     
     const channel = supabase
-      .channel('slots_calls_changes')
+      .channel(`slots_calls_${selectedEvent.id}`)
       .on(
         'postgres_changes',
         {
@@ -358,8 +391,48 @@ export default function SlotsCalls() {
             description: `${newCall.viewer_username} called ${newCall.slot_name}`,
           });
           
-          // Refresh the calls list
-          fetchCalls(selectedEvent.id);
+          // Add the new call to state immediately for instant UI update
+          setCalls(prevCalls => [...prevCalls, newCall].sort((a, b) => 
+            new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'slots_calls',
+          filter: `event_id=eq.${selectedEvent.id}`
+        },
+        (payload) => {
+          console.log('🎰 Slots call updated:', payload.new);
+          const updatedCall = payload.new as SlotsCall;
+          
+          // Update the call in state immediately
+          setCalls(prevCalls => 
+            prevCalls.map(call => 
+              call.id === updatedCall.id ? updatedCall : call
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'slots_calls',
+          filter: `event_id=eq.${selectedEvent.id}`
+        },
+        (payload) => {
+          console.log('🎰 Slots call deleted:', payload.old);
+          const deletedCall = payload.old as SlotsCall;
+          
+          // Remove the call from state immediately
+          setCalls(prevCalls => 
+            prevCalls.filter(call => call.id !== deletedCall.id)
+          );
         }
       )
       .subscribe();
