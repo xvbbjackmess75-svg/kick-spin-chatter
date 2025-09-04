@@ -499,6 +499,8 @@ export type Database = {
           total_tickets: number | null
           updated_at: string
           user_id: string
+          verified_bonus_chances: number | null
+          verified_only: boolean | null
           winner_user_id: string | null
           winning_ticket: number | null
         }
@@ -516,6 +518,8 @@ export type Database = {
           total_tickets?: number | null
           updated_at?: string
           user_id: string
+          verified_bonus_chances?: number | null
+          verified_only?: boolean | null
           winner_user_id?: string | null
           winning_ticket?: number | null
         }
@@ -533,6 +537,8 @@ export type Database = {
           total_tickets?: number | null
           updated_at?: string
           user_id?: string
+          verified_bonus_chances?: number | null
+          verified_only?: boolean | null
           winner_user_id?: string | null
           winning_ticket?: number | null
         }
