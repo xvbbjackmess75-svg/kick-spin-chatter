@@ -88,13 +88,13 @@ async function processSlotsCall(messageData: any, chatroomId: string, socket: We
     console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
     console.log(`🎰 Full message content: "${messageData.content}"`);
     
-    // Extract slot name from message (everything after !kgs )
+    // Extract slot name from message (everything after !kgs or :kgs)
     const messageContent = messageData.content || '';
-    const slotName = messageContent.replace(/^!kgs\s*/, '').trim();
+    const slotName = messageContent.replace(/^[!:]\s*kgs\s*/, '').trim();
     const username = messageData.sender?.username;
     const kickUserId = messageData.sender?.id?.toString();
     
-    console.log(`🎰 Extracted slot name: "${slotName}"`);
+    console.log(`🎰 Extracted slot name: "${slotName}" from message: "${messageContent}"`);
     
     if (!slotName || !username) {
       console.log(`❌ Invalid slots call: missing slot name or username. Content: "${messageContent}"`);
@@ -346,10 +346,12 @@ serve(async (req) => {
                   data: chatMessage
                 }));
 
-                // Check if message is a command (starts with !)
-                if (messageData.content?.startsWith('!')) {
-                  const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
-                  console.log(`🎯 Command detected: !${command} from user: ${messageData.sender?.username}`);
+                // Check if message is a command (starts with ! or :)
+                if (messageData.content?.startsWith('!') || messageData.content?.startsWith(':')) {
+                  // Remove the prefix and get the command
+                  const commandText = messageData.content.substring(1);
+                  const command = commandText.split(' ')[0].toLowerCase();
+                  console.log(`🎯 Command detected: ${messageData.content.substring(0, 1)}${command} from user: ${messageData.sender?.username}`);
 
                   // Process command
                   await processCommand(command, messageData, chatroomId, socket);
