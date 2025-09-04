@@ -99,7 +99,15 @@ export function useAutoMonitor() {
   };
 
   const sendBotMessage = async (message: string) => {
-    if (!user || !kickToken?.access_token) return;
+    if (!user || !kickToken?.access_token) {
+      console.error('❌ Cannot send message: missing user or token');
+      toast({
+        title: "Cannot Send Message",
+        description: "Please make sure you're logged in and have connected your Kick account",
+        variant: "destructive"
+      });
+      return false;
+    }
 
     try {
       const response = await supabase.functions.invoke('kick-auto-monitor', {
@@ -111,12 +119,18 @@ export function useAutoMonitor() {
         }
       });
 
+      if (response.error) {
+        throw new Error(response.error.message || 'Edge function returned an error');
+      }
+
       if (response.data?.success) {
         toast({
           title: "Message Sent",
           description: `Bot message sent successfully`,
         });
         return true;
+      } else {
+        throw new Error(response.data?.error || 'Unknown error from edge function');
       }
 
     } catch (error: any) {
