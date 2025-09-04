@@ -117,6 +117,51 @@ export type Database = {
           },
         ]
       }
+      chatbot_monitors: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kick_user_id: string
+          kick_username: string
+          last_heartbeat: string
+          started_at: string
+          total_commands_processed: number
+          total_messages_processed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kick_user_id: string
+          kick_username: string
+          last_heartbeat?: string
+          started_at?: string
+          total_commands_processed?: number
+          total_messages_processed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kick_user_id?: string
+          kick_username?: string
+          last_heartbeat?: string
+          started_at?: string
+          total_commands_processed?: number
+          total_messages_processed?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       commands: {
         Row: {
           channel_id: string | null
