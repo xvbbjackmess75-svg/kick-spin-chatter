@@ -112,13 +112,9 @@ export default function ViewerVerification() {
     setLoading(true);
     
     try {
-      // Direct insert since user should only get verified_viewer role through this flow
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          role: 'verified_viewer'
-        });
+      // Use secure function that prevents role escalation
+      const { data, error } = await supabase
+        .rpc('verify_viewer', { _user_id: user.id });
 
       if (error) throw error;
 

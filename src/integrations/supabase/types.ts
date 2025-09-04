@@ -911,6 +911,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_viewer: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
