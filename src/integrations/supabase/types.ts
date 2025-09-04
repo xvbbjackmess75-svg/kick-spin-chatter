@@ -874,6 +874,19 @@ export type Database = {
         Args: { event_uuid: string }
         Returns: number
       }
+      get_overlay_slots_calls: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          call_order: number
+          completed_at: string
+          display_status: string
+          event_id: string
+          id: string
+          slot_name: string
+          status: string
+          submitted_at: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

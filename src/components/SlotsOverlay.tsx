@@ -183,18 +183,30 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
       setEvent(eventData);
 
-      // Fetch calls for the active event
+      // Use the secure overlay function that only exposes non-sensitive data
       const { data: callsData, error: callsError } = await supabase
-        .from('slots_calls')
-        .select('*')
-        .eq('event_id', eventData.id)
-        .order('call_order', { ascending: true });
+        .rpc('get_overlay_slots_calls');
 
       if (callsError) {
         console.error("Error fetching calls:", callsError);
         setCalls([]);
       } else {
-        setCalls(callsData || []);
+        // Filter calls for the current event since the function returns all active calls
+        const eventCalls = callsData?.filter((call: any) => call.event_id === eventData.id) || [];
+        // Map the secure data to the expected format (without sensitive fields)
+        const mappedCalls = eventCalls.map((call: any) => ({
+          id: call.id,
+          event_id: call.event_id,
+          viewer_username: 'Anonymous', // Don't expose usernames for security
+          slot_name: call.slot_name,
+          bet_amount: 0, // Don't expose bet amounts for security
+          win_amount: undefined, // Don't expose win amounts for security
+          multiplier: undefined, // Don't expose multipliers for security
+          status: call.status,
+          submitted_at: call.submitted_at,
+          call_order: call.call_order,
+        }));
+        setCalls(mappedCalls);
       }
       
     } catch (error) {
@@ -277,17 +289,15 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     ? [...calls, ...calls] // Duplicate the calls array for seamless loop
     : calls;
 
-  // Calculate totals for summary
-  const totalCost = calls.reduce((sum, call) => sum + call.bet_amount, 0);
-  const totalWinnings = calls
-    .filter(call => call.status === 'completed' && call.win_amount)
-    .reduce((sum, call) => sum + (call.win_amount || 0), 0);
-  const overallMultiplier = totalCost > 0 ? totalWinnings / totalCost : 0;
-  const totalProfit = totalWinnings - totalCost;
+  // Since we no longer have access to financial data for security reasons, 
+  // we'll display a basic status summary instead
+  const totalCalls = calls.length;
+  const completedCalls = calls.filter(call => call.status === 'completed').length;
+  const pendingCalls = calls.filter(call => call.status === 'pending').length;
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
-      {/* Summary Section */}
+      {/* Summary Section - Non-financial data only for security */}
       {calls.length > 0 && (
         <Card 
           className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
@@ -299,23 +309,21 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
           <CardContent className="p-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Cost</div>
-                <div className="font-bold" style={{color: overlaySettings.accent_color}}>${totalCost.toFixed(2)}</div>
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Calls</div>
+                <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalCalls}</div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Winnings</div>
-                <div className="font-bold text-green-400">${totalWinnings.toFixed(2)}</div>
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Completed</div>
+                <div className="font-bold text-green-400">{completedCalls}</div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Multiplier</div>
-                <div className={`font-bold ${overallMultiplier >= 1 ? 'text-green-400' : 'text-red-400'}`}>
-                  {overallMultiplier.toFixed(2)}x
-                </div>
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
+                <div className="font-bold text-orange-400">{pendingCalls}</div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Net P/L</div>
-                <div className={`font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Progress</div>
+                <div className="font-bold" style={{color: overlaySettings.accent_color}}>
+                  {totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0}%
                 </div>
               </div>
             </div>
@@ -349,28 +357,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         </CardContent>
       </Card>
 
-      {/* Winner Display */}
-      {winner && (
-        <Card 
-          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border-yellow-500/50' : 'border-transparent'}`}
-          style={{
-            ...getOverlayStyle(),
-            background: overlaySettings.show_background ? 'linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(245, 158, 11, 0.2))' : 'transparent'
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-6 w-6 text-yellow-400" />
-              <div>
-                <h3 className="font-bold text-yellow-400">🏆 Winner: {winner.viewer_username}</h3>
-                <p className="text-sm text-yellow-300">
-                  {winner.slot_name} • {winner.multiplier?.toFixed(2)}x • ${winner.win_amount}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Winner Display - Disabled for security as we don't have access to win data */}
+      {/* Winner section removed to protect sensitive gambling data */}
 
       {/* Calls Queue */}
       <Card 
@@ -426,12 +414,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                         <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
                       </div>
                       <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
-                        <span className="whitespace-nowrap">${call.bet_amount} bet</span>
-                        <span>•</span>
                         {call.status === 'completed' ? (
-                          <span className="text-green-400 whitespace-nowrap">
-                            ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
-                          </span>
+                          <Badge className="bg-green-500/20 text-green-300 text-xs px-1 py-0">
+                            Completed
+                          </Badge>
                         ) : (
                           <Badge className={`${getStatusColor(call.status)} text-xs px-1 py-0`}>
                             {call.status}
