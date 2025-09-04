@@ -878,7 +878,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           call_order: number
-          completed_at: string
           display_status: string
           event_id: string
           id: string
