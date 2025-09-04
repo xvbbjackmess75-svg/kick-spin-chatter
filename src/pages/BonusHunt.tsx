@@ -112,12 +112,18 @@ export default function BonusHunt() {
 
   const loadSlots = async () => {
     try {
+      console.log('Loading slots...');
       const { data, error } = await supabase
         .from('slots')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      console.log('Slots query result:', { data, error });
+      if (error) {
+        console.error('Error loading slots:', error);
+        throw error;
+      }
+      console.log('Setting slots data:', data?.length || 0, 'slots');
       setSlots(data || []);
     } catch (error) {
       console.error('Error loading slots:', error);
