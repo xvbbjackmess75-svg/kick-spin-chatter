@@ -133,9 +133,10 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="text-lg px-8 py-6 border-border/50"
+              onClick={() => navigate('/viewer-benefits')}
             >
               <Users className="h-5 w-5 mr-2" />
-              View Demo
+              You're a viewer ?
             </Button>
           </div>
         </div>

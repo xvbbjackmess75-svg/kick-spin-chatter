@@ -19,6 +19,9 @@ import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
 import Admin from "./pages/Admin";
+import ViewerBenefits from "./pages/ViewerBenefits";
+import ViewerRegistration from "./pages/ViewerRegistration";
+import ViewerVerification from "./pages/ViewerVerification";
 
 // Create QueryClient at module level with minimal configuration
 const queryClient = new QueryClient();
@@ -33,6 +36,9 @@ const App = () => (
           <Routes>
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/viewer-benefits" element={<ViewerBenefits />} />
+            <Route path="/viewer-registration" element={<ViewerRegistration />} />
+            <Route path="/viewer-verification" element={<ViewerVerification />} />
             <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
