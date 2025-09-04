@@ -70,6 +70,11 @@ export default function SlotsCalls() {
   const [betSize, setBetSize] = useState("");
   const [prize, setPrize] = useState("");
   const [autoStartMonitoring, setAutoStartMonitoring] = useState(false);
+  const [autoStopEnabled, setAutoStopEnabled] = useState(false);
+  const [autoStopMinutes, setAutoStopMinutes] = useState(30);
+  
+  // Persistent monitoring state
+  const [monitoringTimer, setMonitoringTimer] = useState<NodeJS.Timeout | null>(null);
   
   // Overlay customization states
   const [overlaySettings, setOverlaySettings] = useState({
@@ -138,8 +143,33 @@ export default function SlotsCalls() {
     if (user) {
       fetchEvents();
       fetchOverlaySettings();
+      restoreMonitoringState(); // Restore persistent monitoring
     }
   }, [user]);
+
+  // Restore monitoring state on component mount
+  const restoreMonitoringState = () => {
+    const savedMonitoringState = localStorage.getItem('slots_monitoring_state');
+    if (savedMonitoringState) {
+      const state = JSON.parse(savedMonitoringState);
+      if (state.isActive && state.channelName) {
+        console.log('🎰 Restoring slots monitoring for:', state.channelName);
+        setTimeout(() => {
+          initializeWebSocket();
+        }, 1000);
+      }
+    }
+  };
+
+  // Save monitoring state to localStorage
+  const saveMonitoringState = (isActive: boolean, channelName?: string) => {
+    const state = {
+      isActive,
+      channelName: channelName || '',
+      timestamp: Date.now()
+    };
+    localStorage.setItem('slots_monitoring_state', JSON.stringify(state));
+  };
 
   useEffect(() => {
     if (selectedEvent) {
@@ -188,9 +218,16 @@ export default function SlotsCalls() {
             setChatConnected(true);
             setConnectedChannel(data.channelName);
             setIsMonitoring(true);
+            saveMonitoringState(true, data.channelName); // Save persistent state
+            
+            // Setup auto-stop timer if enabled
+            if (autoStopEnabled && autoStopMinutes > 0) {
+              setupAutoStopTimer();
+            }
+            
             toast({
               title: "🎰 Slots Monitoring Active",
-              description: `Now monitoring ${data.channelName} chat for !kgs commands`,
+              description: `Now monitoring ${data.channelName} chat for !kgs commands${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
             });
             console.log(`🎰 [SLOTS] Connected to chat for channel: ${data.channelName}`);
             break;
@@ -204,6 +241,8 @@ export default function SlotsCalls() {
             setChatConnected(false);
             setConnectedChannel("");
             setIsMonitoring(false);
+            saveMonitoringState(false); // Clear persistent state
+            clearAutoStopTimer();
             break;
             
           case 'error':
@@ -243,6 +282,8 @@ export default function SlotsCalls() {
         setChatConnected(false);
         setConnectedChannel("");
         setIsMonitoring(false);
+        saveMonitoringState(false); // Clear persistent state on disconnect
+        clearAutoStopTimer();
       };
 
     } catch (error) {
@@ -255,14 +296,48 @@ export default function SlotsCalls() {
     }
   };
 
-  // Cleanup WebSocket on unmount
+  // Cleanup WebSocket and timer on unmount
   useEffect(() => {
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
       }
+      clearAutoStopTimer();
     };
   }, []);
+
+  // Auto-stop timer functions
+  const setupAutoStopTimer = () => {
+    clearAutoStopTimer(); // Clear any existing timer
+    const timer = setTimeout(() => {
+      stopMonitoring(true); // true indicates auto-stop
+    }, autoStopMinutes * 60 * 1000);
+    setMonitoringTimer(timer);
+    console.log(`🎰 Auto-stop timer set for ${autoStopMinutes} minutes`);
+  };
+
+  const clearAutoStopTimer = () => {
+    if (monitoringTimer) {
+      clearTimeout(monitoringTimer);
+      setMonitoringTimer(null);
+    }
+  };
+
+  const stopMonitoring = (isAutoStop = false) => {
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+    setChatConnected(false);
+    setConnectedChannel("");
+    setIsMonitoring(false);
+    saveMonitoringState(false);
+    clearAutoStopTimer();
+    
+    toast({
+      title: isAutoStop ? "🕐 Auto-Stop Triggered" : "🛑 Monitoring Stopped",
+      description: isAutoStop ? "Slots monitoring auto-stopped after timer" : "Slots monitoring manually stopped",
+    });
+  };
 
   // Handle !kgs command from chat (keeping for backwards compatibility)
   const handleSlotsCallCommand = async (data: any) => {
@@ -952,13 +1027,45 @@ export default function SlotsCalls() {
                       checked={autoStartMonitoring}
                       onCheckedChange={(checked) => setAutoStartMonitoring(checked === true)}
                     />
-                    <Label htmlFor="auto-start-monitoring" className="text-sm font-medium">
-                      Auto start chat monitoring
-                    </Label>
+                    <div>
+                      <Label htmlFor="auto-start-monitoring" className="text-sm font-medium">
+                        Auto start chat monitoring
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, chat monitoring will start automatically after creating the event
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    When enabled, chat monitoring will start automatically after creating the event
-                  </p>
+                  
+                  <div className="flex items-center space-x-2 p-3 bg-secondary/20 rounded-lg border border-accent/20">
+                    <Checkbox 
+                      id="auto-stop-monitoring"
+                      checked={autoStopEnabled}
+                      onCheckedChange={(checked) => setAutoStopEnabled(checked === true)}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="auto-stop-monitoring" className="text-sm font-medium">
+                        Auto stop after timer
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Automatically stop monitoring after specified time
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {autoStopEnabled && (
+                    <div className="ml-6 space-y-2">
+                      <Label className="text-sm">Stop after (minutes):</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="480"
+                        value={autoStopMinutes}
+                        onChange={(e) => setAutoStopMinutes(parseInt(e.target.value) || 30)}
+                        className="w-20"
+                      />
+                    </div>
+                  )}
                   
                   <Button onClick={createEvent} className="w-full gaming-button">
                     Create Event
@@ -1042,34 +1149,33 @@ export default function SlotsCalls() {
                             {chatConnected ? `Monitoring ${connectedChannel}` : 'Not Connected'}
                           </span>
                         </div>
-                        <Button
-                          onClick={chatConnected ? () => {
-                            socketRef.current?.close();
-                            setIsMonitoring(false);
-                          } : initializeWebSocket}
-                          variant={chatConnected ? "destructive" : "default"}
-                          size="sm"
-                          className="gaming-button"
-                        >
-                          {chatConnected ? (
-                            <>
-                              <Square className="h-3 w-3 mr-1" />
-                              Stop Monitor
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3 w-3 mr-1" />
-                              Start Monitor
-                            </>
-                          )}
-                        </Button>
-                        <Button 
-                          onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Close Event
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={chatConnected ? () => stopMonitoring() : initializeWebSocket}
+                            variant={chatConnected ? "destructive" : "default"}
+                            size="sm"
+                            className="gaming-button"
+                          >
+                            {chatConnected ? (
+                              <>
+                                <Square className="h-3 w-3 mr-1" />
+                                Stop Monitor
+                              </>
+                            ) : (
+                              <>
+                                <Play className="h-3 w-3 mr-1" />
+                                Start Monitor
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Close Event
+                          </Button>
+                        </div>
                       </>
                     )}
                     {selectedEvent.status === 'closed' && (

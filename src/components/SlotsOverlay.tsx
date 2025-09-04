@@ -314,20 +314,20 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               No calls yet
             </p>
           ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div className="space-y-2 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
               {displayCalls.map((call, index) => (
                 <div
                   key={call.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-colors ${overlaySettings.animation_enabled ? 'hover:bg-opacity-30' : ''}`}
+                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-300 ${overlaySettings.animation_enabled ? 'hover:bg-opacity-30 hover:scale-[1.02]' : ''}`}
                   style={{
                     backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                     borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
                   }}
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span 
-                        className="text-xs font-mono px-2 py-1 rounded"
+                        className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
                         style={{
                           backgroundColor: overlaySettings.accent_color + '40',
                           color: overlaySettings.accent_color
@@ -335,18 +335,19 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                       >
                         #{index + 1}
                       </span>
-                      <span className="font-semibold text-sm" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
+                      <span className="font-semibold text-sm truncate max-w-[80px]" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
                       <span style={{color: overlaySettings.text_color}}>→</span>
-                      <span className="font-medium text-sm" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
+                      <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
                     </div>
-                    <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.8}}>
-                      ${call.bet_amount} bet • 
+                    <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
+                      <span className="whitespace-nowrap">${call.bet_amount} bet</span>
+                      <span>•</span>
                       {call.status === 'completed' ? (
-                        <span className="text-green-400 ml-1">
+                        <span className="text-green-400 whitespace-nowrap">
                           ${call.win_amount} ({call.multiplier?.toFixed(2)}x)
                         </span>
                       ) : (
-                        <Badge className={getStatusColor(call.status)}>
+                        <Badge className={`${getStatusColor(call.status)} text-xs px-1 py-0`}>
                           {call.status}
                         </Badge>
                       )}
@@ -356,9 +357,9 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               ))}
               
               {calls.length > (overlaySettings.max_visible_calls || maxCalls) && (
-                <div className="text-center py-2">
+                <div className="text-center py-2 border-t border-white/10">
                   <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>
-                    +{calls.length - (overlaySettings.max_visible_calls || maxCalls)} more calls
+                    +{calls.length - (overlaySettings.max_visible_calls || maxCalls)} more calls (scroll to see all)
                   </span>
                 </div>
               )}

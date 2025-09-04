@@ -119,11 +119,36 @@ export default function Giveaways() {
       console.log('✅ Conditions met, fetching giveaways...');
       fetchGiveaways();
       initializeWebSocket();
+      restoreGiveawayMonitoringState(); // Restore persistent monitoring
     } else if (!authLoading) {
       console.log('❌ Conditions not met, setting loading to false');
       setLoading(false);
     }
   }, [authLoading, user?.id, isSupabaseUser]);
+
+  // Restore giveaway monitoring state on component mount
+  const restoreGiveawayMonitoringState = () => {
+    const savedMonitoringState = localStorage.getItem('giveaway_monitoring_state');
+    if (savedMonitoringState) {
+      const state = JSON.parse(savedMonitoringState);
+      if (state.isActive && state.channelName) {
+        console.log('🎉 Restoring giveaway monitoring for:', state.channelName);
+        setTimeout(() => {
+          joinChatChannel(state.channelName);
+        }, 1000);
+      }
+    }
+  };
+
+  // Save giveaway monitoring state to localStorage
+  const saveGiveawayMonitoringState = (isActive: boolean, channelName?: string) => {
+    const state = {
+      isActive,
+      channelName: channelName || '',
+      timestamp: Date.now()
+    };
+    localStorage.setItem('giveaway_monitoring_state', JSON.stringify(state));
+  };
 
   const fetchGiveaways = async () => {
     // Only fetch giveaways for Supabase authenticated users
@@ -174,6 +199,7 @@ export default function Giveaways() {
           case 'connected':
             setChatConnected(true);
             setConnectedChannel(data.channelName);
+            saveGiveawayMonitoringState(true, data.channelName); // Save persistent state
             toast({
               title: "✅ Chat Connected",
               description: `Now monitoring ${data.channelName} chat for keywords`,
@@ -189,6 +215,7 @@ export default function Giveaways() {
           case 'disconnected':
             setChatConnected(false);
             setConnectedChannel("");
+            saveGiveawayMonitoringState(false); // Clear persistent state
             break;
             
           case 'error':
@@ -394,9 +421,10 @@ export default function Giveaways() {
       socketRef.current.close();
       setChatConnected(false);
       setConnectedChannel("");
+      saveGiveawayMonitoringState(false); // Clear persistent state
       toast({
         title: "🛑 Chat Monitoring Stopped",
-        description: "Chat monitoring has been manually stopped",
+        description: "Giveaway chat monitoring has been manually stopped",
       });
     }
   };
