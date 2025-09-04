@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-type UserRole = 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
+type UserRole = 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
 
 // Helper to determine access levels
 export const isViewerRole = (role: UserRole): boolean => {
-  return ['user', 'verified_viewer'].includes(role);
+  return ['viewer', 'verified_viewer'].includes(role);
 };
 
 export const canAccessStreamerPanel = (role: UserRole): boolean => {
@@ -26,7 +26,7 @@ export function useUserRole() {
     if (user) {
       fetchUserRole();
     } else {
-      setRole('user');
+      setRole('viewer');
       setLoading(false);
     }
   }, [user]);
@@ -42,14 +42,14 @@ export function useUserRole() {
       setRole(data || 'user');
     } catch (error) {
       console.error('Error fetching user role:', error);
-      setRole('user');
+      setRole('viewer');
     } finally {
       setLoading(false);
     }
   };
 
   const hasRole = (requiredRole: UserRole): boolean => {
-    const roleHierarchy = { user: 0, premium: 1, vip_plus: 2, verified_viewer: 2, admin: 3 };
+    const roleHierarchy = { viewer: 0, verified_viewer: 1, user: 2, premium: 3, vip_plus: 4, admin: 5 };
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   };
 

@@ -53,7 +53,7 @@ export default function ViewerVerification() {
         return;
       }
       
-      // Only 'user' and 'verified_viewer' roles should access this viewer portal
+      // Only 'viewer' and 'verified_viewer' roles should access this viewer portal
     }
   }, [role, roleLoading, hasAdminAccess, hasStreamerAccess, navigate, toast, user]);
 
@@ -107,7 +107,7 @@ export default function ViewerVerification() {
   };
 
   const handleGetVerified = async () => {
-    if (!canGetVerified || !user) return;
+    if (!canGetVerified || !user || role !== 'viewer') return;
     
     setLoading(true);
     
