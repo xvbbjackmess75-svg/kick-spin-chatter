@@ -7,8 +7,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Admin function called:', req.method, req.url)
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request')
     return new Response('ok', { headers: corsHeaders })
   }
 
@@ -33,7 +36,10 @@ serve(async (req) => {
 
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
+    console.log('Auth header present:', !!authHeader)
+    
     if (!authHeader) {
+      console.log('No authorization header found')
       return new Response(
         JSON.stringify({ error: 'No authorization header' }),
         { 
@@ -48,9 +54,11 @@ serve(async (req) => {
       authHeader.replace('Bearer ', '')
     )
 
+    console.log('Verifying user authentication...')
     if (authError || !user) {
+      console.log('Authentication failed:', authError?.message || 'No user')
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -58,13 +66,18 @@ serve(async (req) => {
       )
     }
 
+    console.log('User authenticated:', user.id)
+
     // Check if user has admin role
+    console.log('Checking admin role for user:', user.id)
     const { data: hasAdminRole, error: roleError } = await supabaseClient
       .rpc('has_role', { _user_id: user.id, _role: 'admin' })
 
+    console.log('Admin role check result:', { hasAdminRole, roleError })
     if (roleError || !hasAdminRole) {
+      console.log('Admin access denied:', roleError?.message || 'User is not admin')
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
+        JSON.stringify({ error: 'Admin access required', details: roleError?.message }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
