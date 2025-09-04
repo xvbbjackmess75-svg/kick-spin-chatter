@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json();
     const { action } = body;
 
-    console.log(`🤖 Auto Monitor Action: ${action}`);
+    console.log(`🤖 Auto Monitor Action: ${action}`, body);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -50,6 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
         return await updateHeartbeat(body.user_id, supabase);
         
       case 'send_message':
+        console.log(`🤖 Processing send_message with token: ${body.token ? 'present' : 'missing'}`);
         return await sendUserMessage(body.message, body.token, supabase);
       
       default:
