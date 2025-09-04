@@ -6,9 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Global variables to store bot token and channel name
+// Global variables to store bot token, channel name, and source
 let botToken: string | null = null;
 let globalChannelName: string | null = null;
+let connectionSource: string | null = null;
 
 async function processCommand(command: string, messageData: any, chatroomId: string, socket: WebSocket) {
   try {
@@ -254,11 +255,12 @@ serve(async (req) => {
       console.log("Received from client:", data);
 
       if (data.type === 'join_channel') {
-        const { channelName, token } = data;
-        console.log(`Attempting to join Kick channel: ${channelName}`);
+        const { channelName, token, source } = data;
+        console.log(`Attempting to join Kick channel: ${channelName} (source: ${source || 'default'})`);
         
-        // Store the channel name and bot token for command responses
+        // Store the channel name, bot token, and source for command responses
         globalChannelName = channelName;
+        connectionSource = source || null;
         if (token) {
           botToken = token;
           console.log(`✅ Bot token received and stored`);
@@ -338,14 +340,17 @@ serve(async (req) => {
                 }));
 
                 // Check if message is a command (starts with ! or :)
-                if (messageData.content?.startsWith('!') || messageData.content?.startsWith(':')) {
+                if ((messageData.content?.startsWith('!') || messageData.content?.startsWith(':')) && 
+                    connectionSource !== 'slots_display_only') {
                   // Remove the prefix and get the command
                   const commandText = messageData.content.substring(1);
                   const command = commandText.split(' ')[0].toLowerCase();
                   console.log(`🎯 Command detected: ${messageData.content.substring(0, 1)}${command} from user: ${messageData.sender?.username}`);
 
-                  // Process command
+                  // Process command (skip if display-only mode)
                   await processCommand(command, messageData, chatroomId, socket);
+                } else if (connectionSource === 'slots_display_only') {
+                  console.log(`🎰 [DISPLAY] Chat message received (display-only mode): ${messageData.content?.substring(0, 50)}...`);
                 }
               }
             } catch (error) {

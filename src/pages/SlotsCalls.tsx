@@ -50,8 +50,11 @@ export default function SlotsCalls() {
   const { canUseChatbot, isKickLinked, kickUser } = useKickAccount();
   const { startAutoMonitoring, monitorStatus } = useAutoMonitor();
   
-  // Use auto-monitor instead of direct WebSocket
+  // Use auto-monitor for command processing + WebSocket for real-time chat display
+  const socketRef = useRef<WebSocket | null>(null);
   const [isManualMonitoring, setIsManualMonitoring] = useState(false);
+  const [chatConnected, setChatConnected] = useState(false);
+  const [connectedChannel, setConnectedChannel] = useState("");
   const { toast } = useToast();
   
   const [events, setEvents] = useState<SlotsEvent[]>([]);
@@ -162,7 +165,7 @@ export default function SlotsCalls() {
     }
   }, [selectedEvent]);
 
-  // Start monitoring using auto-monitor system
+  // Start monitoring using both auto-monitor (for processing) and WebSocket (for display)
   const initializeMonitoring = async () => {
     if (!canUseChatbot) {
       toast({
@@ -174,13 +177,17 @@ export default function SlotsCalls() {
     }
 
     try {
-      console.log('🎰 [SLOTS] Starting auto-monitoring for slots');
+      console.log('🎰 [SLOTS] Starting comprehensive monitoring');
       setIsManualMonitoring(true);
       
-      // Start auto-monitoring if not already active
+      // Start auto-monitoring for command processing (if not already active)
       if (!monitorStatus?.is_active) {
+        console.log('🤖 Starting auto-monitor for command processing');
         await startAutoMonitoring();
       }
+      
+      // Start WebSocket for real-time chat display (no command processing)
+      initializeChatDisplay();
       
       // Setup auto-stop timer if enabled
       if (autoStopEnabled && autoStopMinutes > 0) {
@@ -189,7 +196,7 @@ export default function SlotsCalls() {
       
       toast({
         title: "🎰 Slots Monitoring Active",
-        description: `Now monitoring for !kgs commands using auto-monitor${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
+        description: `Auto-monitor processing commands + real-time chat display${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
       });
       
     } catch (error) {
@@ -203,9 +210,79 @@ export default function SlotsCalls() {
     }
   };
 
-  // Cleanup timer on unmount
+  // Initialize WebSocket for real-time chat display only (no command processing)
+  const initializeChatDisplay = () => {
+    if (!kickUser) return;
+
+    try {
+      const wsUrl = `wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor`;
+      console.log('🎰 [DISPLAY] Connecting to chat display WebSocket:', wsUrl);
+      
+      socketRef.current = new WebSocket(wsUrl);
+
+      socketRef.current.onopen = () => {
+        console.log("🎰 [DISPLAY] Connected to chat display");
+        
+        // Join the channel for display only (with special flag to prevent command processing)
+        if (kickUser) {
+          const joinMessage = {
+            type: 'join_channel',
+            channelName: typeof kickUser === 'string' ? kickUser : kickUser.username || kickUser.toString(),
+            source: 'slots_display_only' // Special flag to indicate display-only mode
+          };
+          console.log("🎰 [DISPLAY] Sending join message:", joinMessage);
+          socketRef.current?.send(JSON.stringify(joinMessage));
+        }
+      };
+
+      socketRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('🎰 [DISPLAY] Received from chat monitor:', data);
+
+        switch (data.type) {
+          case 'connected':
+            setChatConnected(true);
+            setConnectedChannel(data.channelName);
+            console.log(`🎰 [DISPLAY] Connected to chat display for: ${data.channelName}`);
+            break;
+            
+          case 'chat_message':
+            console.log('🎰 [DISPLAY] Chat message received:', data.data);
+            // Just display the message, don't process commands (auto-monitor handles that)
+            break;
+            
+          case 'disconnected':
+            setChatConnected(false);
+            setConnectedChannel("");
+            break;
+            
+          case 'error':
+            console.error('🎰 [DISPLAY] WebSocket error:', data.message);
+            break;
+        }
+      };
+
+      socketRef.current.onerror = (error) => {
+        console.error("🎰 [DISPLAY] WebSocket error:", error);
+      };
+
+      socketRef.current.onclose = () => {
+        console.log("🎰 [DISPLAY] WebSocket disconnected");
+        setChatConnected(false);
+        setConnectedChannel("");
+      };
+
+    } catch (error) {
+      console.error("🎰 [DISPLAY] Error connecting to WebSocket:", error);
+    }
+  };
+
+  // Cleanup WebSocket and timer on unmount
   useEffect(() => {
     return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
       clearAutoStopTimer();
     };
   }, []);
@@ -228,6 +305,11 @@ export default function SlotsCalls() {
   };
 
   const stopMonitoring = (isAutoStop = false) => {
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+    setChatConnected(false);
+    setConnectedChannel("");
     setIsManualMonitoring(false);
     clearAutoStopTimer();
     
@@ -1033,19 +1115,19 @@ export default function SlotsCalls() {
                     {selectedEvent.status === 'active' && (
                       <>
                         <div className="flex items-center gap-2 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${(monitorStatus?.is_active && isManualMonitoring) ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-2 h-2 rounded-full ${(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-muted-foreground">
-                            {(monitorStatus?.is_active && isManualMonitoring) ? `Auto-Monitoring Active` : 'Monitoring Stopped'}
+                            {(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? `Monitoring ${connectedChannel}` : 'Monitoring Stopped'}
                           </span>
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={(monitorStatus?.is_active && isManualMonitoring) ? () => stopMonitoring() : initializeMonitoring}
-                            variant={(monitorStatus?.is_active && isManualMonitoring) ? "destructive" : "default"}
+                            onClick={(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? () => stopMonitoring() : initializeMonitoring}
+                            variant={(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? "destructive" : "default"}
                             size="sm"
                             className="gaming-button"
                           >
-                            {(monitorStatus?.is_active && isManualMonitoring) ? (
+                            {(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? (
                               <>
                                 <Square className="h-3 w-3 mr-1" />
                                 Stop Monitor
@@ -1110,7 +1192,7 @@ export default function SlotsCalls() {
                     
                     {calls.length === 0 ? (
                       <p className="text-muted-foreground text-center py-6">
-                        No calls yet. {selectedEvent.status === 'active' ? ((monitorStatus?.is_active && isManualMonitoring) ? 'Auto-monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Monitor" to begin tracking !kgs commands.') : ''}
+                        No calls yet. {selectedEvent.status === 'active' ? ((monitorStatus?.is_active && chatConnected && isManualMonitoring) ? 'Monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Monitor" to begin tracking !kgs commands.') : ''}
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
