@@ -756,40 +756,40 @@ export default function SlotsCalls() {
                 Customize Overlay
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh]">
-              <DialogHeader>
+            <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
                   Overlay Customization
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-6 overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6">{/* Scrollable content area */}
                 {/* Color Presets */}
                 <div className="space-y-3">
                   <Label className="text-base font-semibold">🎨 Color Themes</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {colorPresets.map((preset, index) => (
                       <button
                         key={index}
                         onClick={() => applyColorPreset(preset)}
-                        className="group relative p-3 rounded-lg border-2 border-border hover:border-primary transition-all duration-200 hover:scale-105"
+                        className="group relative p-3 rounded-lg border-2 border-border hover:border-primary transition-all duration-200 hover:scale-105 min-h-[60px]"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-shrink-0">
                             <div 
-                              className="w-4 h-4 rounded-full border"
+                              className="w-4 h-4 rounded-full border flex-shrink-0"
                               style={{ backgroundColor: preset.background.replace('0.95', '1') }}
                             />
                             <div 
-                              className="w-4 h-4 rounded-full border"
+                              className="w-4 h-4 rounded-full border flex-shrink-0"
                               style={{ backgroundColor: preset.border }}
                             />
                             <div 
-                              className="w-4 h-4 rounded-full border"
+                              className="w-4 h-4 rounded-full border flex-shrink-0"
                               style={{ backgroundColor: preset.accent }}
                             />
                           </div>
-                          <span className="text-sm font-medium">{preset.name}</span>
+                          <span className="text-sm font-medium truncate">{preset.name}</span>
                         </div>
                         <div 
                           className="absolute inset-0 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity"
@@ -803,12 +803,12 @@ export default function SlotsCalls() {
                 {/* Custom Colors */}
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">🎯 Custom Colors</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm flex items-center gap-2">
-                        Background Color
+                      <Label className="text-sm flex items-center gap-2 flex-wrap">
+                        <span>Background Color</span>
                         <div 
-                          className="w-4 h-4 rounded border"
+                          className="w-4 h-4 rounded border flex-shrink-0"
                           style={{ backgroundColor: overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color }}
                         />
                       </Label>
@@ -816,15 +816,15 @@ export default function SlotsCalls() {
                         type="color"
                         value={overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color}
                         onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
-                        className="h-12 cursor-pointer"
+                        className="h-12 cursor-pointer w-full"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-sm flex items-center gap-2">
-                        Border Color
+                      <Label className="text-sm flex items-center gap-2 flex-wrap">
+                        <span>Border Color</span>
                         <div 
-                          className="w-4 h-4 rounded border"
+                          className="w-4 h-4 rounded border flex-shrink-0"
                           style={{ backgroundColor: overlaySettings.border_color }}
                         />
                       </Label>
@@ -832,15 +832,15 @@ export default function SlotsCalls() {
                         type="color"
                         value={overlaySettings.border_color}
                         onChange={(e) => setOverlaySettings({...overlaySettings, border_color: e.target.value})}
-                        className="h-12 cursor-pointer"
+                        className="h-12 cursor-pointer w-full"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-sm flex items-center gap-2">
-                        Text Color
+                      <Label className="text-sm flex items-center gap-2 flex-wrap">
+                        <span>Text Color</span>
                         <div 
-                          className="w-4 h-4 rounded border"
+                          className="w-4 h-4 rounded border flex-shrink-0"
                           style={{ backgroundColor: overlaySettings.text_color }}
                         />
                       </Label>
@@ -848,15 +848,15 @@ export default function SlotsCalls() {
                         type="color"
                         value={overlaySettings.text_color}
                         onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
-                        className="h-12 cursor-pointer"
+                        className="h-12 cursor-pointer w-full"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-sm flex items-center gap-2">
-                        Accent Color
+                      <Label className="text-sm flex items-center gap-2 flex-wrap">
+                        <span>Accent Color</span>
                         <div 
-                          className="w-4 h-4 rounded border"
+                          className="w-4 h-4 rounded border flex-shrink-0"
                           style={{ backgroundColor: overlaySettings.accent_color }}
                         />
                       </Label>
@@ -864,7 +864,7 @@ export default function SlotsCalls() {
                         type="color"
                         value={overlaySettings.accent_color}
                         onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
-                        className="h-12 cursor-pointer"
+                        className="h-12 cursor-pointer w-full"
                       />
                     </div>
                   </div>
@@ -874,14 +874,14 @@ export default function SlotsCalls() {
                 <div className="space-y-3">
                   <Label className="text-base font-semibold">👀 Preview</Label>
                   <div 
-                    className="p-4 rounded-lg border-2 min-h-[80px] flex items-center justify-center text-center transition-all duration-300"
+                    className="p-4 rounded-lg border-2 min-h-[100px] flex items-center justify-center text-center transition-all duration-300 w-full"
                     style={{
                       backgroundColor: overlaySettings.show_background ? overlaySettings.background_color : 'transparent',
                       borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
                       color: overlaySettings.text_color
                     }}
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-full">
                       <div 
                         className="font-semibold"
                         style={{ 
@@ -891,7 +891,7 @@ export default function SlotsCalls() {
                       >
                         🎰 Slot Calls Queue
                       </div>
-                      <div style={{ color: overlaySettings.text_color, fontSize: '14px' }}>
+                      <div style={{ color: overlaySettings.text_color, fontSize: '14px' }} className="break-words">
                         ViewerName: Sweet Bonanza ($10.00)
                       </div>
                     </div>
@@ -902,11 +902,11 @@ export default function SlotsCalls() {
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">⚙️ Display Settings</Label>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Font Size</Label>
                       <Select value={overlaySettings.font_size} onValueChange={(value) => setOverlaySettings({...overlaySettings, font_size: value})}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -925,11 +925,12 @@ export default function SlotsCalls() {
                         max="20"
                         value={overlaySettings.max_visible_calls}
                         onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_calls: parseInt(e.target.value) || 10})}
+                        className="w-full"
                       />
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="show-background"
@@ -959,10 +960,12 @@ export default function SlotsCalls() {
                   </div>
                 </div>
                 
-                <Button onClick={saveOverlaySettings} className="w-full gaming-button hover:scale-105 transition-transform">
-                  💾 Save Overlay Settings
-                </Button>
-              </div>
+                <div className="flex-shrink-0 pt-4 border-t">
+                  <Button onClick={saveOverlaySettings} className="w-full gaming-button hover:scale-105 transition-transform">
+                    💾 Save Overlay Settings
+                  </Button>
+                </div>
+              </div>{/* End scrollable content */}
             </DialogContent>
           </Dialog>
           
