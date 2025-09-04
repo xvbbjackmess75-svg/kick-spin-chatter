@@ -15,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 interface FeaturePermission {
   id: string;
   feature_name: string;
-  required_role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin';
+  required_role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
   description: string;
   is_enabled: boolean;
 }
@@ -23,7 +23,7 @@ interface FeaturePermission {
 interface UserRole {
   id: string;
   user_id: string;
-  role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin';
+  role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
   granted_by: string;
   granted_at: string;
 }
@@ -31,7 +31,7 @@ interface UserRole {
 interface UserWithProfile {
   id: string;
   email: string;
-  role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin';
+  role: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
   display_name?: string;
   kick_username?: string;
   kick_user_id?: string;
@@ -48,7 +48,7 @@ interface ProfileData {
 
 export default function Admin() {
   const { user } = useAuth();
-  const [userRole, setUserRole] = useState<'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin' | null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin' | null>(null);
   const [users, setUsers] = useState<UserWithProfile[]>([]);
   const [featurePermissions, setFeaturePermissions] = useState<FeaturePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +126,7 @@ export default function Admin() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin') => {
+  const updateUserRole = async (userId: string, newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin') => {
     try {
       // Use the admin edge function to update user role
       const { data, error } = await supabase.functions.invoke('admin-users', {
@@ -180,7 +180,7 @@ export default function Admin() {
     }
   };
 
-  const updateFeaturePermission = async (featureName: string, requiredRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin', isEnabled: boolean) => {
+  const updateFeaturePermission = async (featureName: string, requiredRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin', isEnabled: boolean) => {
     try {
       const { error } = await supabase
         .from('feature_permissions')
@@ -365,7 +365,7 @@ export default function Admin() {
                       <TableCell>
                         <Select
                           value={usr.role}
-                          onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin') => 
+                          onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin') => 
                             updateUserRole(usr.id, newRole)
                           }
                         >
@@ -377,6 +377,7 @@ export default function Admin() {
                             <SelectItem value="premium">Premium</SelectItem>
                             <SelectItem value="vip_plus">VIP+</SelectItem>
                             <SelectItem value="verified_viewer">Verified Viewer</SelectItem>
+                            <SelectItem value="streamer">Streamer</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
@@ -433,7 +434,7 @@ export default function Admin() {
                         <TableCell>
                           <Select
                             value={permission.required_role}
-                            onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'admin') => 
+                            onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin') => 
                               updateFeaturePermission(permission.feature_name, newRole, permission.is_enabled)
                             }
                           >
@@ -445,6 +446,7 @@ export default function Admin() {
                               <SelectItem value="premium">Premium</SelectItem>
                               <SelectItem value="vip_plus">VIP+</SelectItem>
                               <SelectItem value="verified_viewer">Verified Viewer</SelectItem>
+                              <SelectItem value="streamer">Streamer</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
