@@ -103,24 +103,8 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
   // Validate the user has permission to send messages to this channel
   // by checking if they own it via the token
   try {
-    // First verify the token by getting user info
-    const userResponse = await fetch('https://api.kick.com/public/v1/users', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token_info.access_token}`,
-        'Accept': 'application/json',
-      }
-    });
-
-    if (!userResponse.ok) {
-      throw new Error(`Token validation failed: ${userResponse.status}`);
-    }
-
-    const userData = await userResponse.json();
-    console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
-    
-    // Send message using Kick Chat API as bot
-    console.log(`🤖 Sending as bot to channel attached to token`);
+    // Send message directly as bot using the bot token
+    console.log(`🤖 Sending message as bot to channel attached to token`);
     
     const response = await fetch('https://api.kick.com/public/v1/chat', {
       method: 'POST',
@@ -130,7 +114,7 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        type: 'bot', // Bot type - goes to channel attached to this token
+        type: 'bot',
         content: message
       })
     });
