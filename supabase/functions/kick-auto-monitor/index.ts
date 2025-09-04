@@ -310,6 +310,14 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
 
 async function processCommandBackground(command: string, messageData: any, userId: string, tokenInfo: any, chatroomId: string, supabase: any) {
   try {
+    console.log(`🎯 Processing command: !${command} from @${messageData.sender?.username}`);
+
+    // Special handling for slots calls (!kgs command)
+    if (command === 'kgs') {
+      await processSlotsCall(messageData, chatroomId, userId, supabase);
+      return;
+    }
+
     // Look up command in database
     const { data: commands, error } = await supabase
       .from('commands')
@@ -379,6 +387,109 @@ async function sendBotMessage(message: string, token: string, chatroomId: string
     console.log(`✅ Auto-sent message: ${message.substring(0, 50)}...`);
   } catch (error) {
     console.error(`❌ Failed to send auto message:`, error);
+  }
+}
+
+async function processSlotsCall(messageData: any, chatroomId: string, userId: string, supabase: any) {
+  try {
+    console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
+    
+    // Extract slot name from message (everything after !kgs )
+    const slotName = messageData.content?.replace('!kgs ', '').trim();
+    const username = messageData.sender?.username;
+    const kickUserId = messageData.sender?.id?.toString();
+    
+    if (!slotName || !username) {
+      console.log(`❌ Invalid slots call: missing slot name or username`);
+      return;
+    }
+
+    // Get the user's profile to find their channel username
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('kick_username, linked_kick_username')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      console.log(`❌ No profile found for user: ${userId}`);
+      return;
+    }
+
+    const channelUsername = profile.linked_kick_username || profile.kick_username;
+
+    // Find active slots event for this streamer's channel  
+    const { data: activeEvent, error: eventError } = await supabase
+      .from('slots_events')
+      .select('*')
+      .eq('status', 'active')
+      .eq('channel_id', channelUsername)
+      .single();
+
+    if (eventError || !activeEvent) {
+      console.log(`❌ No active slots event found for channel: ${channelUsername}`);
+      return;
+    }
+
+    console.log(`✅ Found active slots event: ${activeEvent.title} for ${channelUsername}`);
+
+    // Check if user has already called for this event
+    const { data: existingCalls, error: callsError } = await supabase
+      .from('slots_calls')
+      .select('*')
+      .eq('event_id', activeEvent.id)
+      .eq('viewer_kick_id', kickUserId);
+
+    if (callsError) {
+      console.error(`❌ Error checking existing calls:`, callsError);
+      return;
+    }
+
+    if (existingCalls && existingCalls.length >= activeEvent.max_calls_per_user) {
+      console.log(`❌ User ${username} has reached max calls (${activeEvent.max_calls_per_user})`);
+      return;
+    }
+
+    // Get the next call order
+    const { data: callOrder, error: orderError } = await supabase
+      .rpc('get_next_call_order', { event_uuid: activeEvent.id });
+
+    if (orderError) {
+      console.error(`❌ Error getting call order:`, orderError);
+      return;
+    }
+
+    // Insert the slots call
+    const { error: insertError } = await supabase
+      .from('slots_calls')
+      .insert({
+        event_id: activeEvent.id,
+        viewer_username: username,
+        viewer_kick_id: kickUserId,
+        slot_name: slotName,
+        bet_amount: activeEvent.bet_size,
+        call_order: callOrder,
+        status: 'pending'
+      });
+
+    if (insertError) {
+      console.error(`❌ Error inserting slots call:`, insertError);
+      return;
+    }
+
+    console.log(`✅ Slots call recorded: ${username} called ${slotName} (order: ${callOrder})`);
+
+    // Update command stats
+    await supabase
+      .from('chatbot_monitors')
+      .update({ 
+        total_commands_processed: supabase.raw('total_commands_processed + 1'),
+        last_heartbeat: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+  } catch (error) {
+    console.error(`❌ Error processing slots call:`, error);
   }
 }
 

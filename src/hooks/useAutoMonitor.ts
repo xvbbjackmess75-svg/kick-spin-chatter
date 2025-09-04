@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 interface MonitorStatus {
   id: string;
   is_active: boolean;
+  is_connected?: boolean; // Add this optional property
   kick_username: string;
   total_messages_processed: number;
   total_commands_processed: number;
@@ -37,7 +38,10 @@ export function useAutoMonitor() {
   }, [user]);
 
   const startAutoMonitoring = async () => {
-    if (!user || !kickToken) return;
+    if (!user) {
+      console.error('❌ No user found for monitoring');
+      return;
+    }
 
     try {
       console.log('🤖 Starting auto-monitoring for user:', kickUser?.username);
@@ -46,7 +50,7 @@ export function useAutoMonitor() {
         body: {
           action: 'start_monitoring',
           user_id: user.id,
-          token_info: kickToken
+          token_info: kickToken || {} // Pass empty object if no kickToken
         }
       });
 
@@ -56,11 +60,16 @@ export function useAutoMonitor() {
 
       if (response.data?.success) {
         toast({
-          title: "🤖 ChatBot Auto-Started!",
-          description: `Now monitoring @${kickUser?.username} automatically`,
+          title: "🤖 ChatBot Started!",
+          description: `Now monitoring for slots commands`,
         });
         
-        await checkMonitoringStatus();
+        // Wait a moment then check status
+        setTimeout(() => {
+          checkMonitoringStatus();
+        }, 2000);
+      } else {
+        throw new Error(response.data?.error || 'Failed to start monitoring');
       }
 
     } catch (error: any) {
@@ -85,7 +94,11 @@ export function useAutoMonitor() {
       });
 
       if (response.data?.success && response.data.monitor) {
-        setMonitorStatus(response.data.monitor);
+        // Merge the monitor data with is_connected status
+        setMonitorStatus({
+          ...response.data.monitor,
+          is_connected: response.data.is_connected
+        });
       } else {
         setMonitorStatus(null);
       }

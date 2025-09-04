@@ -374,10 +374,14 @@ export default function SlotsCalls() {
 
       if (error) throw error;
 
-      // Auto-start monitoring if checkbox was checked or always for slots events
-      if (autoStartMonitoring || true) { // Always auto-start for slots
+      // Auto-start monitoring for slots events
+      if (!monitorStatus?.is_active || !monitorStatus?.is_connected) {
         console.log('🤖 Auto-starting monitoring for slots event...');
-        await startAutoMonitoring();
+        try {
+          await startAutoMonitoring();
+        } catch (error) {
+          console.error('Failed to start auto monitoring:', error);
+        }
       }
 
       const successMessage = `🎰 Event "${title}" created for @${channelUsername} and monitoring started!`;
@@ -803,6 +807,37 @@ export default function SlotsCalls() {
                   <div className="flex gap-2">
                     {selectedEvent.status === 'active' && (
                       <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className={`w-2 h-2 rounded-full ${monitorStatus?.is_active && monitorStatus?.is_connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-muted-foreground">
+                            {monitorStatus?.is_active && monitorStatus?.is_connected ? 'Monitoring Active' : 'Monitoring Stopped'}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={async () => {
+                            if (monitorStatus?.is_active && monitorStatus?.is_connected) {
+                              // Stop monitoring logic can be added here if needed
+                              console.log('Manual stop not implemented yet');
+                            } else {
+                              await startAutoMonitoring();
+                            }
+                          }}
+                          variant={monitorStatus?.is_active && monitorStatus?.is_connected ? "destructive" : "default"}
+                          size="sm"
+                          className="gaming-button"
+                        >
+                          {monitorStatus?.is_active && monitorStatus?.is_connected ? (
+                            <>
+                              <Square className="h-3 w-3 mr-1" />
+                              Stop Monitor
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3 mr-1" />
+                              Start Monitor
+                            </>
+                          )}
+                        </Button>
                         <Button 
                           onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
                           variant="outline"
