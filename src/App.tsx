@@ -15,19 +15,11 @@ import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
-
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
 
-// Create QueryClient at module level with proper configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 3,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
+// Create QueryClient at module level with minimal configuration
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
