@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       console.log('🔧 Authorize action')
       
       const clientId = Deno.env.get('KICK_CLIENT_ID')
-      const frontendUrl = body.origin || 'https://kick-spin-chatter.lovable.app'
+      const frontendUrl = 'https://kick-spin-chatter.lovable.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
       const state = crypto.randomUUID()
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       
       const code = body.code
       const codeVerifier = body.code_verifier
-      const origin = body.origin || 'https://kick-spin-chatter.lovable.app'
+      const origin = 'https://kick-spin-chatter.lovable.app'
       
       console.log('🔧 Params received successfully')
       
