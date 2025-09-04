@@ -373,6 +373,14 @@ export default function BonusHunt() {
     slot.theme?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Debug logging
+  console.log('Total slots loaded:', slots.length);
+  console.log('Search term:', searchTerm);
+  console.log('Filtered slots:', filteredSlots.length);
+  if (searchTerm.toLowerCase().includes('wanted')) {
+    console.log('Slots containing "wanted":', slots.filter(s => s.name.toLowerCase().includes('wanted')));
+  }
+
   const totalPnL = sessionBets.reduce((sum, bet) => sum + bet.pnl, 0);
   const totalBets = sessionBets.length;
   const averageMultiplier = sessionBets.length > 0 
