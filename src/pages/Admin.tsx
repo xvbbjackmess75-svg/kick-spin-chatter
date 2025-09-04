@@ -9,8 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Database, Users, Settings, Shield, Calendar, AlertTriangle } from 'lucide-react';
+import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+
+interface FeaturePermission {
+  id: string;
+  feature_name: string;
+  required_role: 'user' | 'premium' | 'vip_plus' | 'admin';
+  description: string;
+  is_enabled: boolean;
+}
 
 interface UserRole {
   id: string;
@@ -42,6 +50,7 @@ export default function Admin() {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<'user' | 'premium' | 'vip_plus' | 'admin' | null>(null);
   const [users, setUsers] = useState<UserWithProfile[]>([]);
+  const [featurePermissions, setFeaturePermissions] = useState<FeaturePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [importingSlots, setImportingSlots] = useState(false);
   const [lastImportDate, setLastImportDate] = useState<string | null>(null);
@@ -50,6 +59,7 @@ export default function Admin() {
     if (user) {
       checkUserRole();
       loadUsers();
+      loadFeaturePermissions();
       loadLastImportDate();
     }
   }, [user]);
@@ -146,6 +156,53 @@ export default function Admin() {
       toast({
         title: "Error Updating Role",
         description: error instanceof Error ? error.message : "Failed to update user role",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadFeaturePermissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('feature_permissions')
+        .select('*')
+        .order('feature_name');
+
+      if (error) throw error;
+      setFeaturePermissions(data || []);
+    } catch (error) {
+      console.error('Error loading feature permissions:', error);
+      toast({
+        title: "Error Loading Permissions",
+        description: "Failed to load feature permissions",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateFeaturePermission = async (featureName: string, requiredRole: 'user' | 'premium' | 'vip_plus' | 'admin', isEnabled: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('feature_permissions')
+        .update({ 
+          required_role: requiredRole,
+          is_enabled: isEnabled 
+        })
+        .eq('feature_name', featureName);
+
+      if (error) throw error;
+      
+      await loadFeaturePermissions();
+      
+      toast({
+        title: "Permission Updated",
+        description: `${featureName} permission has been updated`,
+      });
+    } catch (error) {
+      console.error('Error updating feature permission:', error);
+      toast({
+        title: "Error Updating Permission",
+        description: error instanceof Error ? error.message : "Failed to update permission",
         variant: "destructive"
       });
     }
@@ -250,8 +307,9 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="roles">Role Manager</TabsTrigger>
           <TabsTrigger value="slots">Slot Management</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
@@ -326,6 +384,150 @@ export default function Admin() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  Feature Access Manager
+                </CardTitle>
+                <Button variant="outline" onClick={loadFeaturePermissions} size="sm">
+                  Refresh Permissions
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Configure which roles have access to specific features. Higher roles inherit access from lower roles.
+                </div>
+                
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Feature</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Required Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {featurePermissions.map((permission) => (
+                      <TableRow key={permission.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            {permission.feature_name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {permission.description}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={permission.required_role}
+                            onValueChange={(newRole: 'user' | 'premium' | 'vip_plus' | 'admin') => 
+                              updateFeaturePermission(permission.feature_name, newRole, permission.is_enabled)
+                            }
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
+                              <SelectItem value="vip_plus">VIP+</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={permission.is_enabled ? "default" : "secondary"}>
+                            {permission.is_enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateFeaturePermission(
+                              permission.feature_name, 
+                              permission.required_role, 
+                              !permission.is_enabled
+                            )}
+                          >
+                            {permission.is_enabled ? "Disable" : "Enable"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Role Hierarchy
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Roles are hierarchical - higher roles inherit all permissions from lower roles.
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="border-2">
+                    <CardContent className="p-4 text-center">
+                      <Badge variant="outline" className="mb-2">Base Level</Badge>
+                      <div className="text-lg font-bold">User</div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Basic features and functionality
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-2 border-blue-200">
+                    <CardContent className="p-4 text-center">
+                      <Badge variant="secondary" className="mb-2">Paid Tier</Badge>
+                      <div className="text-lg font-bold">Premium</div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Advanced features + User permissions
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-2 border-purple-200">
+                    <CardContent className="p-4 text-center">
+                      <Badge variant="default" className="mb-2">Elite Tier</Badge>
+                      <div className="text-lg font-bold">VIP+</div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Exclusive features + Premium permissions
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-2 border-red-200">
+                    <CardContent className="p-4 text-center">
+                      <Badge variant="destructive" className="mb-2">Full Access</Badge>
+                      <div className="text-lg font-bold">Admin</div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        All features + VIP+ permissions
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

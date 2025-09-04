@@ -343,6 +343,36 @@ export type Database = {
           },
         ]
       }
+      feature_permissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          feature_name: string
+          id: string
+          is_enabled: boolean | null
+          required_role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          feature_name: string
+          id?: string
+          is_enabled?: boolean | null
+          required_role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          feature_name?: string
+          id?: string
+          is_enabled?: boolean | null
+          required_role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       giveaway_participants: {
         Row: {
           entered_at: string
@@ -825,6 +855,10 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_feature_access: {
+        Args: { _feature_name: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
