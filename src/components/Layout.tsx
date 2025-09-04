@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { Link, useLocation } from "react-router-dom";
 import { 
   Settings, 
@@ -21,6 +22,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
+  const { profile } = useProfile();
   const location = useLocation();
 
   // Check for Kick authentication
@@ -38,11 +40,13 @@ export function Layout({ children }: LayoutProps) {
         initials: kickUser.username?.slice(0, 2).toUpperCase() || 'KU'
       };
     } else if (user) {
+      // Use profile display_name if available, otherwise fall back to email
+      const displayName = profile?.display_name || user.email?.split('@')[0] || 'User';
       return {
         username: user.email?.split('@')[0] || 'User',
-        displayName: user.email?.split('@')[0] || 'User', 
-        avatar: null,
-        initials: user.email?.slice(0, 2).toUpperCase() || 'U'
+        displayName: displayName,
+        avatar: profile?.avatar_url || null,
+        initials: displayName.slice(0, 2).toUpperCase() || 'U'
       };
     } else if (isGuestMode) {
       return {
