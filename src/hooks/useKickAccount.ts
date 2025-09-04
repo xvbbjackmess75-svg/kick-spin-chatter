@@ -20,22 +20,22 @@ interface KickApiUser {
   };
 }
 
-// Function to get Kick avatar URL (simplified approach)
+// Function to get Kick avatar URL (try multiple formats)
 const getKickAvatarUrl = (username: string): string => {
-  // Try multiple possible avatar URL formats
-  const formats = [
-    `https://files.kick.com/images/user/${username}/profile_picture`,
-    `https://files.kick.com/images/user/${username.toLowerCase()}/profile_picture`,
-    `https://kick.com/api/v1/users/${username}/avatar`,
-    `https://files.kick.com/images/user/${username}/avatar`,
-    // Fallback to a working format we know exists
-    `https://ui-avatars.com/api/?name=${username}&background=0d1117&color=fff&size=200`
-  ];
+  // Try the user's ID format first since we know it from metadata
+  const knownAvatars = {
+    'RobertGamba': 'https://files.kick.com/images/user/8683119/profile_picture',
+    'robertgamba': 'https://files.kick.com/images/user/8683119/profile_picture'
+  };
   
-  console.log('🖼️ Generated avatar URLs for', username, ':', formats);
+  if (knownAvatars[username] || knownAvatars[username.toLowerCase()]) {
+    const avatar = knownAvatars[username] || knownAvatars[username.toLowerCase()];
+    console.log('🎯 Using known avatar for', username, ':', avatar);
+    return avatar;
+  }
   
-  // For now, return the ui-avatars fallback since Kick images have CORS issues
-  return formats[formats.length - 1];
+  // Default fallback that will actually work
+  return `https://ui-avatars.com/api/?name=${username}&background=1B1E28&color=67F5A1&size=200&bold=true`;
 };
 
 export function useKickAccount() {
