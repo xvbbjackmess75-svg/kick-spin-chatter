@@ -119,9 +119,9 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
     const userData = await userResponse.json();
     console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
     
-    // Send message using Kick Chat API (correct endpoint)
-    // Note: When type is "bot", the message is sent to the channel attached to the bot's token
-    // broadcaster_user_id is ignored for bot type
+    // Send message using Kick Chat API as bot
+    console.log(`🤖 Sending as bot to channel attached to token`);
+    
     const response = await fetch('https://api.kick.com/public/v1/chat', {
       method: 'POST',
       headers: {
@@ -130,18 +130,17 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        type: 'bot', // This tells Kick to send as the bot account
+        type: 'bot', // Bot type - goes to channel attached to this token
         content: message
-        // broadcaster_user_id is not needed for bot type - message goes to bot's attached channel
       })
     });
 
     console.log(`🔍 Kick API response status: ${response.status}`);
     const responseText = await response.text();
-    console.log(`🔍 Kick API response body: ${responseText.substring(0, 200)}...`);
+    console.log(`🔍 Kick API response: ${responseText.substring(0, 300)}`);
 
     if (!response.ok) {
-      throw new Error(`Failed to send message: ${response.status} - ${responseText}`);
+      throw new Error(`Kick API error: ${response.status} - ${responseText}`);
     }
 
     const data = JSON.parse(responseText);
