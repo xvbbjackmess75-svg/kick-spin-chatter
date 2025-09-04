@@ -50,7 +50,8 @@ const handler = async (req: Request): Promise<Response> => {
         return await updateHeartbeat(body.user_id, supabase);
         
       case 'send_message':
-        console.log(`🤖 Processing send_message with token: ${body.token ? 'present' : 'missing'}`);
+        console.log(`🤖 Processing send_message for user: ${body.user_id} with token: ${body.token ? 'present' : 'missing'}`);
+        console.log(`🤖 Message to send: "${body.message}"`);
         return await sendUserMessage(body.message, body.token, body.user_id, supabase);
       
       default:
@@ -472,14 +473,16 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
 
 async function sendUserMessage(message: string, token: string, userId: string, supabase: any): Promise<Response> {
   try {
-    console.log(`🤖 Sending bot message: ${message.substring(0, 50)}...`);
+    console.log(`🤖 Sending bot message: "${message.substring(0, 50)}..." for user: ${userId}`);
     
     // Get the user's chatroom ID from their profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('kick_channel_id')
+      .select('kick_channel_id, kick_username')
       .eq('user_id', userId)
       .maybeSingle();
+    
+    console.log(`🔍 Profile lookup result:`, { profile, profileError });
     
     if (profileError) {
       console.error(`❌ Database error fetching profile:`, profileError);
