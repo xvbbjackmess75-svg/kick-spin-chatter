@@ -903,9 +903,9 @@ export type Database = {
       }
       link_kick_account_to_profile: {
         Args: {
-          p_kick_avatar: string
-          p_kick_user_id: string
-          p_kick_username: string
+          kick_avatar: string
+          kick_user_id: string
+          kick_username: string
           profile_user_id: string
         }
         Returns: boolean
