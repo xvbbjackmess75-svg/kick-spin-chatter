@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { isAdminRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -285,7 +286,7 @@ export default function Admin() {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
-  if (!userRole || userRole !== 'admin') {
+  if (!userRole || !isAdminRole(userRole)) {
     return (
       <div className="container mx-auto p-4">
         <Card>
@@ -303,7 +304,9 @@ export default function Admin() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <Badge variant="destructive">Admin Access</Badge>
+        <Badge variant="destructive">
+          {userRole === 'admin' ? 'Admin Access' : `${userRole?.toUpperCase()} Access`}
+        </Badge>
       </div>
 
       <Tabs defaultValue="users" className="w-full">

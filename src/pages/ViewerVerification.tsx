@@ -24,7 +24,7 @@ export default function ViewerVerification() {
   const [discordLinked, setDiscordLinked] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { role, loading: roleLoading, isAdmin } = useUserRole();
+  const { role, loading: roleLoading, isAdmin, shouldUseAdminPanel } = useUserRole();
   const { isKickLinked } = useKickAccount();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,32 +32,26 @@ export default function ViewerVerification() {
   const isVerified = role === 'verified_viewer';
   const canGetVerified = isKickLinked && discordLinked;
   
-  // Redirect admins and higher roles away from viewer verification, but allow regular users
+  // Redirect admin roles to admin panel, only allow viewer roles here
   useEffect(() => {
     if (!roleLoading && user) {
-      if (isAdmin()) {
+      if (shouldUseAdminPanel()) {
+        const destination = isAdmin() ? '/admin' : '/';
+        const accessLevel = isAdmin() ? 'admin' : role;
+        
         toast({
           title: "Admin Access",
-          description: "Redirecting to admin dashboard...",
+          description: `You have ${accessLevel} access. Redirecting to ${isAdmin() ? 'admin panel' : 'dashboard'}.`,
         });
-        navigate('/admin');
+        navigate(destination);
         return;
       }
       
-      if (['premium', 'vip_plus', 'streamer'].includes(role)) {
-        toast({
-          title: "Access Granted",
-          description: `You have ${role} access. Redirecting to dashboard.`,
-        });
-        navigate('/');
-        return;
-      }
-      
-      // Allow 'user' and 'verified_viewer' roles to stay on this page
+      // Only 'user' and 'verified_viewer' roles should access this viewer portal
       // - 'user' role can complete verification to become 'verified_viewer'
       // - 'verified_viewer' role can see their verification status
     }
-  }, [role, roleLoading, isAdmin, navigate, toast, user]);
+  }, [role, roleLoading, isAdmin, shouldUseAdminPanel, navigate, toast, user]);
 
   useEffect(() => {
     // Check if Discord is already linked (you can implement this based on your Discord integration)
