@@ -798,10 +798,17 @@ export default function Giveaways() {
           user_id: user.id,
           pending_winners: JSON.stringify(winners),
           remaining_participants: JSON.stringify(remainingParticipants)
+        }, {
+          onConflict: 'giveaway_id,user_id'
         });
       
       if (error) {
         console.error('❌ Error saving giveaway state:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save giveaway state",
+          variant: "destructive"
+        });
       } else {
         console.log('✅ Successfully saved giveaway state to database');
       }

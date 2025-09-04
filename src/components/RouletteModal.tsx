@@ -28,7 +28,7 @@ interface RouletteModalProps {
   participants: Participant[];
   pendingWinners?: PendingWinner[];
   onEndGiveaway: (winners: PendingWinner[]) => void;
-  onSavePendingWinners: (winners: PendingWinner[], remainingParticipants: Participant[]) => void;
+  onSavePendingWinners: (winners: PendingWinner[], remainingParticipants: Participant[]) => Promise<void>;
 }
 
 export function RouletteModal({ 
@@ -89,8 +89,10 @@ export function RouletteModal({
 
     setPendingWinners(prev => {
       const updatedWinners = [...prev, newWinner];
-      // Save immediately when winner is added
-      onSavePendingWinners(updatedWinners, currentParticipants.filter(p => p.username !== winner.username));
+      // Save immediately when winner is added (but don't await to avoid blocking UI)
+      console.log("💾 Immediately saving winner to database:", newWinner.username);
+      onSavePendingWinners(updatedWinners, currentParticipants.filter(p => p.username !== winner.username))
+        .catch(error => console.error("❌ Failed to save winner immediately:", error));
       return updatedWinners;
     });
     
