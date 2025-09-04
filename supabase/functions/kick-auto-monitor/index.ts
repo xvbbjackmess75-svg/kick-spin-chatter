@@ -149,6 +149,16 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
 
     console.log(`🚀 Starting chat monitor with bot token for @${kickUsername}`);
 
+    // Check if monitor is already active to prevent duplicates
+    if (activeMonitors.has(userId)) {
+      console.log(`⚠️ Monitor already active for user ${userId}, stopping existing one first`);
+      const existing = activeMonitors.get(userId);
+      if (existing?.socket) {
+        existing.socket.close();
+      }
+      activeMonitors.delete(userId);
+    }
+
     // Start background monitoring task
     EdgeRuntime.waitUntil(runChatMonitor(userId, kickUsername, kickUserId?.toString(), monitoringTokenInfo, supabase));
 
@@ -774,6 +784,15 @@ setInterval(async () => {
             .single();
           
           if (profile && profile.kick_username) {
+            // Add a temporary entry to prevent concurrent starts
+            activeMonitors.set(monitor.user_id, {
+              socket: null as any,
+              userId: monitor.user_id,
+              kickUsername: monitor.kick_username,
+              channelId: monitor.channel_id,
+              lastHeartbeat: new Date()
+            });
+            
             // Restart the monitor with stored info
             EdgeRuntime.waitUntil(runChatMonitor(
               monitor.user_id, 
