@@ -27,6 +27,7 @@ interface RouletteModalProps {
   giveaway: any;
   participants: Participant[];
   onEndGiveaway: (winners: PendingWinner[]) => void;
+  onSavePendingWinners: (winners: PendingWinner[], remainingParticipants: Participant[]) => void;
 }
 
 export function RouletteModal({ 
@@ -34,7 +35,8 @@ export function RouletteModal({
   onClose, 
   giveaway, 
   participants, 
-  onEndGiveaway 
+  onEndGiveaway,
+  onSavePendingWinners 
 }: RouletteModalProps) {
   const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
   const [currentParticipants, setCurrentParticipants] = useState<Participant[]>(participants);
@@ -141,7 +143,13 @@ export function RouletteModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+          if (!open) {
+            // Save pending winners when modal closes
+            onSavePendingWinners(pendingWinners, currentParticipants);
+            onClose();
+          }
+        }}>
       <DialogContent className="gaming-card max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -196,7 +204,11 @@ export function RouletteModal({
           <div className="flex gap-3 pt-4 border-t">
             <Button 
               variant="outline" 
-              onClick={onClose}
+              onClick={() => {
+                // Save pending winners when manually closing
+                onSavePendingWinners(pendingWinners, currentParticipants);
+                onClose();
+              }}
               className="flex-1"
             >
               Close
