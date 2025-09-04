@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json();
     const { action } = body;
 
-    console.log(`🤖 Auto Monitor Action: ${action}`, body);
+    console.log(`🤖 Auto Monitor Action: ${action}`, { action, user_id: body.user_id, has_token: !!body.token });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
