@@ -25,7 +25,7 @@ interface CommandProcessed {
 
 export function ChatBot() {
   const { toast } = useToast();
-  const { kickUser, canUseChatbot } = useKickAccount();
+  const { kickUser, canUseChatbot, isBotAccount } = useKickAccount();
   const { monitorStatus, isLoading, isActive } = useAutoMonitor();
 
   const getUptime = () => {
@@ -67,20 +67,36 @@ export function ChatBot() {
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-kick-green" />
             Auto ChatBot Monitor
-            <Badge variant="secondary">Not Available</Badge>
+            <Badge variant="secondary">Requires Bot Account</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-4">
-          <p className="text-muted-foreground mb-2">
-            Connect your Kick account to enable automatic chatbot monitoring
-          </p>
-          <Button 
-            onClick={() => window.location.href = '/auth'}
-            variant="outline"
-            size="sm"
-          >
-            Connect Kick Account
-          </Button>
+          <div className="space-y-3">
+            <p className="text-muted-foreground">
+              {!kickUser ? (
+                "Connect your Kick bot account to enable automatic chatbot monitoring"
+              ) : !isBotAccount ? (
+                "This feature requires a Kick bot account. Please connect a bot account instead of a personal account."
+              ) : (
+                "Complete your account setup to enable chatbot features"
+              )}
+            </p>
+            {!isBotAccount && kickUser && (
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  <strong>Note:</strong> You're currently connected with a personal account (@{kickUser.username}). 
+                  The chat API requires a dedicated bot account token for sending messages.
+                </p>
+              </div>
+            )}
+            <Button 
+              onClick={() => window.location.href = '/auth'}
+              variant="outline"
+              size="sm"
+            >
+              {kickUser ? 'Connect Bot Account' : 'Connect Kick Account'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -195,12 +211,12 @@ export function ChatBot() {
           <div className="flex items-start gap-3">
             <Bot className="h-5 w-5 text-kick-green mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-foreground">Automatic ChatBot Features</p>
+              <p className="text-sm font-medium text-foreground">Bot Account Requirements</p>
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                <li>• <strong>24/7 Monitoring:</strong> Automatically started when you link your Kick account</li>
-                <li>• <strong>Instant Responses:</strong> Commands are processed immediately without delays</li>
+                <li>• <strong>Bot Account Token:</strong> Must use a dedicated Kick bot account for API access</li>
+                <li>• <strong>24/7 Monitoring:</strong> Automatically processes chat commands and responses</li>
+                <li>• <strong>Chat API Integration:</strong> Sends messages using official Kick Chat API</li>
                 <li>• <strong>Permission System:</strong> Respects viewer, subscriber, moderator, and owner levels</li>
-                <li>• <strong>Background Processing:</strong> Runs continuously without affecting your stream</li>
               </ul>
             </div>
           </div>

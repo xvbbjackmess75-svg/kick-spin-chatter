@@ -7,6 +7,7 @@ interface KickUser {
   display_name: string;
   avatar: string;
   authenticated: boolean;
+  is_bot_account: boolean; // Add flag to identify bot accounts
 }
 
 interface KickTokenInfo {
@@ -14,6 +15,7 @@ interface KickTokenInfo {
   refresh_token?: string;
   expires_in?: number;
   scope?: string;
+  account_type: 'bot' | 'user'; // Specify if this is a bot or user token
 }
 
 export function useKickAccount() {
@@ -63,17 +65,22 @@ export function useKickAccount() {
 
   const isKickLinked = !!(kickUser?.authenticated && kickToken?.access_token);
   
+  // Check if the linked account is a bot account (required for chat API)
+  const isBotAccount = kickUser?.is_bot_account || kickToken?.account_type === 'bot';
+  
   // Check for hybrid session even if Supabase user is not confirmed
   const hybridSession = localStorage.getItem('kick_hybrid_session');
   const hasHybridAccount = hybridSession ? JSON.parse(hybridSession).authenticated : false;
   
   const hasSupabaseAccount = !!user || hasHybridAccount;
-  const canUseChatbot = isKickLinked && hasSupabaseAccount;
+  const canUseChatbot = isKickLinked && hasSupabaseAccount && isBotAccount;
 
   // Debug logging
   console.log('🔧 useKickAccount debug:', {
     kickUser: kickUser?.username,
     hasKickToken: !!kickToken?.access_token,
+    isBotAccount,
+    accountType: kickToken?.account_type,
     supabaseUser: user?.email,
     hasHybridAccount,
     hybridSession: !!hybridSession,
@@ -97,6 +104,7 @@ export function useKickAccount() {
     kickToken,
     loading,
     isKickLinked,
+    isBotAccount,
     hasSupabaseAccount,
     canUseChatbot,
     getChannelInfo
