@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useKickAccount } from "@/hooks/useKickAccount";
-import { Bot, Play, Square, MessageCircle, Zap } from "lucide-react";
+import { useAutoMonitor } from "@/hooks/useAutoMonitor";
+import { Bot, Play, Square, MessageCircle, Zap, Clock, TrendingUp, Settings } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -24,141 +25,39 @@ interface CommandProcessed {
 
 export function ChatBot() {
   const { toast } = useToast();
-  const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [commandsProcessed, setCommandsProcessed] = useState<CommandProcessed[]>([]);
-  const [wsStatus, setWsStatus] = useState<string>("Disconnected");
-  
-  const socketRef = useRef<WebSocket | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { kickUser, canUseChatbot } = useKickAccount();
+  const { monitorStatus, isLoading, isActive, stopMonitoring } = useAutoMonitor();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const getUptime = () => {
+    if (!monitorStatus?.started_at) return "0m";
+    
+    const now = new Date();
+    const started = new Date(monitorStatus.started_at);
+    const diff = now.getTime() - started.getTime();
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const connectToChatbot = async () => {
-    if (!canUseChatbot || !kickUser || !kickToken) {
-      toast({
-        title: "Error",
-        description: "Kick account not properly linked",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsConnecting(true);
-    setWsStatus("Connecting...");
-
-    try {
-      // Connect to the WebSocket chat monitor
-      const wsUrl = `wss://xdjtgkgwtsdpfftrrouz.supabase.co/functions/v1/kick-chat-monitor`;
-      const socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        console.log("🤖 Connected to chat monitor WebSocket");
-        setWsStatus("Connected");
-        
-        // Join the channel with bot token
-        socket.send(JSON.stringify({
-          type: 'join_channel',
-          channelName: kickUser.username,
-          token: kickToken.access_token
-        }));
-        
-        socketRef.current = socket;
-      };
-
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("📥 Received from chat monitor:", data);
-
-        switch (data.type) {
-          case 'connected':
-            setIsConnected(true);
-            setIsConnecting(false);
-            setWsStatus(`Monitoring @${data.channelName}`);
-            toast({
-              title: "🤖 ChatBot Active!",
-              description: `Now monitoring chat in @${data.channelName}`,
-            });
-            break;
-
-          case 'chat_message':
-            setMessages(prev => [...prev.slice(-49), data.data]); // Keep last 50 messages
-            break;
-
-          case 'command_processed':
-            setCommandsProcessed(prev => [...prev.slice(-9), data]); // Keep last 10 commands
-            toast({
-              title: "⚡ Command Processed",
-              description: `!${data.command} from @${data.user}`,
-            });
-            break;
-
-          case 'error':
-            toast({
-              title: "ChatBot Error",
-              description: data.message,
-              variant: "destructive"
-            });
-            break;
-
-          case 'disconnected':
-            setIsConnected(false);
-            setWsStatus("Disconnected");
-            break;
-        }
-      };
-
-      socket.onerror = (error) => {
-        console.error("❌ WebSocket error:", error);
-        setIsConnecting(false);
-        setWsStatus("Error");
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to chat monitor",
-          variant: "destructive"
-        });
-      };
-
-      socket.onclose = () => {
-        console.log("🔌 WebSocket disconnected");
-        setIsConnected(false);
-        setIsConnecting(false);
-        setWsStatus("Disconnected");
-        socketRef.current = null;
-      };
-
-    } catch (error: any) {
-      console.error("❌ Error connecting to chatbot:", error);
-      setIsConnecting(false);
-      setWsStatus("Error");
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to start chatbot",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const disconnectChatbot = () => {
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-    setIsConnected(false);
-    setIsConnecting(false);
-    setWsStatus("Disconnected");
-    toast({
-      title: "ChatBot Stopped",
-      description: "Chat monitoring has been stopped",
-    });
+  const getLastActivity = () => {
+    if (!monitorStatus?.last_heartbeat) return "Never";
+    
+    const now = new Date();
+    const lastHeartbeat = new Date(monitorStatus.last_heartbeat);
+    const diff = now.getTime() - lastHeartbeat.getTime();
+    
+    const minutes = Math.floor(diff / (1000 * 60));
+    
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
   };
 
   if (!canUseChatbot) {
@@ -167,13 +66,13 @@ export function ChatBot() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-kick-green" />
-            ChatBot Monitor
-            <Badge variant="secondary">Disconnected</Badge>
+            Auto ChatBot Monitor
+            <Badge variant="secondary">Not Available</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-4">
           <p className="text-muted-foreground mb-2">
-            Connect your Kick account to enable the chatbot
+            Connect your Kick account to enable automatic chatbot monitoring
           </p>
           <Button 
             onClick={() => window.location.href = '/auth'}
@@ -187,58 +86,124 @@ export function ChatBot() {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Control Panel */}
+  if (isLoading) {
+    return (
       <Card className="gaming-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-kick-green" />
-            ChatBot Monitor
+            Auto ChatBot Monitor
+            <Badge variant="secondary">Loading...</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-4">
+          <p className="text-muted-foreground">Checking monitor status...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Always-On Status Panel */}
+      <Card className="gaming-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-kick-green" />
+            Auto ChatBot Monitor
             <Badge 
               className={
-                isConnected 
+                isActive 
                   ? "bg-kick-green/20 text-kick-green border-kick-green/30"
-                  : "bg-destructive/20 text-destructive border-destructive/30"
+                  : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
               }
             >
-              {wsStatus}
+              <div className={`w-2 h-2 rounded-full mr-2 ${isActive ? 'bg-kick-green animate-pulse' : 'bg-yellow-500'}`} />
+              {isActive ? "Always On" : "Starting..."}
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MessageCircle className="h-4 w-4" />
-              <span>Channel: @{kickUser?.username}</span>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Channel Info */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/20">
+              <div>
+                <p className="text-sm text-muted-foreground">Monitoring Channel</p>
+                <p className="text-lg font-semibold text-foreground">
+                  @{kickUser?.username}
+                </p>
+              </div>
+              <MessageCircle className="h-8 w-8 text-primary" />
+            </div>
+            
+            {/* Uptime */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/20">
+              <div>
+                <p className="text-sm text-muted-foreground">Uptime</p>
+                <p className="text-lg font-semibold text-foreground">{getUptime()}</p>
+              </div>
+              <Clock className="h-8 w-8 text-accent" />
+            </div>
+            
+            {/* Last Activity */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/20">
+              <div>
+                <p className="text-sm text-muted-foreground">Last Activity</p>
+                <p className="text-lg font-semibold text-foreground">{getLastActivity()}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-kick-green" />
+            </div>
+          </div>
+
+          {/* Statistics */}
+          {monitorStatus && (
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Messages Processed</p>
+                    <p className="text-2xl font-bold text-primary">{monitorStatus.total_messages_processed.toLocaleString()}</p>
+                  </div>
+                  <MessageCircle className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              
+              <div className="p-4 rounded-lg bg-kick-green/5 border border-kick-green/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Commands Executed</p>
+                    <p className="text-2xl font-bold text-kick-green">{monitorStatus.total_commands_processed.toLocaleString()}</p>
+                  </div>
+                  <Zap className="h-8 w-8 text-kick-green" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Controls */}
+          <div className="mt-6 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              🤖 <strong>Always-On Mode:</strong> The chatbot automatically monitors your chat and responds to commands 24/7. No manual intervention required!
             </div>
             
             <div className="flex gap-2">
-              {!isConnected && !isConnecting && (
-                <Button 
-                  onClick={connectToChatbot}
-                  size="sm"
-                  className="gaming-button"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start ChatBot
-                </Button>
-              )}
+              <Button 
+                onClick={() => window.location.href = '/commands'}
+                variant="outline"
+                size="sm"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Manage Commands
+              </Button>
               
-              {isConnecting && (
-                <Button disabled size="sm">
-                  Connecting...
-                </Button>
-              )}
-              
-              {isConnected && (
+              {isActive && (
                 <Button 
-                  onClick={disconnectChatbot}
+                  onClick={stopMonitoring}
                   size="sm"
                   variant="destructive"
                 >
                   <Square className="h-4 w-4 mr-2" />
-                  Stop ChatBot
+                  Disable Auto-Monitor
                 </Button>
               )}
             </div>
@@ -246,60 +211,23 @@ export function ChatBot() {
         </CardContent>
       </Card>
 
-      {/* Live Chat Feed */}
-      {isConnected && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Chat Messages */}
-          <Card className="gaming-card">
-            <CardHeader>
-              <CardTitle className="text-sm">Live Chat Feed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {messages.map((message) => (
-                    <div key={message.id} className="text-xs p-2 rounded border-l-2 border-accent">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-primary">{message.username}</span>
-                        <span className="text-muted-foreground">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <p className="text-foreground">{message.content}</p>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          {/* Commands Processed */}
-          <Card className="gaming-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Zap className="h-4 w-4 text-kick-green" />
-                Commands Processed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {commandsProcessed.map((cmd, index) => (
-                    <div key={index} className="text-xs p-2 rounded border-l-2 border-kick-green">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-kick-green">!{cmd.command}</span>
-                        <span className="text-muted-foreground">by @{cmd.user}</span>
-                      </div>
-                      <p className="text-foreground">→ {cmd.response}</p>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Info Panel */}
+      <Card className="gaming-card border-kick-green/30">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Bot className="h-5 w-5 text-kick-green mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Automatic ChatBot Features</p>
+              <ul className="text-sm text-muted-foreground mt-1 space-y-1">
+                <li>• <strong>24/7 Monitoring:</strong> Automatically started when you link your Kick account</li>
+                <li>• <strong>Instant Responses:</strong> Commands are processed immediately without delays</li>
+                <li>• <strong>Permission System:</strong> Respects viewer, subscriber, moderator, and owner levels</li>
+                <li>• <strong>Background Processing:</strong> Runs continuously without affecting your stream</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
