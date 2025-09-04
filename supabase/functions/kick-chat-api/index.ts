@@ -93,42 +93,21 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
     const userData = await userResponse.json();
     console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
     
-    // Send message using Kick Chat API
-    const response = await fetch(`https://api.kick.com/public/v1/channels/${channel_id}/chatroom/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token_info.access_token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        content: message
-      })
-    });
-
-    console.log(`🔍 Kick API response status: ${response.status}`);
-    const responseText = await response.text();
-    console.log(`🔍 Kick API response body: ${responseText.substring(0, 200)}...`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to send message: ${response.status} - ${responseText}`);
-    }
-
-    const data = JSON.parse(responseText);
+    // IMPORTANT: Kick's public API doesn't currently support sending chat messages
+    // The API is mainly read-only. We'll need to inform the user about this limitation.
+    console.log("⚠️ Kick's public API doesn't support sending chat messages");
     
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message_id: data.id,
-        content: data.content
+        success: false, 
+        error: "Kick's public API doesn't currently support sending chat messages. This feature requires direct access to Kick's private API or using a bot account through their chat system.",
+        details: "The public API is primarily read-only and doesn't include endpoints for posting messages to chat."
       }),
       {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error: any) {
-    throw new Error(`Failed to send message: ${error.message}`);
-  }
 }
 
 async function processCommand(body: KickChatRequest, supabase: any): Promise<Response> {
