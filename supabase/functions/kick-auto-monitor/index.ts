@@ -77,6 +77,100 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
   try {
     console.log(`🔧 Starting monitoring for user: ${userId}`);
 
+    // Get user's profile to check for linked Kick account
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('kick_username, linked_kick_username, kick_user_id, linked_kick_user_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error("No profile found for user");
+    }
+
+    // Use linked kick account if available, otherwise fall back to kick_username
+    const kickUsername = profile.linked_kick_username || profile.kick_username;
+    const kickUserId = profile.linked_kick_user_id || profile.kick_user_id;
+
+    if (!kickUsername) {
+      throw new Error("No Kick account linked to profile");
+    }
+
+    console.log(`✅ Using Kick account: ${kickUsername} (ID: ${kickUserId})`);
+
+    // Get channel info to find chatroom ID  
+    const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUsername}`);
+    
+    if (!channelResponse.ok) {
+      throw new Error(`Channel not found: ${kickUsername}`);
+    }
+
+    const channelData = await channelResponse.json();
+    const chatroomId = channelData.chatroom?.id;
+
+    if (!chatroomId) {
+      throw new Error(`No chatroom found for channel: ${kickUsername}`);
+    }
+
+    // Update profile with chatroom ID if not present
+    await supabase
+      .from('profiles')
+      .update({
+        kick_channel_id: chatroomId.toString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    console.log(`✅ Updated profile with chatroom ID: ${chatroomId}`);
+
+    // Create or update monitor record
+    const { data: monitor, error: monitorError } = await supabase
+      .from('chatbot_monitors')
+      .upsert({
+        user_id: userId,
+        kick_user_id: kickUserId?.toString(),
+        kick_username: kickUsername,
+        channel_id: kickUserId?.toString(),
+        is_active: true,
+        last_heartbeat: new Date().toISOString()
+      }, { 
+        onConflict: 'user_id' 
+      })
+      .select()
+      .single();
+
+    if (monitorError) {
+      throw new Error(`Failed to create monitor record: ${monitorError.message}`);
+    }
+
+    // Use bot token for monitoring (since user doesn't have Kick token)
+    const botToken = Deno.env.get('KICK_BOT_TOKEN');
+    const monitoringTokenInfo = tokenInfo?.access_token ? tokenInfo : { access_token: botToken };
+
+    // Start background monitoring task
+    EdgeRuntime.waitUntil(runChatMonitor(userId, kickUsername, kickUserId?.toString(), monitoringTokenInfo, supabase));
+
+    console.log(`✅ Monitoring started for @${kickUsername}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: `Monitoring started for @${kickUsername}`,
+        monitor_id: monitor.id
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+
+  } catch (error: any) {
+    console.error(`❌ Failed to start monitoring:`, error);
+    throw error;
+  }
+}
+  try {
+    console.log(`🔧 Starting monitoring for user: ${userId}`);
+
     // Get user's Kick data from the request (passed from frontend)
     if (!tokenInfo?.access_token) {
       throw new Error("No bot token provided");

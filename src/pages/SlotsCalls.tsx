@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
+import { useAutoMonitor } from "@/hooks/useAutoMonitor";
 import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette } from "lucide-react";
 
 interface SlotsEvent {
@@ -47,6 +48,7 @@ interface SlotsCall {
 export default function SlotsCalls() {
   const { user } = useAuth();
   const { canUseChatbot, isKickLinked, kickUser } = useKickAccount();
+  const { startAutoMonitoring, monitorStatus } = useAutoMonitor();
   const { toast } = useToast();
   
   const [events, setEvents] = useState<SlotsEvent[]>([]);
@@ -327,6 +329,37 @@ export default function SlotsCalls() {
         });
         return;
       }
+      // Get the linked Kick username from profile to use as channel_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('kick_username, linked_kick_username')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        toast({
+          title: "Error",
+          description: "Failed to get your Kick profile information",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Use linked kick username if available, otherwise fall back to kick_username
+      const channelUsername = profile?.linked_kick_username || profile?.kick_username;
+      
+      if (!channelUsername) {
+        toast({
+          title: "No Kick Account",
+          description: "Please link your Kick account first",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log(`🎰 Creating slots event for channel: ${channelUsername}`);
+
       const { error } = await supabase
         .from('slots_events')
         .insert({
@@ -336,46 +369,34 @@ export default function SlotsCalls() {
           bet_size: parseFloat(betSize),
           prize: prize.trim(),
           status: 'active',
-          channel_id: typeof kickUser === 'string' ? kickUser : (kickUser?.toString() || null)
+          channel_id: channelUsername // Use the correct Kick username
         });
 
       if (error) throw error;
 
-      // Auto-start monitoring if checkbox was checked
-      if (autoStartMonitoring) {
-        // Initialize WebSocket if not already connected
-        if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-          initializeWebSocket();
-        }
-        
-        // Give WebSocket time to connect
-        setTimeout(() => {
-          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            const joinMessage = {
-              type: 'join_channel',
-              channel: typeof kickUser === 'string' ? kickUser : kickUser?.toString() || ''
-            };
-            socketRef.current.send(JSON.stringify(joinMessage));
-          }
-        }, 1000);
+      // Auto-start monitoring if checkbox was checked or always for slots events
+      if (autoStartMonitoring || true) { // Always auto-start for slots
+        console.log('🤖 Auto-starting monitoring for slots event...');
+        await startAutoMonitoring();
       }
 
-      const successMessage = autoStartMonitoring 
-        ? `Event "${title}" created and monitoring started!`
-        : `Event "${title}" created! Remember to start monitoring to track !kgs commands.`;
+      const successMessage = `🎰 Event "${title}" created for @${channelUsername} and monitoring started!`;
 
       toast({
         title: "Success",
         description: successMessage,
       });
 
+      // Reset form
       setTitle("");
       setMaxCallsPerUser(1);
       setBetSize("");
       setPrize("");
       setAutoStartMonitoring(false);
       setIsCreateDialogOpen(false);
-      fetchEvents();
+      
+      // Refresh events
+      await fetchEvents();
     } catch (error) {
       console.error("Error creating event:", error);
       toast({
@@ -782,27 +803,6 @@ export default function SlotsCalls() {
                   <div className="flex gap-2">
                     {selectedEvent.status === 'active' && (
                       <>
-                        <Button
-                          onClick={isMonitoring ? () => {
-                            socketRef.current?.close();
-                            setIsMonitoring(false);
-                          } : initializeWebSocket}
-                          variant={isMonitoring ? "destructive" : "default"}
-                          size="sm"
-                          className="gaming-button"
-                        >
-                          {isMonitoring ? (
-                            <>
-                              <Square className="h-3 w-3 mr-1" />
-                              Stop
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3 w-3 mr-1" />
-                              Start
-                            </>
-                          )}
-                        </Button>
                         <Button 
                           onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
                           variant="outline"
@@ -855,7 +855,7 @@ export default function SlotsCalls() {
                     
                     {calls.length === 0 ? (
                       <p className="text-muted-foreground text-center py-6">
-                        No calls yet. {selectedEvent.status === 'active' ? 'Start monitoring to track !kgs commands.' : ''}
+                        No calls yet. {selectedEvent.status === 'active' ? 'Monitoring is active. Use !kgs [slot name] in chat to make calls.' : ''}
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
