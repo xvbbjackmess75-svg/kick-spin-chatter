@@ -22,6 +22,7 @@ import Admin from "./pages/Admin";
 import ViewerBenefits from "./pages/ViewerBenefits";
 import ViewerRegistration from "./pages/ViewerRegistration";
 import ViewerVerification from "./pages/ViewerVerification";
+import UpgradeToStreamer from "./pages/UpgradeToStreamer";
 
 // Create QueryClient at module level with minimal configuration
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/viewer-benefits" element={<ViewerBenefits />} />
             <Route path="/viewer-registration" element={<ViewerRegistration />} />
             <Route path="/viewer-verification" element={<ViewerVerification />} />
+            <Route path="/upgrade-to-streamer" element={<UpgradeToStreamer />} />
             <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
@@ -99,6 +101,14 @@ const App = () => (
                   <Layout>
                     <Admin />
                   </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/upgrade-to-streamer"
+              element={
+                <ProtectedRoute>
+                  <UpgradeToStreamer />
                 </ProtectedRoute>
               }
             />

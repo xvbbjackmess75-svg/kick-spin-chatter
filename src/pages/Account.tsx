@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { LinkKickAccount } from '@/components/LinkKickAccount';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Mail, Save, LogOut, ArrowLeft } from 'lucide-react';
+import { User, Mail, Save, LogOut, ArrowLeft, Crown, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Account() {
@@ -227,6 +227,32 @@ export default function Account() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Upgrade to Streamer */}
+          {!profile?.is_streamer && (
+            <Card className="gaming-card border-kick-green/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-kick-green" />
+                  Upgrade to Streamer
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Unlock powerful streamer features like advanced giveaways, custom commands, 
+                  analytics, and community management tools.
+                </p>
+                <Button
+                  onClick={() => navigate('/upgrade-to-streamer')}
+                  className="gaming-button w-full"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Streamer
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Account Actions */}
           <Card className="gaming-card">
