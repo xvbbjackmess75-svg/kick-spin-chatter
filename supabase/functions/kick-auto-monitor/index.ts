@@ -428,7 +428,7 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
       .select('*')
       .eq('status', 'active')
       .eq('channel_id', channelUsername)
-      .single();
+      .maybeSingle();
 
     if (eventError || !activeEvent) {
       console.log(`❌ No active slots event found for channel: ${channelUsername}`);
