@@ -20,28 +20,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Get the starting page from request body, default to 1
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const startPage = body.startPage || 1;
+    const pagesPerRun = 30; // Much smaller batches to avoid CPU timeout
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting comprehensive slot data import from ALL 263 pages of aboutslots.com');
+    const endPage = Math.min(startPage + pagesPerRun - 1, 263);
+    console.log(`Importing slots from pages ${startPage} to ${endPage} (${endPage - startPage + 1} pages)`);
 
     const allSlots: SlotData[] = [];
-    const maxPages = 263; // All pages as requested by user
-    const batchSize = 20; // Larger batches but with better error handling
-    let totalProcessed = 0;
+    const batchSize = 5; // Much smaller concurrent batches
 
-    // Process pages in batches
-    for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
-      const startPage = batch * batchSize + 1;
-      const endPage = Math.min((batch + 1) * batchSize, maxPages);
-      
-      console.log(`Processing batch ${batch + 1}: pages ${startPage}-${endPage}`);
+    // Process pages in small batches
+    for (let batch = startPage; batch <= endPage; batch += batchSize) {
+      const batchEnd = Math.min(batch + batchSize - 1, endPage);
+      console.log(`Processing batch: pages ${batch}-${batchEnd}`);
 
       // Process pages in this batch concurrently
       const pagePromises = [];
-      for (let page = startPage; page <= endPage; page++) {
+      for (let page = batch; page <= batchEnd; page++) {
         pagePromises.push(scrapePage(page));
       }
 
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
         
         for (let i = 0; i < batchResults.length; i++) {
           const result = batchResults[i];
-          const pageNum = startPage + i;
+          const pageNum = batch + i;
           
           if (result.status === 'fulfilled') {
             const pageSlots = result.value;
@@ -61,16 +62,16 @@ Deno.serve(async (req) => {
           }
         }
       } catch (error) {
-        console.error(`Error processing batch ${batch + 1}:`, error);
+        console.error(`Error processing batch ${batch}-${batchEnd}:`, error);
       }
 
-      // Small delay between batches to be respectful to the server
-      if (batch < Math.ceil(maxPages / batchSize) - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Small delay between batches
+      if (batch + batchSize <= endPage) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
-    console.log(`Total slots found across all pages: ${allSlots.length}`);
+    console.log(`Total slots found from pages ${startPage}-${endPage}: ${allSlots.length}`);
 
     if (allSlots.length === 0) {
       return new Response(
@@ -141,14 +142,19 @@ Deno.serve(async (req) => {
       console.log(`Inserted batch ${Math.floor(i / insertBatchSize) + 1}, total inserted: ${insertedCount}`);
     }
 
+    const nextStartPage = endPage < 263 ? endPage + 1 : null;
+    
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully imported ${insertedCount} new slots from ${maxPages} pages`,
+        message: `Successfully imported ${insertedCount} new slots from pages ${startPage}-${endPage}`,
         total_found: allSlots.length,
         unique_slots: uniqueSlots.length,
         new_slots_added: insertedCount,
-        existing_slots_skipped: uniqueSlots.length - insertedCount
+        existing_slots_skipped: uniqueSlots.length - insertedCount,
+        pages_processed: `${startPage}-${endPage}`,
+        next_start_page: nextStartPage,
+        has_more: nextStartPage !== null
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

@@ -234,20 +234,55 @@ export default function BonusHunt() {
 
   const importAllSlotsFromAboutSlots = async () => {
     setImportingAllSlots(true);
+    
     try {
-      toast({ 
-        title: 'Import started!', 
-        description: 'Scraping all 200 pages of slots from aboutslots.com. This may take several minutes...'
-      });
+      let startPage = 1;
+      let totalNewSlots = 0;
+      let totalProcessed = 0;
+      
+      while (startPage <= 263) {
+        toast({ 
+          title: `Importing pages ${startPage}-${Math.min(startPage + 29, 263)}...`, 
+          description: `Processing batch ${Math.ceil(startPage / 30)} of ${Math.ceil(263 / 30)}. Total new slots so far: ${totalNewSlots}`
+        });
 
-      const { data, error } = await supabase.functions.invoke('import-slots');
+        const { data, error } = await supabase.functions.invoke('import-slots', {
+          body: { startPage }
+        });
+
+        if (error) {
+          console.error('Error importing slots:', error);
+          toast({
+            title: "Import Error", 
+            description: `Failed to import from page ${startPage}: ${error.message}`,
+            variant: "destructive"
+          });
+          break;
+        }
+
+        if (data?.success) {
+          totalNewSlots += data.new_slots_added || 0;
+          totalProcessed += (data.total_found || 0);
+          
+          if (!data.has_more) {
+            break;
+          }
+          
+          startPage = data.next_start_page;
+          
+          // Small delay between runs to avoid overwhelming the system
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          console.error('Import failed:', data);
+          break;
+        }
+      }
       
-      if (error) throw error;
-      
-      toast({ 
-        title: 'All slots imported successfully!', 
-        description: `${data.new_slots_added} new slots added from ${data.total_found} total found across all pages`
+      toast({
+        title: "Import Complete!",
+        description: `Successfully imported ${totalNewSlots} new slots from 263 pages (${totalProcessed} total slots processed)`,
       });
+      
       loadSlots(); // Refresh the slots list
     } catch (error) {
       console.error('Error importing all slots:', error);
