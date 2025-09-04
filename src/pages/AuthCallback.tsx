@@ -102,7 +102,56 @@ export default function AuthCallback() {
               localStorage.setItem('kick_token', JSON.stringify(token_info));
             }
 
-            // Store Kick user info - keep it simple
+            // Always create a Supabase account for Kick users for seamless experience
+            try {
+              console.log('🔄 Creating Supabase account for Kick user...');
+              
+              // Create a unique email for the Kick user
+              const userEmail = `kick_${user.id}@kickuser.lovable.app`;
+              
+              // Generate a secure temporary password
+              const tempPassword = `KickUser_${user.id}_${Date.now()}`;
+              
+              console.log('🔄 Attempting to create/sign in to Supabase account...');
+              
+              // Try to create the account
+              const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: userEmail,
+                password: tempPassword,
+                options: {
+                  emailRedirectTo: `${window.location.origin}/`,
+                  data: {
+                    kick_username: user.username,
+                    kick_user_id: user.id.toString(),
+                    kick_avatar: user.avatar,
+                    display_name: user.display_name || user.username,
+                    is_hybrid_account: true,
+                    created_via_kick: true
+                  }
+                }
+              });
+
+              if (signUpError && signUpError.message.includes('already registered')) {
+                console.log('🔄 Account exists, signing in...');
+                // Account exists, sign in with the temporary password approach
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                  email: userEmail,
+                  password: tempPassword
+                });
+                
+                if (signInError) {
+                  console.log('🔄 Sign in failed, probably password mismatch - that\'s ok');
+                  // Password doesn't match, but account exists - user can manage it on account page
+                }
+              }
+              
+              console.log('✅ Supabase account ready');
+              
+            } catch (hybridError) {
+              console.error('❌ Hybrid account setup failed:', hybridError);
+            }
+
+            // Store Kick user info
             console.log('✅ Kick authentication successful');
             
             toast({

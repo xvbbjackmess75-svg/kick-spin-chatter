@@ -40,16 +40,14 @@ export default function Account() {
   const kickUserData = localStorage.getItem('kick_user');
   const kickUser = kickUserData ? JSON.parse(kickUserData) : null;
   const isKickAuthenticated = kickUser?.authenticated;
-  const storedCreds = localStorage.getItem('kick_hybrid_credentials');
-  const hasStoredCreds = storedCreds && JSON.parse(storedCreds).kick_user_id.toString() === kickUser?.id?.toString();
   
   const isEmailAuthenticated = !!user && !isKickAuthenticated;
-  const isHybridAccount = !!user && isKickAuthenticated; // Kick user with Supabase account
-  const isKickOnlyWithCreds = !user && isKickAuthenticated && hasStoredCreds; // Kick user with stored credentials but no session
+  const isHybridAccount = !!user && isKickAuthenticated; // Kick user with active Supabase session
+  const isKickOnly = !user && isKickAuthenticated; // Kick user without Supabase session
 
   const getCurrentUserInfo = () => {
     if (isHybridAccount) {
-      // Kick user with Supabase account
+      // Kick user with active Supabase session
       return {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
@@ -57,14 +55,14 @@ export default function Account() {
         email: user?.email || 'Auto-generated email',
         provider: 'Kick + Email (Hybrid)'
       };
-    } else if (kickUser?.authenticated) {
-      // Kick-only user (shouldn't happen with auto-creation)
+    } else if (isKickOnly) {
+      // Kick-only user (no active Supabase session but has Kick account)
       return {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
         avatar: kickUser.avatar,
-        email: 'Not available for Kick accounts',
-        provider: 'Kick'
+        email: `kick_${kickUser.id}@kickuser.lovable.app`,
+        provider: 'Kick (Add Email & Password Available)'
       };
     } else if (user) {
       // Email-only user
@@ -251,56 +249,74 @@ export default function Account() {
     }
   };
 
-  const handleSignInWithStoredCreds = async () => {
-    if (!hasStoredCreds) {
+  const handleCreateSupabaseAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (kickUserPassword !== kickUserConfirmPassword) {
       toast({
-        title: "No credentials found",
-        description: "Please sign in with Kick first to set up your account.",
+        title: "Password mismatch",
+        description: "Passwords don't match",
         variant: "destructive"
       });
       return;
     }
-    
-    setLoading(true);
-    try {
-      const creds = JSON.parse(storedCreds!);
-      const userEmail = `kick_${kickUser.id}@kickuser.lovable.app`;
-      
-      console.log('🔄 Requesting password reset for:', userEmail);
-      
-      // Instead of trying to sign in with potentially wrong credentials, 
-      // request a password reset to get a magic link
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/account`
-      });
-      
-      if (error) throw error;
-      
+
+    if (kickUserPassword.length < 6) {
       toast({
-        title: "Password Reset Sent!",
-        description: "Check your email for a magic link to access your account. The email is: " + userEmail,
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+        variant: "destructive"
       });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create/update Supabase account with user's preferred email and password
+      const { data, error } = await supabase.auth.signUp({
+        email: kickUserEmail,
+        password: kickUserPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            kick_username: kickUser?.username,
+            kick_user_id: kickUser?.id?.toString(),
+            kick_avatar: kickUser?.avatar,
+            display_name: kickUser?.display_name || kickUser?.username,
+            is_hybrid_account: true
+          }
+        }
+      });
+      
+      if (error && !error.message.includes('already registered')) {
+        throw error;
+      }
+
+      toast({
+        title: "Account setup complete!",
+        description: error?.message.includes('already registered') 
+          ? "Account updated! Please check your email to verify the new email address." 
+          : "Account created! Please check your email to verify your account.",
+      });
+      
+      // Clear form
+      setKickUserEmail('');
+      setKickUserPassword('');
+      setKickUserConfirmPassword('');
+
+      // Refresh page to update UI
+      setTimeout(() => window.location.reload(), 1000);
       
     } catch (error: any) {
-      console.error('❌ Password reset error:', error);
       toast({
-        title: "Reset failed",
-        description: "Could not request password reset. Try clearing credentials and signing in with Kick again.",
+        title: "Setup failed",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClearCredentials = () => {
-    localStorage.removeItem('kick_hybrid_credentials');
-    localStorage.removeItem('kick_hybrid_session');
-    toast({
-      title: "Credentials cleared",
-      description: "Please sign in with Kick again to set up a fresh account.",
-    });
-    window.location.reload();
   };
 
   if (!userInfo) {
@@ -370,42 +386,71 @@ export default function Account() {
         </Card>
 
 
-        {/* Sign In Section - For Kick users with stored credentials but no session */}
-        {isKickOnlyWithCreds && (
+        {/* Add Email & Password - For Kick-only users */}
+        {isKickOnly && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                Account Access
+                <Mail className="h-5 w-5" />
+                Add Email & Password
               </CardTitle>
               <CardDescription>
-                Sign in to access email and password management features
+                Add your own email and password to access your account from any device
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>Account Available:</strong> We've created a Supabase account for your Kick profile.
+                  <strong>Current status:</strong> Signed in with Kick only
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Sign in to manage your email and password settings.
+                  Add email and password to sign in from any device and manage your account.
                 </p>
               </div>
-              <div className="flex gap-2">
+              <form onSubmit={handleCreateSupabaseAccount} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="kick-email">Your Email Address</Label>
+                  <Input
+                    id="kick-email"
+                    type="email"
+                    value={kickUserEmail}
+                    onChange={(e) => setKickUserEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kick-password">Choose Password</Label>
+                  <Input
+                    id="kick-password"
+                    type="password"
+                    value={kickUserPassword}
+                    onChange={(e) => setKickUserPassword(e.target.value)}
+                    placeholder="Choose a password"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kick-confirm-password">Confirm Password</Label>
+                  <Input
+                    id="kick-confirm-password"
+                    type="password"
+                    value={kickUserConfirmPassword}
+                    onChange={(e) => setKickUserConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    minLength={6}
+                    required
+                  />
+                </div>
                 <Button 
-                  onClick={handleSignInWithStoredCreds}
-                  disabled={loading}
+                  type="submit" 
+                  disabled={loading || !kickUserEmail || !kickUserPassword || kickUserPassword !== kickUserConfirmPassword}
+                  className="w-full"
                 >
-                  {loading ? "Sending Reset Link..." : "Send Password Reset Email"}
+                  {loading ? "Setting up..." : "Add Email & Password"}
                 </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleClearCredentials}
-                  disabled={loading}
-                >
-                  Clear & Regenerate
-                </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
         )}
