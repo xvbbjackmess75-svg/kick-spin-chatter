@@ -78,8 +78,11 @@ export default function Giveaways() {
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
   const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
-  const [savedPendingWinners, setSavedPendingWinners] = useState<PendingWinner[]>([]);
-  const [savedParticipants, setSavedParticipants] = useState<RouletteParticipant[]>([]);
+  // Store saved state per giveaway ID
+  const [savedGiveawayStates, setSavedGiveawayStates] = useState<Record<string, {
+    pendingWinners: PendingWinner[];
+    participants: RouletteParticipant[];
+  }>>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
@@ -502,23 +505,25 @@ export default function Giveaways() {
       console.log("👥 Participants fetched:", giveawayParticipants.map(p => p.username));
       console.log("📊 Setting participants state:", giveawayParticipants.length);
       
-      setCurrentGiveaway(giveaway);
+      // Check if we have saved state for this specific giveaway
+      const savedState = savedGiveawayStates[giveaway.id];
       
-      // Check if we have saved state for this giveaway
-      if (currentGiveaway?.id === giveaway.id && savedParticipants.length > 0) {
-        console.log("🔄 Restoring saved state for giveaway");
-        setParticipants(savedParticipants);
-        setPendingWinners(savedPendingWinners);
+      if (savedState && savedState.pendingWinners.length > 0) {
+        console.log("🔄 Restoring saved state for giveaway:", giveaway.id, {
+          pendingWinners: savedState.pendingWinners.length,
+          remainingParticipants: savedState.participants.length
+        });
+        setParticipants(savedState.participants);
+        setPendingWinners(savedState.pendingWinners);
       } else {
-        console.log("🆕 Fresh start for giveaway");
+        console.log("🆕 Fresh start for giveaway:", giveaway.id);
         setParticipants(giveawayParticipants);
-        setPendingWinners([]); // Reset pending winners
-        setSavedPendingWinners([]);
-        setSavedParticipants([]);
+        setPendingWinners([]);
       }
       
+      setCurrentGiveaway(giveaway);
       console.log("🎪 Opening roulette modal...");
-      setIsRouletteModalOpen(true); // Open modal
+      setIsRouletteModalOpen(true);
       
     } catch (error) {
       console.error('Error starting winner selection:', error);
@@ -632,8 +637,15 @@ export default function Giveaways() {
       setCurrentGiveaway(null);
       setParticipants([]);
       setPendingWinners([]);
-      setSavedPendingWinners([]);
-      setSavedParticipants([]);
+      
+      // Clear saved state for this giveaway since it's completed
+      if (currentGiveaway) {
+        setSavedGiveawayStates(prev => {
+          const newStates = { ...prev };
+          delete newStates[currentGiveaway.id];
+          return newStates;
+        });
+      }
       
       // Refresh giveaways list
       console.log("🔄 Refreshing giveaways list...");
@@ -739,9 +751,24 @@ export default function Giveaways() {
 
   // Handle saving pending winners when modal closes
   const handleSavePendingWinners = (winners: PendingWinner[], remainingParticipants: RouletteParticipant[]) => {
-    console.log("💾 Saving pending winners:", winners.length, "remaining participants:", remainingParticipants.length);
-    setSavedPendingWinners(winners);
-    setSavedParticipants(remainingParticipants);
+    if (!currentGiveaway) return;
+    
+    console.log("💾 Saving pending winners for giveaway:", currentGiveaway.id, {
+      winners: winners.length,
+      remainingParticipants: remainingParticipants.length,
+      winnerNames: winners.map(w => w.username)
+    });
+    
+    // Save state for this specific giveaway
+    setSavedGiveawayStates(prev => ({
+      ...prev,
+      [currentGiveaway.id]: {
+        pendingWinners: winners,
+        participants: remainingParticipants
+      }
+    }));
+    
+    // Update current state as well
     setPendingWinners(winners);
     setParticipants(remainingParticipants);
   };
@@ -1120,9 +1147,7 @@ export default function Giveaways() {
           onEndGiveaway={async (winners) => {
             await handleAcceptAllWinners();
             setIsRouletteModalOpen(false);
-            // Clear saved state after ending giveaway
-            setSavedPendingWinners([]);
-            setSavedParticipants([]);
+            // Clear saved state after ending giveaway is handled in handleAcceptAllWinners
           }}
           onSavePendingWinners={handleSavePendingWinners}
         />
