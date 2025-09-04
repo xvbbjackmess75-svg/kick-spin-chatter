@@ -106,8 +106,8 @@ export default function AuthCallback() {
             try {
               console.log('🔄 Creating Supabase account for Kick user...');
               
-              // Create a unique email for the Kick user
-              const userEmail = `kick_${user.id}@kickuser.lovable.app`;
+              // Create a unique email for the Kick user using a valid domain
+              const userEmail = `kick-user-${user.id}@example.com`;
               
               // Generate a secure temporary password
               const tempPassword = `KickUser_${user.id}_${Date.now()}`;

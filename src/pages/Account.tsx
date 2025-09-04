@@ -61,7 +61,7 @@ export default function Account() {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
         avatar: kickUser.avatar,
-        email: `kick_${kickUser.id}@kickuser.lovable.app`,
+        email: `kick-user-${kickUser.id}@example.com`,
         provider: 'Kick (Add Email & Password Available)'
       };
     } else if (user) {
