@@ -72,25 +72,57 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
   try {
     console.log(`🔧 Starting monitoring for user: ${userId}`);
 
-    // Get user's Kick profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('kick_username, kick_user_id, kick_channel_id')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileError || !profile?.kick_username) {
-      throw new Error("User does not have Kick account linked");
+    // Get user's Kick data from the request (passed from frontend)
+    if (!tokenInfo?.access_token) {
+      throw new Error("No bot token provided");
     }
+
+    // Get Kick user info from the token
+    console.log(`🔍 Getting Kick user info from token...`);
+    const userResponse = await fetch('https://api.kick.com/public/v1/users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${tokenInfo.access_token}`,
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!userResponse.ok) {
+      throw new Error(`Failed to get Kick user info: ${userResponse.status}`);
+    }
+
+    const userData = await userResponse.json();
+    const kickUserData = userData.data?.[0];
+    
+    if (!kickUserData) {
+      throw new Error("No Kick user data found in token response");
+    }
+
+    console.log(`✅ Got Kick user data: ${kickUserData.name} (ID: ${kickUserData.user_id})`);
+
+    // Update/create profile with Kick data
+    await supabase
+      .from('profiles')
+      .upsert({
+        user_id: userId,
+        kick_username: kickUserData.name,
+        kick_user_id: kickUserData.user_id?.toString(),
+        kick_channel_id: kickUserData.user_id?.toString(),
+        updated_at: new Date().toISOString()
+      }, { 
+        onConflict: 'user_id' 
+      });
+
+    console.log(`✅ Updated profile with Kick data for user: ${kickUserData.name}`);
 
     // Create or update monitor record
     const { data: monitor, error: monitorError } = await supabase
       .from('chatbot_monitors')
       .upsert({
         user_id: userId,
-        kick_user_id: profile.kick_user_id,
-        kick_username: profile.kick_username,
-        channel_id: profile.kick_channel_id,
+        kick_user_id: kickUserData.user_id?.toString(),
+        kick_username: kickUserData.name,
+        channel_id: kickUserData.user_id?.toString(),
         is_active: true,
         last_heartbeat: new Date().toISOString()
       }, { 
@@ -104,14 +136,14 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
     }
 
     // Start background monitoring task
-    EdgeRuntime.waitUntil(runChatMonitor(userId, profile.kick_username, profile.kick_channel_id, tokenInfo, supabase));
+    EdgeRuntime.waitUntil(runChatMonitor(userId, kickUserData.name, kickUserData.user_id?.toString(), tokenInfo, supabase));
 
-    console.log(`✅ Monitoring started for @${profile.kick_username}`);
+    console.log(`✅ Monitoring started for @${kickUserData.name}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Monitoring started for @${profile.kick_username}`,
+        message: `Monitoring started for @${kickUserData.name}`,
         monitor_id: monitor.id
       }),
       {
