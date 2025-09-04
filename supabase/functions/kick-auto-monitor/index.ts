@@ -177,115 +177,142 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
 }
 
 async function runChatMonitor(userId: string, kickUsername: string, channelId: string, tokenInfo: any, supabase: any) {
-  console.log(`🤖 Starting background chat monitor for @${kickUsername}`);
+  console.log(`🤖 Starting persistent chat monitor for @${kickUsername}`);
   
-  try {
-    // Get channel info to find chatroom ID
-    const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUsername}`);
-    
-    if (!channelResponse.ok) {
-      throw new Error(`Channel not found: ${kickUsername}`);
-    }
-
-    const channelData = await channelResponse.json();
-    const chatroomId = channelData.chatroom?.id;
-
-    if (!chatroomId) {
-      throw new Error(`No chatroom found for channel: ${kickUsername}`);
-    }
-
-    console.log(`📡 Connecting to chatroom ${chatroomId} for @${kickUsername}`);
-
-    // Connect to Kick's Pusher WebSocket
-    const pusherUrl = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false";
-    const kickSocket = new WebSocket(pusherUrl);
-
-    // Store active monitor
-    activeMonitors.set(userId, {
-      socket: kickSocket,
-      userId,
-      kickUsername,
-      channelId,
-      lastHeartbeat: new Date()
-    });
-
-    kickSocket.onopen = () => {
-      console.log(`✅ Connected to Kick WebSocket for @${kickUsername}`);
+  const connectToChat = async (retryCount = 0): Promise<void> => {
+    try {
+      // Get channel info to find chatroom ID
+      const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUsername}`);
       
-      // Subscribe to the chatroom channel
-      const subscribeMessage = {
-        event: "pusher:subscribe",
-        data: {
-          channel: `chatrooms.${chatroomId}.v2`
+      if (!channelResponse.ok) {
+        throw new Error(`Channel not found: ${kickUsername}`);
+      }
+
+      const channelData = await channelResponse.json();
+      const chatroomId = channelData.chatroom?.id;
+
+      if (!chatroomId) {
+        throw new Error(`No chatroom found for channel: ${kickUsername}`);
+      }
+
+      console.log(`📡 Connecting to chatroom ${chatroomId} for @${kickUsername} (attempt ${retryCount + 1})`);
+
+      // Connect to Kick's Pusher WebSocket
+      const pusherUrl = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false";
+      const kickSocket = new WebSocket(pusherUrl);
+
+      // Store active monitor
+      activeMonitors.set(userId, {
+        socket: kickSocket,
+        userId,
+        kickUsername,
+        channelId,
+        lastHeartbeat: new Date()
+      });
+
+      kickSocket.onopen = () => {
+        console.log(`✅ Connected to Kick WebSocket for @${kickUsername}`);
+        
+        // Subscribe to the chatroom channel
+        const subscribeMessage = {
+          event: "pusher:subscribe",
+          data: {
+            channel: `chatrooms.${chatroomId}.v2`
+          }
+        };
+        
+        kickSocket.send(JSON.stringify(subscribeMessage));
+      };
+
+      kickSocket.onmessage = async (event) => {
+        try {
+          const pusherData = JSON.parse(event.data);
+
+          // Handle chat messages
+          if (pusherData.event === 'App\\Events\\ChatMessageEvent') {
+            const messageData = JSON.parse(pusherData.data);
+            
+            // Update message count and heartbeat
+            await supabase
+              .from('chatbot_monitors')
+              .update({ 
+                total_messages_processed: supabase.raw('total_messages_processed + 1'),
+                last_heartbeat: new Date().toISOString()
+              })
+              .eq('user_id', userId);
+
+            // Update in-memory heartbeat
+            const monitor = activeMonitors.get(userId);
+            if (monitor) {
+              monitor.lastHeartbeat = new Date();
+            }
+
+            // Check if message is a command
+            if (messageData.content?.startsWith('!')) {
+              const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
+              console.log(`🎯 Auto-processing command: !${command} from @${messageData.sender?.username}`);
+
+              await processCommandBackground(command, messageData, userId, tokenInfo, chatroomId, supabase);
+            }
+          }
+        } catch (error) {
+          console.error("❌ Error processing chat message:", error);
         }
       };
-      
-      kickSocket.send(JSON.stringify(subscribeMessage));
-    };
 
-    kickSocket.onmessage = async (event) => {
-      try {
-        const pusherData = JSON.parse(event.data);
-
-        // Handle chat messages
-        if (pusherData.event === 'App\\Events\\ChatMessageEvent') {
-          const messageData = JSON.parse(pusherData.data);
-          
-          // Update message count
+      kickSocket.onerror = async (error) => {
+        console.error(`❌ WebSocket error for @${kickUsername}:`, error);
+        activeMonitors.delete(userId);
+        
+        // Attempt to reconnect after a delay if retries are available
+        if (retryCount < 5) {
+          console.log(`🔄 Attempting to reconnect in ${Math.pow(2, retryCount)} seconds...`);
+          setTimeout(() => connectToChat(retryCount + 1), Math.pow(2, retryCount) * 1000);
+        } else {
+          // Mark monitor as inactive after max retries
           await supabase
             .from('chatbot_monitors')
-            .update({ 
-              total_messages_processed: supabase.raw('total_messages_processed + 1'),
-              last_heartbeat: new Date().toISOString()
-            })
+            .update({ is_active: false })
             .eq('user_id', userId);
-
-          // Check if message is a command
-          if (messageData.content?.startsWith('!')) {
-            const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
-            console.log(`🎯 Auto-processing command: !${command} from @${messageData.sender?.username}`);
-
-            await processCommandBackground(command, messageData, userId, tokenInfo, chatroomId, supabase);
-          }
         }
-      } catch (error) {
-        console.error("❌ Error processing chat message:", error);
+      };
+
+      kickSocket.onclose = async (event) => {
+        console.log(`🔌 WebSocket disconnected for @${kickUsername} (code: ${event.code})`);
+        activeMonitors.delete(userId);
+        
+        // Only attempt reconnect if it wasn't a manual close (code 1000)
+        if (event.code !== 1000 && retryCount < 5) {
+          console.log(`🔄 Attempting to reconnect in ${Math.pow(2, retryCount)} seconds...`);
+          setTimeout(() => connectToChat(retryCount + 1), Math.pow(2, retryCount) * 1000);
+        } else if (event.code === 1000 || retryCount >= 5) {
+          // Mark monitor as inactive
+          await supabase
+            .from('chatbot_monitors')
+            .update({ is_active: false })
+            .eq('user_id', userId);
+        }
+      };
+
+    } catch (error) {
+      console.error(`❌ Error in chat monitor for @${kickUsername}:`, error);
+      
+      // Attempt to reconnect after a delay if retries are available
+      if (retryCount < 5) {
+        console.log(`🔄 Attempting to reconnect in ${Math.pow(2, retryCount)} seconds...`);
+        setTimeout(() => connectToChat(retryCount + 1), Math.pow(2, retryCount) * 1000);
+      } else {
+        // Mark monitor as inactive after max retries
+        await supabase
+          .from('chatbot_monitors')
+          .update({ is_active: false })
+          .eq('user_id', userId);
       }
-    };
+    }
+  };
 
-    kickSocket.onerror = async (error) => {
-      console.error(`❌ WebSocket error for @${kickUsername}:`, error);
-      
-      // Mark monitor as inactive
-      await supabase
-        .from('chatbot_monitors')
-        .update({ is_active: false })
-        .eq('user_id', userId);
-
-      activeMonitors.delete(userId);
-    };
-
-    kickSocket.onclose = async () => {
-      console.log(`🔌 WebSocket disconnected for @${kickUsername}`);
-      
-      // Mark monitor as inactive
-      await supabase
-        .from('chatbot_monitors')
-        .update({ is_active: false })
-        .eq('user_id', userId);
-
-      activeMonitors.delete(userId);
-    };
-
-  } catch (error) {
-    console.error(`❌ Error in chat monitor for @${kickUsername}:`, error);
-    
-    // Mark monitor as inactive
-    await supabase
-      .from('chatbot_monitors')
-      .update({ is_active: false })
-      .eq('user_id', userId);
-  }
+  // Start the initial connection
+  await connectToChat();
 }
 
 async function processCommandBackground(command: string, messageData: any, userId: string, tokenInfo: any, chatroomId: string, supabase: any) {
@@ -561,5 +588,70 @@ setInterval(async () => {
     }
   }
 }, 300000); // 5 minutes
+
+// Health check and auto-restart functionality
+setInterval(async () => {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) return;
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Check for monitors that should be active but aren't connected
+    const { data: activeDbMonitors } = await supabase
+      .from('chatbot_monitors')
+      .select('*')
+      .eq('is_active', true);
+    
+    if (activeDbMonitors) {
+      for (const monitor of activeDbMonitors) {
+        // Check if monitor is connected in memory
+        const isConnected = activeMonitors.has(monitor.user_id);
+        
+        if (!isConnected) {
+          console.log(`🔄 Auto-restarting disconnected monitor for user: ${monitor.user_id}`);
+          
+          // Get user's token info from profiles
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', monitor.user_id)
+            .single();
+          
+          if (profile && profile.kick_username) {
+            // Restart the monitor with stored info
+            EdgeRuntime.waitUntil(runChatMonitor(
+              monitor.user_id, 
+              monitor.kick_username, 
+              monitor.channel_id, 
+              { access_token: Deno.env.get('KICK_BOT_TOKEN') }, // Use bot token for auto-restart
+              supabase
+            ));
+          }
+        }
+      }
+    }
+    
+    // Clean up stale monitors (older than 10 minutes without heartbeat)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    for (const [userId, monitor] of activeMonitors.entries()) {
+      if (monitor.lastHeartbeat < tenMinutesAgo) {
+        console.log(`🧹 Cleaning up stale monitor for user: ${userId}`);
+        monitor.socket.close();
+        activeMonitors.delete(userId);
+        
+        await supabase
+          .from('chatbot_monitors')
+          .update({ is_active: false })
+          .eq('user_id', userId);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in health check:', error);
+  }
+}, 60000); // Run every minute
 
 serve(handler);

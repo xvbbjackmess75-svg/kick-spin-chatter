@@ -21,7 +21,20 @@ export function useAutoMonitor() {
   const [monitorStatus, setMonitorStatus] = useState<MonitorStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Auto monitoring disabled - all monitoring is now manual
+  // Check monitoring status periodically to ensure persistence
+  useEffect(() => {
+    if (!user) return;
+
+    // Check status immediately
+    checkMonitoringStatus();
+
+    // Set up periodic status checks
+    const interval = setInterval(() => {
+      checkMonitoringStatus();
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const startAutoMonitoring = async () => {
     if (!user || !kickToken) return;
