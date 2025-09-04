@@ -39,20 +39,12 @@ export default function Dashboard() {
       path: "/giveaways"
     },
     {
-      icon: Bot,
-      title: "Chat Bot",
-      description: "Automated chat moderation and custom commands for your stream",
-      color: "text-kick-green",
-      bgColor: "bg-kick-green/10",
-      path: "/bot-settings"
-    },
-    {
-      icon: Monitor,
-      title: "Chat Monitor",
-      description: "Real-time chat monitoring with keyword detection and alerts",
+      icon: Trophy,
+      title: "Giveaway History",
+      description: "View your past giveaways, winners, and participation stats",
       color: "text-accent",
       bgColor: "bg-accent/10",
-      path: "/chat-monitor"
+      path: "/history"
     },
   ];
 
@@ -147,7 +139,7 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-foreground">Platform Features</h2>
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           {features.map((feature, index) => (
             <Card key={index} className="gaming-card hover:scale-[1.02] transition-all duration-200 cursor-pointer" onClick={() => navigate(feature.path)}>
               <CardContent className="p-6">

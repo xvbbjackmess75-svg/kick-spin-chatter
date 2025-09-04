@@ -14,8 +14,6 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 
-import ChatMonitor from "./pages/ChatMonitor";
-import BotSettings from "./pages/BotSettings";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
 
@@ -49,26 +47,6 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Giveaways />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat-monitor"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ChatMonitor />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/bot-settings"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <BotSettings />
                   </Layout>
                 </ProtectedRoute>
               }

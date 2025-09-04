@@ -21,21 +21,7 @@ export function useAutoMonitor() {
   const [monitorStatus, setMonitorStatus] = useState<MonitorStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Auto-start monitoring when conditions are met
-  useEffect(() => {
-    if (canUseChatbot && user && kickUser && kickToken) {
-      startAutoMonitoring();
-    }
-  }, [canUseChatbot, user, kickUser, kickToken]);
-
-  // Check status periodically
-  useEffect(() => {
-    if (user) {
-      checkMonitoringStatus();
-      const interval = setInterval(checkMonitoringStatus, 30000); // Check every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+  // Auto monitoring disabled - all monitoring is now manual
 
   const startAutoMonitoring = async () => {
     if (!user || !kickToken) return;
@@ -159,13 +145,7 @@ export function useAutoMonitor() {
     }
   };
 
-  // Send heartbeat every minute when active
-  useEffect(() => {
-    if (monitorStatus?.is_active) {
-      const heartbeatInterval = setInterval(sendHeartbeat, 60000); // Every minute
-      return () => clearInterval(heartbeatInterval);
-    }
-  }, [monitorStatus?.is_active]);
+  // Heartbeat disabled for manual monitoring
 
   return {
     monitorStatus,

@@ -24,8 +24,6 @@ import {
 
 const mainItems = [
   { title: "Giveaways", url: "/", icon: Gift },
-  { title: "Chat Monitor", url: "/chat-monitor", icon: Monitor },
-  { title: "Bot Settings", url: "/bot-settings", icon: Bot },
   { title: "History", url: "/history", icon: Trophy },
 ];
 
