@@ -34,101 +34,127 @@ export function LiveChatFeed() {
   const { toast } = useToast();
   const { kickUser } = useKickAccount();
   const { sendBotMessage } = useAutoMonitor();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      username: "StreamBot",
-      message: "🤖 Bot is now online and ready!",
-      timestamp: "14:23:30",
-      userType: "moderator",
-      avatar: "/bot-avatar.jpg",
-      isBot: true
-    },
-    {
-      id: 2,
-      username: "StreamFan99",
-      message: "!enter",
-      timestamp: "14:23:15",
-      userType: "viewer",
-      avatar: "/avatar1.jpg",
-      isCommand: true
-    },
-    {
-      id: 3,
-      username: "ModeratorMax",
-      message: "Welcome everyone to the stream! 🎮",
-      timestamp: "14:23:10",
-      userType: "moderator",
-      avatar: "/avatar2.jpg"
-    },
-    {
-      id: 4,
-      username: "GamingQueen",
-      message: "Love this game! ❤️ First time watching",
-      timestamp: "14:23:05",
-      userType: "subscriber",
-      avatar: "/avatar3.jpg"
-    },
-    {
-      id: 5,
-      username: "BotLover",
-      message: "!discord",
-      timestamp: "14:22:58",
-      userType: "viewer",
-      avatar: "/avatar4.jpg",
-      isCommand: true
-    }
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // Simulate new messages
+  // Connect to real Kick chat
   useEffect(() => {
-    const interval = setInterval(() => {
-      const sampleMessages = [
-        "This stream is amazing! 🔥",
-        "!help",
-        "First time here, loving it!",
-        "!giveaway",
-        "GG that was insane",
-        "What game is this?",
-        "!enter",
-        "Sub hype! 💜",
-        "!discord",
-        "Can't wait for the next stream!"
-      ];
-      
-      const sampleUsers = [
-        { name: "ChatMaster", type: "viewer" as const, avatar: "/avatar5.jpg" },
-        { name: "ProGamer2023", type: "subscriber" as const, avatar: "/avatar6.jpg" },
-        { name: "StreamLover", type: "viewer" as const, avatar: "/avatar7.jpg" },
-        { name: "NightOwl99", type: "subscriber" as const, avatar: "/avatar8.jpg" },
-        { name: "GameFan", type: "viewer" as const, avatar: "/avatar9.jpg" }
-      ];
+    if (!kickUser?.username) return;
 
-      const randomMessage = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
-      const randomUser = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
-      const now = new Date();
-      const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    const connectToKickChat = async () => {
+      try {
+        // Get channel info to find chatroom ID
+        const channelResponse = await fetch(`https://kick.com/api/v2/channels/${kickUser.username}`);
+        
+        if (!channelResponse.ok) {
+          throw new Error(`Channel not found: ${kickUser.username}`);
+        }
 
-      const newMessage: ChatMessage = {
-        id: Date.now(),
-        username: randomUser.name,
-        message: randomMessage,
-        timestamp,
-        userType: randomUser.type,
-        avatar: randomUser.avatar,
-        isCommand: randomMessage.startsWith('!')
-      };
+        const channelData = await channelResponse.json();
+        const chatroomId = channelData.chatroom?.id;
 
-      setMessages(prev => [...prev.slice(-19), newMessage]); // Keep last 20 messages
-    }, 3000 + Math.random() * 4000); // Random interval between 3-7 seconds
+        if (!chatroomId) {
+          throw new Error(`No chatroom found for channel: ${kickUser.username}`);
+        }
 
-    return () => clearInterval(interval);
-  }, []);
+        console.log(`📡 Connecting to chatroom ${chatroomId} for @${kickUser.username}`);
+
+        // Connect to Kick's Pusher WebSocket
+        const pusherUrl = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false";
+        const kickSocket = new WebSocket(pusherUrl);
+        wsRef.current = kickSocket;
+
+        kickSocket.onopen = () => {
+          console.log(`✅ Connected to Kick WebSocket for @${kickUser.username}`);
+          setIsConnected(true);
+          
+          // Subscribe to the chatroom channel
+          const subscribeMessage = {
+            event: "pusher:subscribe",
+            data: {
+              channel: `chatrooms.${chatroomId}.v2`
+            }
+          };
+          
+          kickSocket.send(JSON.stringify(subscribeMessage));
+        };
+
+        kickSocket.onmessage = (event) => {
+          try {
+            const pusherData = JSON.parse(event.data);
+
+            // Handle chat messages
+            if (pusherData.event === 'App\\Events\\ChatMessageEvent') {
+              const messageData = JSON.parse(pusherData.data);
+              
+              const chatMessage: ChatMessage = {
+                id: messageData.id || Date.now(),
+                username: messageData.sender?.username || 'Unknown',
+                message: messageData.content || '',
+                timestamp: new Date().toLocaleTimeString('en-US', { 
+                  hour12: false,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                }),
+                userType: getUserTypeFromBadges(messageData.sender?.identity?.badges || []),
+                avatar: messageData.sender?.identity?.avatar || `/avatar${Math.floor(Math.random() * 9) + 1}.jpg`,
+                isCommand: messageData.content?.startsWith('!') || false,
+                isBot: messageData.sender?.username?.toLowerCase().includes('bot') || false
+              };
+
+              setMessages(prev => [...prev.slice(-19), chatMessage]); // Keep last 20 messages
+            }
+          } catch (error) {
+            console.error("❌ Error processing chat message:", error);
+          }
+        };
+
+        kickSocket.onerror = (error) => {
+          console.error(`❌ WebSocket error for @${kickUser.username}:`, error);
+          setIsConnected(false);
+        };
+
+        kickSocket.onclose = () => {
+          console.log(`🔌 WebSocket disconnected for @${kickUser.username}`);
+          setIsConnected(false);
+        };
+
+      } catch (error) {
+        console.error(`❌ Error connecting to Kick chat:`, error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to Kick chat. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    connectToKickChat();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [kickUser?.username]);
+
+  // Helper function to determine user type from badges
+  const getUserTypeFromBadges = (badges: any[]): "viewer" | "subscriber" | "moderator" => {
+    if (badges?.some((badge: any) => badge.type === 'broadcaster' || badge.type === 'moderator')) {
+      return 'moderator';
+    }
+    if (badges?.some((badge: any) => badge.type === 'subscriber')) {
+      return 'subscriber';
+    }
+    return 'viewer';
+  };
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -143,25 +169,11 @@ export function LiveChatFeed() {
     const success = await sendBotMessage(newMessage);
     
     if (success) {
-      const timestamp = new Date().toLocaleTimeString('en-US', { 
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-
-      const message: ChatMessage = {
-        id: Date.now(),
-        username: kickUser?.username || "Bot",
-        message: newMessage,
-        timestamp,
-        userType: "moderator",
-        avatar: "/bot-avatar.jpg",
-        isBot: true
-      };
-
-      setMessages(prev => [...prev, message]);
       setNewMessage("");
+      toast({
+        title: "Message Sent",
+        description: "Bot message sent to Kick chat successfully",
+      });
     }
   };
 
@@ -190,10 +202,10 @@ export function LiveChatFeed() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-primary" />
-          Live Chat
-          <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30 ml-auto">
-            <div className="w-2 h-2 bg-kick-green rounded-full mr-2 animate-pulse" />
-            Live
+          Live Kick Chat - @{kickUser?.username}
+          <Badge className={isConnected ? "bg-kick-green/20 text-kick-green border-kick-green/30 ml-auto" : "bg-red-500/20 text-red-500 border-red-500/30 ml-auto"}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-kick-green animate-pulse' : 'bg-red-500'}`} />
+            {isConnected ? 'Connected' : 'Disconnected'}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -254,14 +266,14 @@ export function LiveChatFeed() {
         <div className="border-t border-border/50 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Bot className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">Send as Bot</span>
-            <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">@{kickUser?.username}</Badge>
+            <span className="text-sm font-medium text-foreground">Send as Kick Bot</span>
+            <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">Bot Account</Badge>
           </div>
           <div className="flex gap-2">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a bot message to send to chat..."
+              placeholder="Type a message to send from your Kick bot..."
               className="bg-secondary/30 flex-1"
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             />
@@ -276,7 +288,7 @@ export function LiveChatFeed() {
           </div>
           <div className="flex items-center gap-2 mt-2">
             <div className="text-xs text-muted-foreground">
-              Messages sent through your Kick bot • {messages.length} total messages
+              Messages sent from your connected Kick bot account • {messages.length} messages loaded
             </div>
           </div>
         </div>

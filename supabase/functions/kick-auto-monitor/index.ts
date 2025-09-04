@@ -458,32 +458,51 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
 
 async function sendUserMessage(message: string, token: string, supabase: any): Promise<Response> {
   try {
-    console.log(`🤖 Sending user message: ${message.substring(0, 50)}...`);
+    console.log(`🤖 Sending bot message: ${message.substring(0, 50)}...`);
     
-    const response = await fetch('https://api.kick.com/public/v1/chat', {
+    // Send message as the bot using the bot token
+    const response = await fetch('https://kick.com/api/v2/messages/send/1', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Socket-ID': 'bot-socket-id'
       },
       body: JSON.stringify({
-        type: 'message',
-        content: message
+        chatroom_id: 1, // This will be dynamic based on the channel
+        content: message,
+        type: 'message'
       })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Kick API error: ${response.status} - ${errorText}`);
+      // Try alternative API endpoint
+      const altResponse = await fetch('https://kick.com/api/v1/chat/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          content: message,
+          type: 'message'
+        })
+      });
+      
+      if (!altResponse.ok) {
+        const errorText = await altResponse.text();
+        throw new Error(`Kick Bot API error: ${altResponse.status} - ${errorText}`);
+      }
     }
 
-    console.log(`✅ User message sent successfully: ${message.substring(0, 50)}...`);
+    console.log(`✅ Bot message sent successfully: ${message.substring(0, 50)}...`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: "Message sent successfully"
+        message: "Bot message sent successfully"
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -491,7 +510,7 @@ async function sendUserMessage(message: string, token: string, supabase: any): P
     );
 
   } catch (error: any) {
-    console.error(`❌ Failed to send user message:`, error);
+    console.error(`❌ Failed to send bot message:`, error);
     throw error;
   }
 }
