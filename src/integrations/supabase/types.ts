@@ -418,6 +418,54 @@ export type Database = {
         }
         Relationships: []
       }
+      overlay_settings: {
+        Row: {
+          accent_color: string | null
+          animation_enabled: boolean | null
+          background_color: string | null
+          border_color: string | null
+          created_at: string
+          font_size: string | null
+          id: string
+          max_visible_calls: number | null
+          show_background: boolean | null
+          show_borders: boolean | null
+          text_color: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          animation_enabled?: boolean | null
+          background_color?: string | null
+          border_color?: string | null
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          max_visible_calls?: number | null
+          show_background?: boolean | null
+          show_borders?: boolean | null
+          text_color?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          animation_enabled?: boolean | null
+          background_color?: string | null
+          border_color?: string | null
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          max_visible_calls?: number | null
+          show_background?: boolean | null
+          show_borders?: boolean | null
+          text_color?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

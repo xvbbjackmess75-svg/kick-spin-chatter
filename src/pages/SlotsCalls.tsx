@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
-import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy } from "lucide-react";
+import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette } from "lucide-react";
 
 interface SlotsEvent {
   id: string;
@@ -52,6 +54,7 @@ export default function SlotsCalls() {
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [isMonitoring, setIsMonitoring] = useState(false);
   
   // Form states
@@ -59,6 +62,20 @@ export default function SlotsCalls() {
   const [maxCallsPerUser, setMaxCallsPerUser] = useState(1);
   const [betSize, setBetSize] = useState("");
   const [prize, setPrize] = useState("");
+  const [autoStartMonitoring, setAutoStartMonitoring] = useState(false);
+  
+  // Overlay customization states
+  const [overlaySettings, setOverlaySettings] = useState({
+    background_color: 'rgba(0, 0, 0, 0.95)',
+    border_color: '#3b82f6',
+    text_color: '#ffffff',
+    accent_color: '#3b82f6',
+    font_size: 'medium',
+    max_visible_calls: 10,
+    show_background: true,
+    show_borders: true,
+    animation_enabled: true
+  });
   
   // Result input states
   const [winAmount, setWinAmount] = useState("");
@@ -70,6 +87,7 @@ export default function SlotsCalls() {
   useEffect(() => {
     if (user) {
       fetchEvents();
+      fetchOverlaySettings();
     }
   }, [user]);
 
@@ -233,6 +251,54 @@ export default function SlotsCalls() {
     }
   };
 
+  const fetchOverlaySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('overlay_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Not found error
+        console.error("Error fetching overlay settings:", error);
+        return;
+      }
+
+      if (data) {
+        setOverlaySettings(data);
+      }
+    } catch (error) {
+      console.error("Error fetching overlay settings:", error);
+    }
+  };
+
+  const saveOverlaySettings = async () => {
+    try {
+      const { error } = await supabase
+        .from('overlay_settings')
+        .upsert({
+          user_id: user?.id,
+          ...overlaySettings
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Overlay settings saved successfully!",
+      });
+
+      setIsOverlayDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving overlay settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save overlay settings",
+        variant: "destructive",
+      });
+    }
+  };
+
   const createEvent = async () => {
     if (!title.trim() || !betSize || !prize.trim()) {
       toast({
@@ -244,6 +310,23 @@ export default function SlotsCalls() {
     }
 
     try {
+      // Check if there's already an active event
+      const { data: activeEvents, error: checkError } = await supabase
+        .from('slots_events')
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('status', 'active');
+
+      if (checkError) throw checkError;
+
+      if (activeEvents && activeEvents.length > 0) {
+        toast({
+          title: "Error",
+          description: "You can only have one active event at a time. Please close your current event first.",
+          variant: "destructive",
+        });
+        return;
+      }
       const { error } = await supabase
         .from('slots_events')
         .insert({
@@ -258,15 +341,39 @@ export default function SlotsCalls() {
 
       if (error) throw error;
 
+      // Auto-start monitoring if checkbox was checked
+      if (autoStartMonitoring) {
+        // Initialize WebSocket if not already connected
+        if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+          initializeWebSocket();
+        }
+        
+        // Give WebSocket time to connect
+        setTimeout(() => {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            const joinMessage = {
+              type: 'join_channel',
+              channel: typeof kickUser === 'string' ? kickUser : kickUser?.toString() || ''
+            };
+            socketRef.current.send(JSON.stringify(joinMessage));
+          }
+        }, 1000);
+      }
+
+      const successMessage = autoStartMonitoring 
+        ? `Event "${title}" created and monitoring started!`
+        : `Event "${title}" created! Remember to start monitoring to track !kgs commands.`;
+
       toast({
         title: "Success",
-        description: "Slots event created successfully!",
+        description: successMessage,
       });
 
       setTitle("");
       setMaxCallsPerUser(1);
       setBetSize("");
       setPrize("");
+      setAutoStartMonitoring(false);
       setIsCreateDialogOpen(false);
       fetchEvents();
     } catch (error) {
@@ -364,17 +471,18 @@ export default function SlotsCalls() {
     }, completedCalls[0]);
   };
 
-  const getOverlayUrl = (eventId: string) => {
+  const getOverlayUrl = (userId?: string) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/overlay/slots?eventId=${eventId}&maxCalls=10`;
+    const userIdParam = userId || user?.id;
+    return `${baseUrl}/overlay/slots?userId=${userIdParam}`;
   };
 
-  const copyOverlayUrl = (eventId: string) => {
-    const url = getOverlayUrl(eventId);
+  const copyOverlayUrl = () => {
+    const url = getOverlayUrl();
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "Copied!",
-        description: "Overlay URL copied to clipboard",
+        description: "Your personal overlay URL copied to clipboard",
       });
     });
   };
@@ -411,28 +519,123 @@ export default function SlotsCalls() {
         </div>
         
         <div className="flex gap-3">
-          {selectedEvent?.status === 'active' && (
-            <Button
-              onClick={isMonitoring ? () => {
-                socketRef.current?.close();
-                setIsMonitoring(false);
-              } : initializeWebSocket}
-              variant={isMonitoring ? "destructive" : "default"}
-              className="gaming-button"
-            >
-              {isMonitoring ? (
-                <>
-                  <Square className="h-4 w-4 mr-2" />
-                  Stop Monitoring
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Monitoring
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={copyOverlayUrl}
+            variant="outline"
+            className="gaming-button"
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Copy Overlay URL
+          </Button>
+          
+          <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gaming-button">
+                <Settings className="h-4 w-4 mr-2" />
+                Customize Overlay
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Overlay Customization</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="space-y-2">
+                  <Label>Background Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Border Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.border_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, border_color: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Text Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.text_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Accent Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.accent_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Font Size</Label>
+                  <Select value={overlaySettings.font_size} onValueChange={(value) => setOverlaySettings({...overlaySettings, font_size: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Small</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="large">Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Max Visible Calls</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={overlaySettings.max_visible_calls}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_calls: parseInt(e.target.value) || 10})}
+                  />
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="show-background"
+                      checked={overlaySettings.show_background}
+                      onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_background: checked === true})}
+                    />
+                    <Label htmlFor="show-background">Show Background</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="show-borders"
+                      checked={overlaySettings.show_borders}
+                      onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_borders: checked === true})}
+                    />
+                    <Label htmlFor="show-borders">Show Borders</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="animation-enabled"
+                      checked={overlaySettings.animation_enabled}
+                      onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, animation_enabled: checked === true})}
+                    />
+                    <Label htmlFor="animation-enabled">Enable Animations</Label>
+                  </div>
+                </div>
+                
+                <Button onClick={saveOverlaySettings} className="w-full gaming-button">
+                  Save Settings
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -477,19 +680,35 @@ export default function SlotsCalls() {
                     placeholder="5.00"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="prize">Prize</Label>
-                  <Textarea
-                    id="prize"
-                    value={prize}
-                    onChange={(e) => setPrize(e.target.value)}
-                    placeholder="Describe the prize for the winner"
-                    rows={3}
-                  />
-                </div>
-                <Button onClick={createEvent} className="w-full gaming-button">
-                  Create Event
-                </Button>
+                  <div>
+                    <Label htmlFor="prize">Prize</Label>
+                    <Textarea
+                      id="prize"
+                      value={prize}
+                      onChange={(e) => setPrize(e.target.value)}
+                      placeholder="Describe the prize for the winner"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  {/* Auto-start monitoring checkbox */}
+                  <div className="flex items-center space-x-2 p-3 bg-secondary/20 rounded-lg border border-accent/20">
+                    <Checkbox 
+                      id="auto-start-monitoring"
+                      checked={autoStartMonitoring}
+                      onCheckedChange={(checked) => setAutoStartMonitoring(checked === true)}
+                    />
+                    <Label htmlFor="auto-start-monitoring" className="text-sm font-medium">
+                      Auto start chat monitoring
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, chat monitoring will start automatically after creating the event
+                  </p>
+                  
+                  <Button onClick={createEvent} className="w-full gaming-button">
+                    Create Event
+                  </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -561,23 +780,37 @@ export default function SlotsCalls() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={() => copyOverlayUrl(selectedEvent.id)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Copy className="h-3 w-3" />
-                      Copy Overlay URL
-                    </Button>
                     {selectedEvent.status === 'active' && (
-                      <Button 
-                        onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Close Event
-                      </Button>
+                      <>
+                        <Button
+                          onClick={isMonitoring ? () => {
+                            socketRef.current?.close();
+                            setIsMonitoring(false);
+                          } : initializeWebSocket}
+                          variant={isMonitoring ? "destructive" : "default"}
+                          size="sm"
+                          className="gaming-button"
+                        >
+                          {isMonitoring ? (
+                            <>
+                              <Square className="h-3 w-3 mr-1" />
+                              Stop
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3 mr-1" />
+                              Start
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                          onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Close Event
+                        </Button>
+                      </>
                     )}
                     {selectedEvent.status === 'closed' && (
                       <Button 

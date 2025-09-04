@@ -97,11 +97,12 @@ async function processSlotsCall(messageData: any, chatroomId: string, socket: We
     }
 
     // Find active slots event for this channel
+    // We'll need to match by channel name to user mapping
     const { data: activeEvent, error: eventError } = await supabase
       .from('slots_events')
-      .select('*')
+      .select('*, profiles!inner(kick_username)')
       .eq('status', 'active')
-      .eq('channel_id', chatroomId)
+      .eq('profiles.kick_username', chatroomId) // Match by kick username
       .single();
 
     if (eventError || !activeEvent) {

@@ -25,20 +25,60 @@ interface SlotsEvent {
 }
 
 interface SlotsOverlayProps {
-  eventId?: string;
+  userId?: string;
   maxCalls?: number;
 }
 
-export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayProps) {
+interface OverlaySettings {
+  background_color: string;
+  border_color: string;
+  text_color: string;
+  accent_color: string;
+  font_size: string;
+  max_visible_calls: number;
+  show_background: boolean;
+  show_borders: boolean;
+  animation_enabled: boolean;
+}
+
+export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProps) {
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
+    background_color: 'rgba(0, 0, 0, 0.95)',
+    border_color: '#3b82f6',
+    text_color: '#ffffff',
+    accent_color: '#3b82f6',
+    font_size: 'medium',
+    max_visible_calls: 10,
+    show_background: true,
+    show_borders: true,
+    animation_enabled: true
+  });
 
   useEffect(() => {
-    if (eventId) {
-      fetchEventAndCalls();
+    if (userId) {
+      fetchOverlaySettings();
+      fetchActiveEventAndCalls();
       
-      // Set up real-time subscription for calls
+      // Set up real-time subscription for events and calls
+      const eventsSubscription = supabase
+        .channel('slots_events_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'slots_events',
+            filter: `user_id=eq.${userId}`
+          },
+          () => {
+            fetchActiveEventAndCalls();
+          }
+        )
+        .subscribe();
+
       const callsSubscription = supabase
         .channel('slots_calls_changes')
         .on(
@@ -46,47 +86,94 @@ export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayPro
           {
             event: '*',
             schema: 'public',
-            table: 'slots_calls',
-            filter: `event_id=eq.${eventId}`
+            table: 'slots_calls'
           },
-          () => {
-            fetchEventAndCalls();
+          (payload: any) => {
+            // Only update if it's for the current active event
+            if (event && payload.new && (payload.new as any).event_id === event.id) {
+              fetchActiveEventAndCalls();
+            }
           }
         )
         .subscribe();
 
       return () => {
+        supabase.removeChannel(eventsSubscription);
         supabase.removeChannel(callsSubscription);
       };
     }
-  }, [eventId]);
+  }, [userId, event?.id]);
 
-  const fetchEventAndCalls = async () => {
-    if (!eventId) return;
+  const fetchOverlaySettings = async () => {
+    if (!userId) return;
 
     try {
-      // Fetch event details
+      const { data, error } = await supabase
+        .from('overlay_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Not found error
+        console.error("Error fetching overlay settings:", error);
+        return;
+      }
+
+      if (data) {
+        setOverlaySettings(data);
+      }
+    } catch (error) {
+      console.error("Error fetching overlay settings:", error);
+    }
+  };
+
+  const fetchActiveEventAndCalls = async () => {
+    if (!userId) return;
+
+    try {
+      // Fetch active event for this user
       const { data: eventData, error: eventError } = await supabase
         .from('slots_events')
         .select('*')
-        .eq('id', eventId)
+        .eq('user_id', userId)
+        .eq('status', 'active')
         .single();
 
-      if (eventError) throw eventError;
+      if (eventError && eventError.code !== 'PGRST116') {
+        console.error("Error fetching active event:", eventError);
+        setEvent(null);
+        setCalls([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!eventData) {
+        setEvent(null);
+        setCalls([]);
+        setLoading(false);
+        return;
+      }
+
       setEvent(eventData);
 
-      // Fetch calls
+      // Fetch calls for the active event
       const { data: callsData, error: callsError } = await supabase
         .from('slots_calls')
         .select('*')
-        .eq('event_id', eventId)
+        .eq('event_id', eventData.id)
         .order('call_order', { ascending: true });
 
-      if (callsError) throw callsError;
-      setCalls(callsData || []);
+      if (callsError) {
+        console.error("Error fetching calls:", callsError);
+        setCalls([]);
+      } else {
+        setCalls(callsData || []);
+      }
       
     } catch (error) {
       console.error("Error fetching overlay data:", error);
+      setEvent(null);
+      setCalls([]);
     } finally {
       setLoading(false);
     }
@@ -115,56 +202,88 @@ export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayPro
     }, completedCalls[0]);
   };
 
-  if (!eventId) {
+  const getFontSizeClass = (size: string) => {
+    switch (size) {
+      case 'small': return 'text-sm';
+      case 'large': return 'text-lg';
+      default: return 'text-base';
+    }
+  };
+
+  const getOverlayStyle = () => ({
+    backgroundColor: overlaySettings.show_background ? overlaySettings.background_color : 'transparent',
+    borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
+    color: overlaySettings.text_color
+  });
+
+  if (!userId) {
     return (
       <div className="w-full max-w-md mx-auto bg-background/95 backdrop-blur-sm border rounded-lg p-6 text-center">
         <Dices className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground">No active slots event</p>
+        <p className="text-muted-foreground">Invalid overlay URL</p>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/95 backdrop-blur-sm border rounded-lg p-6 text-center">
-        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto" />
-        <p className="text-muted-foreground mt-2">Loading...</p>
+      <div className="w-full max-w-md mx-auto rounded-lg p-6 text-center" style={getOverlayStyle()}>
+        <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full mx-auto" />
+        <p className="mt-2" style={{color: overlaySettings.text_color}}>Loading...</p>
       </div>
     );
   }
 
-  const displayCalls = calls.slice(0, maxCalls);
+  if (!event) {
+    return (
+      <div className="w-full max-w-md mx-auto rounded-lg p-6 text-center" style={getOverlayStyle()}>
+        <Dices className="h-8 w-8 mx-auto mb-2" style={{color: overlaySettings.accent_color}} />
+        <p style={{color: overlaySettings.text_color}}>No active events</p>
+      </div>
+    );
+  }
+
+  const displayCalls = calls.slice(0, overlaySettings.max_visible_calls || maxCalls);
   const winner = event?.status === 'completed' ? getWinner() : null;
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-4 font-sans">
+    <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
       {/* Event Header */}
-      {event && (
-        <Card className="bg-background/95 backdrop-blur-sm border-primary/30">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Dices className="h-6 w-6 text-primary" />
-              <div className="flex-1">
-                <h2 className="font-bold text-lg">{event.title}</h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Bet: ${event.bet_size}</span>
-                  <Badge className={
+      <Card 
+        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+        style={getOverlayStyle()}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Dices className="h-6 w-6" style={{color: overlaySettings.accent_color}} />
+            <div className="flex-1">
+              <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
+              <div className="flex items-center gap-2 text-sm opacity-80">
+                <span style={{color: overlaySettings.text_color}}>Bet: ${event.bet_size}</span>
+                <Badge 
+                  className={
                     event.status === 'active' ? 'bg-green-500/20 text-green-300' :
                     event.status === 'closed' ? 'bg-yellow-500/20 text-yellow-300' :
                     'bg-blue-500/20 text-blue-300'
-                  }>
-                    {event.status}
-                  </Badge>
-                </div>
+                  }
+                >
+                  {event.status}
+                </Badge>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Winner Display */}
       {winner && (
-        <Card className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/50">
+        <Card 
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border-yellow-500/50' : 'border-transparent'}`}
+          style={{
+            ...getOverlayStyle(),
+            background: overlaySettings.show_background ? 'linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(245, 158, 11, 0.2))' : 'transparent'
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Trophy className="h-6 w-6 text-yellow-400" />
@@ -180,15 +299,18 @@ export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayPro
       )}
 
       {/* Calls Queue */}
-      <Card className="bg-background/95 backdrop-blur-sm">
+      <Card 
+        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+        style={getOverlayStyle()}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold">Calls Queue ({calls.length})</h3>
+            <Clock className="h-4 w-4" style={{color: overlaySettings.accent_color}} />
+            <h3 className="font-semibold" style={{color: overlaySettings.text_color}}>Calls Queue ({calls.length})</h3>
           </div>
           
           {displayCalls.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4 text-sm">
+            <p className="text-center py-4 text-sm opacity-70" style={{color: overlaySettings.text_color}}>
               No calls yet
             </p>
           ) : (
@@ -196,18 +318,28 @@ export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayPro
               {displayCalls.map((call, index) => (
                 <div
                   key={call.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/50 hover:bg-muted/30 transition-colors"
+                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-colors ${overlaySettings.animation_enabled ? 'hover:bg-opacity-30' : ''}`}
+                  style={{
+                    backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                    borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+                  }}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono bg-primary/20 text-primary px-2 py-1 rounded">
+                      <span 
+                        className="text-xs font-mono px-2 py-1 rounded"
+                        style={{
+                          backgroundColor: overlaySettings.accent_color + '40',
+                          color: overlaySettings.accent_color
+                        }}
+                      >
                         #{index + 1}
                       </span>
-                      <span className="font-semibold text-sm">{call.viewer_username}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-primary font-medium text-sm">{call.slot_name}</span>
+                      <span className="font-semibold text-sm" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
+                      <span style={{color: overlaySettings.text_color}}>→</span>
+                      <span className="font-medium text-sm" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.8}}>
                       ${call.bet_amount} bet • 
                       {call.status === 'completed' ? (
                         <span className="text-green-400 ml-1">
@@ -223,10 +355,10 @@ export default function SlotsOverlay({ eventId, maxCalls = 10 }: SlotsOverlayPro
                 </div>
               ))}
               
-              {calls.length > maxCalls && (
+              {calls.length > (overlaySettings.max_visible_calls || maxCalls) && (
                 <div className="text-center py-2">
-                  <span className="text-xs text-muted-foreground">
-                    +{calls.length - maxCalls} more calls
+                  <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>
+                    +{calls.length - (overlaySettings.max_visible_calls || maxCalls)} more calls
                   </span>
                 </div>
               )}

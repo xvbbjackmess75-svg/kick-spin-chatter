@@ -4,12 +4,12 @@ import SlotsOverlay from "@/components/SlotsOverlay";
 
 export default function SlotsOverlayPage() {
   const [searchParams] = useSearchParams();
-  const eventId = searchParams.get('eventId');
+  const userId = searchParams.get('userId');
   const maxCalls = parseInt(searchParams.get('maxCalls') || '10');
 
   return (
     <div className="min-h-screen bg-transparent p-4">
-      <SlotsOverlay eventId={eventId || undefined} maxCalls={maxCalls} />
+      <SlotsOverlay userId={userId || undefined} maxCalls={maxCalls} />
     </div>
   );
 }
