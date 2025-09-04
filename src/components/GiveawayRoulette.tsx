@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Trophy, Users, Crown, CheckCircle2, RotateCcw } from "lucide-react";
+import { Crown, RotateCcw, Play, Trophy, Users, CheckCircle2 } from 'lucide-react';
 
 interface Participant {
   id: number;
@@ -20,18 +20,20 @@ interface WinnerResult {
 
 interface GiveawayRouletteProps {
   participants: Participant[];
-  onAcceptWinner: (winner: Participant, result: WinnerResult) => void;
+  onPendingWinner: (winner: Participant, result: WinnerResult) => void;
   onRerollWinner: () => void;
-  onAddAnotherWinner?: () => void;
-  onEndGiveaway?: () => void;
+  onStartNewRoll: () => void;
+  currentPendingWinner: Participant | null;
+  showStartButton: boolean;
 }
 
 export function GiveawayRoulette({ 
   participants, 
-  onAcceptWinner, 
+  onPendingWinner, 
   onRerollWinner, 
-  onAddAnotherWinner,
-  onEndGiveaway 
+  onStartNewRoll,
+  currentPendingWinner,
+  showStartButton
 }: GiveawayRouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -39,12 +41,12 @@ export function GiveawayRoulette({
   const [winnerResult, setWinnerResult] = useState<WinnerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isResultLocked, setIsResultLocked] = useState(false);
-  const [lockedIndicatorPosition, setLockedIndicatorPosition] = useState<number | null>(null); // Lock indicator position
+  const [lockedIndicatorPosition, setLockedIndicatorPosition] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
   const extendedParticipants = [];
-  const repetitions = 50; // Reduced for better performance
+  const repetitions = 50;
   
   for (let i = 0; i < repetitions; i++) {
     participants.forEach((participant, index) => {
@@ -178,14 +180,14 @@ export function GiveawayRoulette({
     setWinnerResult(null);
     setShowResult(false);
     setIsResultLocked(false);
-    setLockedIndicatorPosition(null); // Unlock indicator position
+    setLockedIndicatorPosition(null);
   };
 
-  // Handle accept winner
-  const handleAcceptWinner = () => {
+  // Handle accept pending winner
+  const handleAcceptPendingWinner = () => {
     if (selectedWinner && winnerResult) {
-      onAcceptWinner(selectedWinner, winnerResult);
-      resetRoulette();
+      onPendingWinner(selectedWinner, winnerResult);
+      // Don't reset here - parent will manage state
     }
   };
 
@@ -196,16 +198,22 @@ export function GiveawayRoulette({
     
     // Start new selection after short delay
     setTimeout(() => {
-      startRoulette();
+      if (participants.length > 0) {
+        startRoulette();
+      }
     }, 500);
   };
 
-  // Auto-start when participants change (only if not already locked)
+  // Auto-start roulette when participants change and showStartButton is false
   useEffect(() => {
-    if (participants.length > 0 && !isSpinning && !selectedWinner && !isResultLocked) {
-      startRoulette();
+    if (participants.length > 0 && !showStartButton && !isSpinning && !selectedWinner) {
+      console.log("🎰 Auto-starting roulette with", participants.length, "participants");
+      const timer = setTimeout(() => {
+        startRoulette();
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [participants, isResultLocked]);
+  }, [participants, showStartButton, isSpinning, selectedWinner]);
 
   return (
     <Card className="gaming-card w-full">
@@ -224,7 +232,7 @@ export function GiveawayRoulette({
         {/* Roulette Strip */}
         <div className="relative overflow-hidden border-2 border-kick-green/30 rounded-lg bg-gradient-to-r from-kick-dark via-kick-purple/20 to-kick-dark">
           
-          {/* Winner indicator arrow - RESPONSIVE OR LOCKED */}
+          {/* Winner indicator arrow */}
           <div 
             className="absolute top-0 transform -translate-x-1/2 -translate-y-1 z-20"
             style={{
@@ -236,7 +244,7 @@ export function GiveawayRoulette({
             <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-kick-green drop-shadow-lg" />
           </div>
           
-          {/* Center line - RESPONSIVE OR LOCKED */}
+          {/* Center line */}
           <div 
             className="absolute top-0 bottom-0 transform -translate-x-1/2 w-1 bg-kick-green z-10 opacity-80"
             style={{
@@ -246,7 +254,7 @@ export function GiveawayRoulette({
             }}
           />
           
-          {/* Scrolling container - RESPONSIVE WIDTH */}
+          {/* Scrolling container */}
           <div ref={containerRef} className="relative h-32">
             <div 
               className="flex absolute top-0 h-full"
@@ -261,9 +269,6 @@ export function GiveawayRoulette({
                   key={participant.uniqueKey}
                   className="flex-shrink-0 w-20 h-full flex flex-col items-center justify-center p-2 border-r border-kick-green/20 relative"
                 >
-                  {/* Debug overlay to show exact center of each participant */}
-                  <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-red-500 opacity-30 z-5" />
-                  
                   <Avatar className="w-16 h-16 border-2 border-background shadow-lg relative z-10">
                     <AvatarImage 
                       src={`https://files.kick.com/images/user/${participant.username}/profile_image/conversion/300x300-medium.webp`}
@@ -289,78 +294,67 @@ export function GiveawayRoulette({
           <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-kick-dark to-transparent pointer-events-none z-10" />
         </div>
 
-        {/* Winner Display */}
-        {selectedWinner && showResult && winnerResult && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-6 rounded-xl bg-kick-green/10 border border-kick-green/30">
+        {/* Winner Actions */}
+        {showResult && selectedWinner && (
+          <div className="text-center space-y-4 animate-fade-in">
+            <div className="p-6 bg-gradient-to-r from-accent/20 to-primary/20 rounded-lg border border-accent/30">
+              <h3 className="text-2xl font-bold text-foreground mb-2">🎉 Winner Selected!</h3>
               <div className="flex items-center justify-center gap-4 mb-4">
-                <Trophy className="h-8 w-8 text-kick-green animate-pulse" />
-                <h4 className="text-xl font-bold text-foreground">🎉 Winner Selected! 🎉</h4>
-                <Trophy className="h-8 w-8 text-kick-green animate-pulse" />
-              </div>
-              
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <Avatar className="w-20 h-20 border-4 border-kick-green pulse-glow">
+                <Avatar className="w-16 h-16 border-4 border-accent">
                   <AvatarImage 
-                    src={`https://files.kick.com/images/user/${selectedWinner.username}/profile_image/conversion/300x300-medium.webp`}
+                    src={selectedWinner.avatar}
                     alt={selectedWinner.username}
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-avatar.jpg';
                     }}
                   />
-                  <AvatarFallback className="bg-kick-green text-kick-dark font-bold text-lg">
+                  <AvatarFallback className="bg-accent text-accent-foreground text-xl font-bold">
                     {selectedWinner.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">{selectedWinner.username}</p>
-                  <Badge className="bg-kick-green/20 text-kick-green border-kick-green/30 mt-2">
-                    <Crown className="h-3 w-3 mr-1" />
-                    Winner
-                  </Badge>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Ticket #{winnerResult.winningTicket} out of {winnerResult.totalTickets}
-                  </p>
+                <div>
+                  <p className="text-xl font-bold text-foreground">{selectedWinner.username}</p>
+                  {winnerResult && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Winning Ticket: #{winnerResult.winningTicket}</p>
+                      <p>Total Tickets: {winnerResult.totalTickets}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              
+              <div className="flex gap-3 justify-center">
                 <Button 
-                  onClick={handleAcceptWinner}
-                  className="bg-kick-green hover:bg-kick-green/80 text-kick-dark font-bold"
+                  onClick={handleAcceptPendingWinner}
+                  className="gaming-button"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Accept Winner
+                  <Crown className="h-4 w-4 mr-2" />
+                  Add to Winners
                 </Button>
+                
                 <Button 
                   onClick={handleReroll}
                   variant="outline"
-                  className="border-kick-green/30 text-kick-green hover:bg-kick-green/10"
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reroll
                 </Button>
-                {onAddAnotherWinner && (
-                  <Button 
-                    onClick={onAddAnotherWinner}
-                    variant="outline"
-                    className="border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white font-semibold"
-                  >
-                    Add Another Winner
-                  </Button>
-                )}
-                {onEndGiveaway && (
-                  <Button 
-                    onClick={onEndGiveaway}
-                    variant="outline"
-                    className="border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold"
-                  >
-                    End Giveaway
-                  </Button>
-                )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Start Button for New Rolls */}
+        {showStartButton && participants.length > 0 && !isSpinning && !selectedWinner && (
+          <div className="text-center py-8">
+            <Button 
+              onClick={onStartNewRoll}
+              className="gaming-button text-lg px-8 py-4"
+              size="lg"
+            >
+              <Play className="h-5 w-5 mr-2" />
+              Start Rolling for Next Winner
+            </Button>
           </div>
         )}
 

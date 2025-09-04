@@ -23,6 +23,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { GiveawayRoulette } from "@/components/GiveawayRoulette";
+import { PendingWinners } from "@/components/PendingWinners";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,6 +62,15 @@ interface Giveaway {
   created_at: string;
 }
 
+interface PendingWinner {
+  id: number;
+  username: string;
+  avatar?: string;
+  winningTicket: number;
+  totalTickets: number;
+  ticketsPerParticipant: number;
+}
+
 export default function Giveaways() {
   const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
   const { user } = useAuth();
@@ -68,11 +78,13 @@ export default function Giveaways() {
   const { toast } = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [participants, setParticipants] = useState<RouletteParticipant[]>([]);
+  const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentGiveaway, setCurrentGiveaway] = useState<Giveaway | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatConnected, setChatConnected] = useState(false);
   const [connectedChannel, setConnectedChannel] = useState<string>("");
+  const [showStartButton, setShowStartButton] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   
   // Management states
@@ -473,7 +485,7 @@ export default function Giveaways() {
       const giveawayParticipants: RouletteParticipant[] = (data || []).map((p, index) => ({
         id: index,
         username: p.kick_username,
-        avatar: undefined
+        avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
       }));
       
       if (giveawayParticipants.length === 0) {
@@ -490,6 +502,8 @@ export default function Giveaways() {
       
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
+      setPendingWinners([]); // Reset pending winners
+      setShowStartButton(false); // Auto-start first roll
       
     } catch (error) {
       console.error('Error starting winner selection:', error);
@@ -501,63 +515,101 @@ export default function Giveaways() {
     }
   };
 
-  // Handle winner acceptance
-  const handleAcceptWinner = async (winner: RouletteParticipant, result: any) => {
-    if (!currentGiveaway) return;
-
-    console.log("🏆 ACCEPTING WINNER:", {
-      giveaway: currentGiveaway.title,
-      giveawayId: currentGiveaway.id,
+  // Handle pending winner from roulette
+  const handlePendingWinner = (winner: RouletteParticipant, result: any) => {
+    console.log("🏆 PENDING WINNER:", {
+      giveaway: currentGiveaway?.title,
       winner: winner.username,
+      winningTicket: result.winningTicket
+    });
+
+    const pendingWinner: PendingWinner = {
+      id: Date.now() + Math.random(), // Temporary ID
+      username: winner.username,
+      avatar: winner.avatar,
       winningTicket: result.winningTicket,
-      currentStatus: currentGiveaway.status
+      totalTickets: result.totalTickets,
+      ticketsPerParticipant: result.ticketsPerParticipant
+    };
+
+    setPendingWinners(prev => [...prev, pendingWinner]);
+    
+    // Show start button for next roll
+    setShowStartButton(true);
+    
+    toast({
+      title: "Winner Added to Pending!",
+      description: `${winner.username} is now pending. Add more winners or accept all to finish.`,
+    });
+  };
+
+  // Remove a pending winner
+  const handleRemovePendingWinner = (winnerId: number) => {
+    setPendingWinners(prev => prev.filter(w => w.id !== winnerId));
+    toast({
+      title: "Winner Removed",
+      description: "Winner removed from pending list",
+    });
+  };
+
+  // Accept all pending winners and end giveaway
+  const handleAcceptAllWinners = async () => {
+    if (!currentGiveaway || pendingWinners.length === 0) return;
+
+    console.log("🏆 ACCEPTING ALL WINNERS:", {
+      giveaway: currentGiveaway.title,
+      pendingWinners: pendingWinners.map(w => w.username)
     });
 
     try {
-      // Add winner to the giveaway_winners table (keeping giveaway active)
-      const { data: winnerData, error: winnerError } = await supabase
+      // Insert all pending winners into the database
+      const winnersToInsert = pendingWinners.map(winner => ({
+        giveaway_id: currentGiveaway.id,
+        winner_username: winner.username,
+        winning_ticket: winner.winningTicket,
+        total_tickets: winner.totalTickets,
+        tickets_per_participant: winner.ticketsPerParticipant
+      }));
+
+      const { error: winnersError } = await supabase
         .from('giveaway_winners')
-        .insert({
-          giveaway_id: currentGiveaway.id,
-          winner_username: winner.username,
-          winning_ticket: result.winningTicket,
-          total_tickets: result.totalTickets,
-          tickets_per_participant: result.ticketsPerParticipant
-        })
-        .select();
+        .insert(winnersToInsert);
 
-      if (winnerError) {
-        console.error("❌ Winner insert error:", winnerError);
-        throw winnerError;
-      }
+      if (winnersError) throw winnersError;
 
-      console.log("✅ Winner added successfully:", winnerData);
+      // Mark giveaway as completed
+      const { error: giveawayError } = await supabase
+        .from('giveaways')
+        .update({ status: 'completed' })
+        .eq('id', currentGiveaway.id);
+
+      if (giveawayError) throw giveawayError;
 
       toast({
-        title: "Winner Added!",
-        description: `${winner.username} has been added as a winner! You can add more winners or end the giveaway.`,
+        title: "Giveaway Completed!",
+        description: `${pendingWinners.length} winners have been saved and the giveaway is now completed.`,
       });
 
-      // Reset roulette for next winner selection
+      // Reset all states
       setCurrentGiveaway(null);
       setParticipants([]);
+      setPendingWinners([]);
+      setShowStartButton(false);
       
-      console.log("🔄 Refreshing giveaways after winner acceptance...");
-      // Refresh giveaways to update the UI
+      // Refresh giveaways list
       await fetchGiveaways();
       
-      console.log("✅ Dashboard refreshed, winner added to giveaway");
-      
     } catch (error) {
-      console.error('Error accepting winner:', error);
+      console.error('Error accepting all winners:', error);
       toast({
         title: "Error",
-        description: `Failed to accept winner: ${error.message}`,
+        description: `Failed to accept winners: ${error.message}`,
         variant: "destructive"
       });
     }
   };
 
+  // Add another winner - reset roulette but exclude previous winners
   const handleAddAnotherWinner = async () => {
     if (!currentGiveaway) return;
     
@@ -570,16 +622,8 @@ export default function Giveaways() {
 
       if (participantsError) throw participantsError;
 
-      // Fetch existing winners to exclude them
-      const { data: winnersData, error: winnersError } = await supabase
-        .from('giveaway_winners')
-        .select('winner_username')
-        .eq('giveaway_id', currentGiveaway.id);
-
-      if (winnersError) throw winnersError;
-
-      // Get list of usernames that have already won
-      const previousWinners = winnersData.map(w => w.winner_username);
+      // Get list of usernames that have already won (from pending winners)
+      const previousWinners = pendingWinners.map(w => w.username);
       
       // Filter out previous winners from participants
       const availableParticipants = participantsData.filter(
@@ -604,6 +648,7 @@ export default function Giveaways() {
       console.log("🎯 Adding another winner - available participants:", mappedParticipants.length, "excluded:", previousWinners.length);
       
       setParticipants(mappedParticipants);
+      setShowStartButton(true); // Show button to start rolling
       
     } catch (error) {
       console.error('Error loading participants for another winner:', error);
@@ -613,6 +658,12 @@ export default function Giveaways() {
         variant: "destructive"
       });
     }
+  };
+
+  // Start new roll (triggered by button)
+  const handleStartNewRoll = () => {
+    console.log("🎲 Starting new roll...");
+    setShowStartButton(false); // Hide button and auto-start roulette
   };
 
   const handleEndGiveaway = async () => {
@@ -646,11 +697,14 @@ export default function Giveaways() {
     }
   };
 
-  // Handle winner reroll
+  // Handle winner reroll (clears current pending winner)
   const handleRerollWinner = () => {
     console.log("🔄 Rerolling winner...");
-    // Don't clear the participants, let the roulette component handle the reroll
-    // The roulette component will automatically restart the selection
+    // Remove the last pending winner if any
+    if (pendingWinners.length > 0) {
+      setPendingWinners(prev => prev.slice(0, -1));
+    }
+    // Roulette component will handle the actual reroll
   };
 
   const simulateParticipant = async (giveawayId: string) => {
@@ -1008,35 +1062,26 @@ export default function Giveaways() {
           </div>
         </div>
 
-        {/* Roulette Modal */}
+        {/* Roulette Section */}
         {currentGiveaway && participants.length > 0 && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-foreground">{currentGiveaway.title}</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      setCurrentGiveaway(null);
-                      setParticipants([]);
-                    }}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              </div>
-              <div className="p-4">
-                <GiveawayRoulette
-                  participants={participants}
-                  onAcceptWinner={handleAcceptWinner}
-                  onRerollWinner={handleRerollWinner}
-                  onAddAnotherWinner={handleAddAnotherWinner}
-                  onEndGiveaway={handleEndGiveaway}
-                />
-              </div>
-            </div>
+          <div className="space-y-6">
+            <GiveawayRoulette 
+              participants={participants}
+              onPendingWinner={handlePendingWinner}
+              onRerollWinner={handleRerollWinner}
+              onStartNewRoll={handleStartNewRoll}
+              currentPendingWinner={null}
+              showStartButton={showStartButton}
+            />
+            
+            {/* Pending Winners Display */}
+            <PendingWinners 
+              pendingWinners={pendingWinners}
+              onRemoveWinner={handleRemovePendingWinner}
+              onAcceptAllWinners={handleAcceptAllWinners}
+              onAddAnotherWinner={handleAddAnotherWinner}
+              isRolling={false}
+            />
           </div>
         )}
 
