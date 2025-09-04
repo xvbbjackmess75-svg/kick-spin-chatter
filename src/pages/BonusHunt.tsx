@@ -635,32 +635,44 @@ export default function BonusHunt() {
                 </div>
 
                 {/* Slot Grid */}
-                {searchTerm && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                    {filteredSlots.map((slot) => (
-                      <Card
-                        key={slot.id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedSlot?.id === slot.id ? 'ring-2 ring-primary' : ''
-                        }`}
-                        onClick={() => setSelectedSlot(slot)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="font-medium">{slot.name}</div>
-                          <div className="text-sm text-muted-foreground">{slot.provider}</div>
-                          {slot.theme && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {slot.theme}
-                            </Badge>
-                          )}
-                          {slot.rtp && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              RTP: {slot.rtp}%
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                {(searchTerm || slots.length > 0) && (
+                  <div className="space-y-2">
+                    {searchTerm && (
+                      <div className="text-sm text-muted-foreground">
+                        {filteredSlots.length} slot(s) found
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                      {(searchTerm ? filteredSlots : slots.slice(0, 20)).map((slot) => (
+                        <Card
+                          key={slot.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedSlot?.id === slot.id ? 'ring-2 ring-primary' : ''
+                          }`}
+                          onClick={() => setSelectedSlot(slot)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="font-medium">{slot.name}</div>
+                            <div className="text-sm text-muted-foreground">{slot.provider}</div>
+                            {slot.theme && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {slot.theme}
+                              </Badge>
+                            )}
+                            {slot.rtp && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                RTP: {slot.rtp}%
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {!searchTerm && slots.length > 20 && (
+                      <div className="text-sm text-muted-foreground text-center">
+                        Showing first 20 slots. Use search to find specific slots.
+                      </div>
+                    )}
                   </div>
                 )}
 
