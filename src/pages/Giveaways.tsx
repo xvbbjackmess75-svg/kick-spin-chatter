@@ -501,13 +501,20 @@ export default function Giveaways() {
       console.log("📊 Setting participants state:", giveawayParticipants.length);
       
       // Check if we have saved state for this specific giveaway in database
+      console.log("🔍 Checking for saved state for giveaway:", giveaway.id);
       try {
-        const { data: savedState } = await supabase
+        const { data: savedState, error } = await supabase
           .from('giveaway_states')
           .select('*')
           .eq('giveaway_id', giveaway.id)
           .eq('user_id', user.id)
           .maybeSingle();
+        
+        if (error) {
+          console.error("❌ Error fetching saved state:", error);
+        } else {
+          console.log("📊 Saved state query result:", savedState);
+        }
         
         if (savedState && savedState.pending_winners) {
           const pendingWinnersData = typeof savedState.pending_winners === 'string' 
@@ -525,12 +532,12 @@ export default function Giveaways() {
             setParticipants(remainingParticipantsData as RouletteParticipant[]);
             setPendingWinners(pendingWinnersData as PendingWinner[]);
           } else {
-            console.log("🆕 Fresh start for giveaway:", giveaway.id);
+            console.log("🆕 Fresh start for giveaway (no pending winners):", giveaway.id);
             setParticipants(giveawayParticipants);
             setPendingWinners([]);
           }
         } else {
-          console.log("🆕 Fresh start for giveaway:", giveaway.id);
+          console.log("🆕 Fresh start for giveaway (no saved state):", giveaway.id);
           setParticipants(giveawayParticipants);
           setPendingWinners([]);
         }
@@ -792,6 +799,12 @@ export default function Giveaways() {
           pending_winners: JSON.stringify(winners),
           remaining_participants: JSON.stringify(remainingParticipants)
         });
+      
+      if (error) {
+        console.error('❌ Error saving giveaway state:', error);
+      } else {
+        console.log('✅ Successfully saved giveaway state to database');
+      }
     } catch (error) {
       console.error('Error saving giveaway state:', error);
     }
@@ -1172,6 +1185,7 @@ export default function Giveaways() {
           onClose={() => setIsRouletteModalOpen(false)}
           giveaway={currentGiveaway}
           participants={participants}
+          pendingWinners={pendingWinners}
           onEndGiveaway={async (winners) => {
             await handleAcceptAllWinners();
             setIsRouletteModalOpen(false);

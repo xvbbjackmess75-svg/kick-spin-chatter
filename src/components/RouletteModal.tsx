@@ -26,6 +26,7 @@ interface RouletteModalProps {
   onClose: () => void;
   giveaway: any;
   participants: Participant[];
+  pendingWinners?: PendingWinner[];
   onEndGiveaway: (winners: PendingWinner[]) => void;
   onSavePendingWinners: (winners: PendingWinner[], remainingParticipants: Participant[]) => void;
 }
@@ -35,14 +36,22 @@ export function RouletteModal({
   onClose, 
   giveaway, 
   participants, 
+  pendingWinners: initialPendingWinners = [],
   onEndGiveaway,
   onSavePendingWinners 
 }: RouletteModalProps) {
-  const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>([]);
+  const [pendingWinners, setPendingWinners] = useState<PendingWinner[]>(initialPendingWinners);
   const [currentParticipants, setCurrentParticipants] = useState<Participant[]>(participants);
   const [isRolling, setIsRolling] = useState(false);
   const [currentPendingWinner, setCurrentPendingWinner] = useState<Participant | null>(null);
   const [showStartButton, setShowStartButton] = useState(true);
+
+  // Initialize pending winners from props when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPendingWinners(initialPendingWinners);
+    }
+  }, [isOpen, initialPendingWinners]);
 
   // Sync participants when modal opens or participants change
   useEffect(() => {
@@ -51,7 +60,6 @@ export function RouletteModal({
       participants: participants.map(p => p.username)
     });
     setCurrentParticipants(participants);
-    setPendingWinners([]); // Reset winners when participants change
     setShowStartButton(true);
   }, [participants]);
 
@@ -143,10 +151,10 @@ export function RouletteModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
+    <Dialog open={isOpen} onOpenChange={async (open) => {
           if (!open) {
             // Save pending winners when modal closes
-            onSavePendingWinners(pendingWinners, currentParticipants);
+            await onSavePendingWinners(pendingWinners, currentParticipants);
             onClose();
           }
         }}>
@@ -204,9 +212,9 @@ export function RouletteModal({
           <div className="flex gap-3 pt-4 border-t">
             <Button 
               variant="outline" 
-              onClick={() => {
+              onClick={async () => {
                 // Save pending winners when manually closing
-                onSavePendingWinners(pendingWinners, currentParticipants);
+                await onSavePendingWinners(pendingWinners, currentParticipants);
                 onClose();
               }}
               className="flex-1"
