@@ -304,7 +304,7 @@ export default function SlotsCalls() {
     }
   };
 
-  const stopMonitoring = (isAutoStop = false) => {
+  const stopMonitoring = async (isAutoStop = false) => {
     if (socketRef.current) {
       socketRef.current.close();
     }
@@ -313,9 +313,25 @@ export default function SlotsCalls() {
     setIsManualMonitoring(false);
     clearAutoStopTimer();
     
+    // Stop the auto-monitor 
+    try {
+      const response = await supabase.functions.invoke('kick-auto-monitor', {
+        body: {
+          action: 'stop_monitoring',
+          user_id: user?.id
+        }
+      });
+      
+      if (!response.error && response.data?.success) {
+        console.log('✅ Auto-monitor stopped successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error stopping auto-monitor:', error);
+    }
+    
     toast({
-      title: isAutoStop ? "🕐 Auto-Stop Triggered" : "🛑 Monitoring Stopped",
-      description: isAutoStop ? "Slots monitoring auto-stopped after timer" : "Slots monitoring manually stopped",
+      title: isAutoStop ? "🕐 Auto-Stop Triggered" : "🛑 Auto-Monitor Stopped",
+      description: isAutoStop ? "Auto-monitoring stopped after timer" : "Auto-monitoring manually stopped",
     });
   };
 
@@ -1115,27 +1131,27 @@ export default function SlotsCalls() {
                     {selectedEvent.status === 'active' && (
                       <>
                         <div className="flex items-center gap-2 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-2 h-2 rounded-full ${monitorStatus?.is_active ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-muted-foreground">
-                            {(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? `Monitoring ${connectedChannel}` : 'Monitoring Stopped'}
+                            {monitorStatus?.is_active ? `Auto-Monitor Active (${chatConnected ? 'Chat Connected' : 'Chat Disconnected'})` : 'Auto-Monitor Stopped'}
                           </span>
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? () => stopMonitoring() : initializeMonitoring}
-                            variant={(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? "destructive" : "default"}
+                            onClick={monitorStatus?.is_active ? () => stopMonitoring() : initializeMonitoring}
+                            variant={monitorStatus?.is_active ? "destructive" : "default"}
                             size="sm"
                             className="gaming-button"
                           >
-                            {(monitorStatus?.is_active && chatConnected && isManualMonitoring) ? (
+                            {monitorStatus?.is_active ? (
                               <>
                                 <Square className="h-3 w-3 mr-1" />
-                                Stop Monitor
+                                Stop Auto-Monitor
                               </>
                             ) : (
                               <>
                                 <Play className="h-3 w-3 mr-1" />
-                                Start Monitor
+                                Start Auto-Monitor
                               </>
                             )}
                           </Button>
@@ -1192,7 +1208,7 @@ export default function SlotsCalls() {
                     
                     {calls.length === 0 ? (
                       <p className="text-muted-foreground text-center py-6">
-                        No calls yet. {selectedEvent.status === 'active' ? ((monitorStatus?.is_active && chatConnected && isManualMonitoring) ? 'Monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Monitor" to begin tracking !kgs commands.') : ''}
+                        No calls yet. {selectedEvent.status === 'active' ? (monitorStatus?.is_active ? 'Auto-monitoring is active. Use !kgs [slot name] in chat to make calls.' : 'Click "Start Auto-Monitor" to begin tracking !kgs commands.') : ''}
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
