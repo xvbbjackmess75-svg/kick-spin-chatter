@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { useAutoMonitor } from "@/hooks/useAutoMonitor";
+import { TestCallDialog } from "@/components/TestCallDialog";
 import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette } from "lucide-react";
 
 interface SlotsEvent {
@@ -63,6 +64,11 @@ export default function SlotsCalls() {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  
+  // Test data states
+  const [testSlotName, setTestSlotName] = useState("");
+  const [testUsername, setTestUsername] = useState("");
   
   // Form states
   const [title, setTitle] = useState("");
@@ -567,6 +573,105 @@ export default function SlotsCalls() {
           bet_size: parseFloat(betSize),
           prize: prize.trim(),
           status: 'active',
+          channel_id: channelUsername
+        });
+
+      if (error) throw error;
+
+      // Auto-start chat monitoring for slots events
+      console.log('🤖 Auto-starting chat monitoring for slots event...');
+      
+      setTimeout(() => {
+        initializeWebSocket();
+      }, 1000);
+
+      const successMessage = `🎰 Event "${title}" created for @${channelUsername} and monitoring started!`;
+
+      toast({
+        title: "Success",
+        description: successMessage,
+      });
+
+      setTitle("");
+      setMaxCallsPerUser(1);
+      setBetSize("");
+      setPrize("");
+      setAutoStartMonitoring(false);
+      setIsCreateDialogOpen(false);
+      
+      await fetchEvents();
+    } catch (error) {
+      console.error("Error creating event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create event",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add test participant function
+  const addTestCall = async () => {
+    if (!selectedEvent || !testSlotName.trim() || !testUsername.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in both username and slot name for test call",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Get next call order
+      const { data: orderData } = await supabase
+        .rpc('get_next_call_order', { event_uuid: selectedEvent.id });
+
+      // Add test call to database
+      const { error } = await supabase
+        .from('slots_calls')
+        .insert({
+          event_id: selectedEvent.id,
+          viewer_username: testUsername.trim(),
+          viewer_kick_id: 'test_' + Date.now(),
+          slot_name: testSlotName.trim(),
+          bet_amount: selectedEvent.bet_size,
+          status: 'pending',
+          call_order: orderData || 1
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Test Call Added",
+        description: `${testUsername} → ${testSlotName} (Test)`,
+      });
+
+      // Clear form and refresh
+      setTestSlotName("");
+      setTestUsername("");
+      setIsTestDialogOpen(false);
+      fetchCalls(selectedEvent.id);
+
+    } catch (error) {
+      console.error("Error adding test call:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add test call",
+        variant: "destructive"
+      });
+    }
+
+      console.log(`🎰 Creating slots event for channel: ${channelUsername}`);
+
+      const { error } = await supabase
+        .from('slots_events')
+        .insert({
+          user_id: user?.id,
+          title: title.trim(),
+          max_calls_per_user: maxCallsPerUser,
+          bet_size: parseFloat(betSize),
+          prize: prize.trim(),
+          status: 'active',
           channel_id: channelUsername // Use the correct Kick username
         });
 
@@ -748,6 +853,11 @@ export default function SlotsCalls() {
             <Copy className="h-4 w-4 mr-2" />
             Copy Overlay URL
           </Button>
+          
+          <TestCallDialog 
+            selectedEvent={selectedEvent} 
+            onCallAdded={() => selectedEvent && fetchCalls(selectedEvent.id)} 
+          />
           
           <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
             <DialogTrigger asChild>

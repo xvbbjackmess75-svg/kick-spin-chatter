@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
     border_color: '#3b82f6',
@@ -103,6 +105,20 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       };
     }
   }, [userId, event?.id]);
+
+  // Auto-scroll effect for OBS overlay
+  useEffect(() => {
+    if (calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled) {
+      const interval = setInterval(() => {
+        setScrollOffset(prev => {
+          const maxOffset = calls.length - (overlaySettings.max_visible_calls || maxCalls);
+          return prev >= maxOffset ? 0 : prev + 1;
+        });
+      }, 3000); // Scroll every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled]);
 
   const fetchOverlaySettings = async () => {
     if (!userId) return;
@@ -243,7 +259,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     );
   }
 
-  const displayCalls = calls.slice(0, overlaySettings.max_visible_calls || maxCalls);
+  const displayCalls = calls.slice(scrollOffset, scrollOffset + (overlaySettings.max_visible_calls || maxCalls));
   const winner = event?.status === 'completed' ? getWinner() : null;
 
   return (
@@ -314,11 +330,17 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               No calls yet
             </p>
           ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+            <div 
+              ref={scrollContainerRef}
+              className="space-y-2 transition-all duration-1000 ease-in-out"
+              style={{
+                transform: `translateY(0px)` // Smooth auto-scroll
+              }}
+            >
               {displayCalls.map((call, index) => (
                 <div
-                  key={call.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-300 ${overlaySettings.animation_enabled ? 'hover:bg-opacity-30 hover:scale-[1.02]' : ''}`}
+                  key={`${call.id}-${scrollOffset}`}
+                  className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-500 ${overlaySettings.animation_enabled ? 'animate-fade-in' : ''}`}
                   style={{
                     backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                     borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
@@ -333,7 +355,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                           color: overlaySettings.accent_color
                         }}
                       >
-                        #{index + 1}
+                        #{scrollOffset + index + 1}
                       </span>
                       <span className="font-semibold text-sm truncate max-w-[80px]" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
                       <span style={{color: overlaySettings.text_color}}>→</span>
@@ -358,9 +380,24 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               
               {calls.length > (overlaySettings.max_visible_calls || maxCalls) && (
                 <div className="text-center py-2 border-t border-white/10">
-                  <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>
-                    +{calls.length - (overlaySettings.max_visible_calls || maxCalls)} more calls (scroll to see all)
-                  </span>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="flex space-x-1">
+                      {Array.from({ length: Math.min(5, Math.ceil(calls.length / (overlaySettings.max_visible_calls || maxCalls))) }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            i === Math.floor(scrollOffset / (overlaySettings.max_visible_calls || maxCalls)) 
+                              ? 'bg-current' 
+                              : 'bg-current opacity-30'
+                          }`}
+                          style={{ color: overlaySettings.accent_color }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs opacity-70 ml-2" style={{color: overlaySettings.text_color}}>
+                      Showing {scrollOffset + 1}-{Math.min(scrollOffset + (overlaySettings.max_visible_calls || maxCalls), calls.length)} of {calls.length}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
