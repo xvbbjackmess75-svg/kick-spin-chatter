@@ -469,6 +469,101 @@ export type Database = {
         }
         Relationships: []
       }
+      slots_calls: {
+        Row: {
+          bet_amount: number
+          call_order: number
+          completed_at: string | null
+          event_id: string
+          id: string
+          multiplier: number | null
+          slot_name: string
+          status: string
+          submitted_at: string
+          viewer_kick_id: string | null
+          viewer_username: string
+          win_amount: number | null
+        }
+        Insert: {
+          bet_amount: number
+          call_order: number
+          completed_at?: string | null
+          event_id: string
+          id?: string
+          multiplier?: number | null
+          slot_name: string
+          status?: string
+          submitted_at?: string
+          viewer_kick_id?: string | null
+          viewer_username: string
+          win_amount?: number | null
+        }
+        Update: {
+          bet_amount?: number
+          call_order?: number
+          completed_at?: string | null
+          event_id?: string
+          id?: string
+          multiplier?: number | null
+          slot_name?: string
+          status?: string
+          submitted_at?: string
+          viewer_kick_id?: string | null
+          viewer_username?: string
+          win_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slots_calls_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "slots_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slots_events: {
+        Row: {
+          bet_size: number
+          channel_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          max_calls_per_user: number
+          prize: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bet_size: number
+          channel_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          max_calls_per_user?: number
+          prize: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bet_size?: number
+          channel_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          max_calls_per_user?: number
+          prize?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -477,6 +572,10 @@ export type Database = {
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_next_call_order: {
+        Args: { event_uuid: string }
+        Returns: number
       }
       link_kick_account_to_profile: {
         Args: {

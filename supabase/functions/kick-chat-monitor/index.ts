@@ -24,6 +24,12 @@ async function processCommand(command: string, messageData: any, chatroomId: str
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Special handling for slots calls (!kgs command)
+    if (command === 'kgs') {
+      await processSlotsCall(messageData, chatroomId, socket, supabase);
+      return;
+    }
+
     // Look up command in database
     const { data: commands, error } = await supabase
       .from('commands')
@@ -73,6 +79,99 @@ async function processCommand(command: string, messageData: any, chatroomId: str
 
   } catch (error) {
     console.error(`❌ Error processing command !${command}:`, error);
+  }
+}
+
+async function processSlotsCall(messageData: any, chatroomId: string, socket: WebSocket, supabase: any) {
+  try {
+    console.log(`🎰 Processing slots call from ${messageData.sender?.username}`);
+    
+    // Extract slot name from message (everything after !kgs )
+    const slotName = messageData.content?.replace('!kgs ', '').trim();
+    const username = messageData.sender?.username;
+    const kickUserId = messageData.sender?.id?.toString();
+    
+    if (!slotName || !username) {
+      console.log(`❌ Invalid slots call: missing slot name or username`);
+      return;
+    }
+
+    // Find active slots event for this channel
+    const { data: activeEvent, error: eventError } = await supabase
+      .from('slots_events')
+      .select('*')
+      .eq('status', 'active')
+      .eq('channel_id', chatroomId)
+      .single();
+
+    if (eventError || !activeEvent) {
+      console.log(`❌ No active slots event found for channel: ${chatroomId}`);
+      return;
+    }
+
+    // Check if user has exceeded their call limit
+    const { count: userCallsCount } = await supabase
+      .from('slots_calls')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', activeEvent.id)
+      .eq('viewer_username', username);
+
+    if ((userCallsCount || 0) >= activeEvent.max_calls_per_user) {
+      console.log(`🚫 User ${username} has reached call limit for event ${activeEvent.id}`);
+      
+      if (botToken) {
+        await sendBotMessage(
+          `@${username} You've reached the maximum number of calls (${activeEvent.max_calls_per_user}) for this event!`, 
+          botToken
+        );
+      }
+      return;
+    }
+
+    // Get next call order
+    const { data: orderData } = await supabase
+      .rpc('get_next_call_order', { event_uuid: activeEvent.id });
+
+    // Add the call to the database
+    const { error: insertError } = await supabase
+      .from('slots_calls')
+      .insert({
+        event_id: activeEvent.id,
+        viewer_username: username,
+        viewer_kick_id: kickUserId,
+        slot_name: slotName,
+        bet_amount: activeEvent.bet_size,
+        status: 'pending',
+        call_order: orderData || 1
+      });
+
+    if (insertError) {
+      console.error(`❌ Error inserting slots call:`, insertError);
+      return;
+    }
+
+    console.log(`✅ Slots call added: ${username} -> ${slotName}`);
+
+    // Send confirmation message
+    if (botToken) {
+      await sendBotMessage(
+        `@${username} Your call for ${slotName} has been added to the queue! (Bet: $${activeEvent.bet_size})`, 
+        botToken
+      );
+    }
+
+    // Notify client about the new slots call
+    socket.send(JSON.stringify({
+      type: 'slots_call_added',
+      event_id: activeEvent.id,
+      viewer_username: username,
+      slot_name: slotName,
+      bet_amount: activeEvent.bet_size,
+      call_order: orderData || 1
+    }));
+
+  } catch (error) {
+    console.error(`❌ Error processing slots call:`, error);
   }
 }
 

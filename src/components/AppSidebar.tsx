@@ -19,11 +19,13 @@ import {
   Zap,
   Trophy,
   History,
-  Monitor
+  Monitor,
+  Dices
 } from "lucide-react";
 
 const mainItems = [
   { title: "Giveaways", url: "/", icon: Gift },
+  { title: "Slots Calls", url: "/slots-calls", icon: Dices },
   { title: "History", url: "/history", icon: Trophy },
 ];
 
