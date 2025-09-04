@@ -102,67 +102,13 @@ export default function AuthCallback() {
               localStorage.setItem('kick_token', JSON.stringify(token_info));
             }
 
-            // Auto-create Supabase account for Kick user
-            try {
-              console.log('🔄 Setting up Supabase account for Kick user...');
-              
-              // Create a unique email for the Kick user
-              const userEmail = `kick_${user.id}@kickuser.lovable.app`;
-              
-              // Generate a DETERMINISTIC password based on user ID so it's always the same
-              const userIdString = user.id.toString();
-              const deterministicSeed = userIdString + "KICK_USER_SALT_2025";
-              const encoder = new TextEncoder();
-              const data = encoder.encode(deterministicSeed);
-              const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-              const hashArray = new Uint8Array(hashBuffer);
-              const password = Array.from(hashArray.slice(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');
-              
-              console.log('🔄 Attempting to create Supabase account...');
-              
-              // Only try to create the account, don't try to sign in
-              const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: userEmail,
-                password: password,
-                options: {
-                  emailRedirectTo: `${window.location.origin}/`,
-                  data: {
-                    kick_username: user.username,
-                    kick_user_id: user.id.toString(),
-                    kick_avatar: user.avatar,
-                    display_name: user.display_name || user.username,
-                    is_hybrid_account: true,
-                    created_via_kick: true
-                  }
-                }
-              });
-
-              if (signUpError && !signUpError.message.includes('already registered')) {
-                console.error('❌ Account creation failed:', signUpError);
-              } else {
-                console.log('✅ Account ready (created or exists)');
-                
-                // Store the credentials for manual sign-in on the account page
-                localStorage.setItem('kick_hybrid_credentials', JSON.stringify({
-                  email: userEmail,
-                  password: password,
-                  created_at: new Date().toISOString(),
-                  kick_user_id: user.id
-                }));
-              }
-              
-              toast({
-                title: "Account Ready!",
-                description: `Welcome ${user.username}! Visit /account to manage your email and password settings.`,
-              });
-              
-            } catch (hybridError) {
-              console.error('❌ Hybrid account setup failed:', hybridError);
-              toast({
-                title: "Authentication Complete",
-                description: `Signed in as ${user.username}. Basic features are available.`,
-              });
-            }
+            // Store Kick user info - keep it simple
+            console.log('✅ Kick authentication successful');
+            
+            toast({
+              title: "Welcome!",
+              description: `Successfully signed in as ${user.username}`,
+            });
 
             const successMessage = isLinkingMode 
               ? `Kick account @${user.username} linked successfully!`
@@ -175,8 +121,17 @@ export default function AuthCallback() {
               });
             }
             
-            // Redirect based on mode
-            navigate(isLinkingMode ? '/account' : '/');
+            // Check if user needs onboarding
+            const needsOnboarding = !localStorage.getItem('kick_onboarding_completed');
+            
+            // Redirect based on mode and onboarding status
+            if (isLinkingMode) {
+              navigate('/account');
+            } else if (needsOnboarding) {
+              navigate('/kick-onboarding');
+            } else {
+              navigate('/');
+            }
           } else {
             throw new Error('OAuth exchange failed - no user data received');
           }

@@ -17,6 +17,7 @@ import Commands from "./pages/Commands";
 import ChatMonitor from "./pages/ChatMonitor";
 import BotSettings from "./pages/BotSettings";
 import Account from "./pages/Account";
+import KickOnboarding from "./pages/KickOnboarding";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Routes>
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
               path="/"
