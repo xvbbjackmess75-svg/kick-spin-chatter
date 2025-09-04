@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { 
   Trophy,
@@ -25,20 +27,40 @@ export default function ViewerDashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { role } = useUserRole();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [linkingDiscord, setLinkingDiscord] = useState(false);
 
-  const handleDiscordLink = () => {
+  const handleDiscordLink = async () => {
     setLinkingDiscord(true);
-    // Discord OAuth flow would go here
-    const clientId = "YOUR_DISCORD_CLIENT_ID"; // This would come from environment
-    const redirectUri = encodeURIComponent(`${window.location.origin}/discord-callback`);
-    const scope = "identify";
     
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-    
-    // Open in popup or redirect
-    window.location.href = discordAuthUrl;
+    try {
+      // Generate a random state for security
+      const state = crypto.randomUUID();
+      localStorage.setItem('discord_oauth_state', state);
+      
+      // Call our edge function to get the Discord OAuth URL
+      const { data, error } = await supabase.functions.invoke('discord-oauth', {
+        body: {
+          action: 'authorize',
+          state: state
+        }
+      });
+
+      if (error) throw error;
+
+      // Redirect to Discord OAuth
+      window.location.href = data.url;
+      
+    } catch (error) {
+      console.error('Discord OAuth initiation error:', error);
+      toast({
+        title: "Discord Link Failed",
+        description: "Failed to initiate Discord authentication. Please try again.",
+        variant: "destructive"
+      });
+      setLinkingDiscord(false);
+    }
   };
 
   const viewerBenefits = [
@@ -72,8 +94,8 @@ export default function ViewerDashboard() {
 
   const accountStatus = {
     kickLinked: !!profile?.kick_username,
-    discordLinked: false, // This would come from actual Discord link status
-    verified: profile?.kick_username && false // Both Kick + Discord needed
+    discordLinked: user ? !!localStorage.getItem(`discord_linked_${user.id}`) : false,
+    verified: profile?.kick_username && user ? !!localStorage.getItem(`discord_linked_${user.id}`) : false
   };
 
   return (
