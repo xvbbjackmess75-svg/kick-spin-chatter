@@ -470,6 +470,7 @@ export default function SlotsCalls() {
 
   const fetchCalls = async (eventId: string) => {
     try {
+      console.log('🎰 Fetching calls for event:', eventId);
       const { data, error } = await supabase
         .from('slots_calls')
         .select('*')
@@ -477,9 +478,16 @@ export default function SlotsCalls() {
         .order('call_order', { ascending: true });
 
       if (error) throw error;
+      
+      console.log('🎰 Fetched calls:', data?.length || 0);
       setCalls(data || []);
     } catch (error) {
       console.error("Error fetching calls:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch slot calls",
+        variant: "destructive",
+      });
     }
   };
 
