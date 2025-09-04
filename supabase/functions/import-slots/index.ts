@@ -25,11 +25,12 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting comprehensive slot data import from ALL pages of aboutslots.com');
+    console.log('Starting comprehensive slot data import from ALL 263 pages of aboutslots.com');
 
     const allSlots: SlotData[] = [];
-    const maxPages = 50; // Reduced to avoid timeouts - will need multiple runs
-    const batchSize = 5; // Smaller batches to avoid CPU timeout
+    const maxPages = 263; // All pages as requested by user
+    const batchSize = 20; // Larger batches but with better error handling
+    let totalProcessed = 0;
 
     // Process pages in batches
     for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
@@ -172,8 +173,8 @@ Deno.serve(async (req) => {
 async function scrapePage(pageNumber: number): Promise<SlotData[]> {
   try {
     const url = pageNumber === 1 
-      ? 'https://www.aboutslots.com/all-casino-slots'
-      : `https://www.aboutslots.com/all-casino-slots?page=${pageNumber}`;
+      ? 'https://www.aboutslots.com/all-casino-slots/'
+      : `https://www.aboutslots.com/all-casino-slots/${pageNumber}`;
     
     console.log(`Scraping page ${pageNumber}: ${url}`);
     
