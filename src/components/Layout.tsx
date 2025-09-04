@@ -31,6 +31,16 @@ export function Layout({ children }: LayoutProps) {
 
   // Determine current user info
   const getCurrentUserInfo = () => {
+    console.log('🔍 Layout - Current state:', { 
+      kickUser: kickUser ? {
+        authenticated: kickUser.authenticated,
+        username: kickUser.username,
+        avatar: kickUser.avatar
+      } : null,
+      user: user ? { email: user.email } : null,
+      profile: profile ? { display_name: profile.display_name, avatar_url: profile.avatar_url } : null
+    });
+    
     if (kickUser?.authenticated) {
       console.log('📱 Layout using Kick user:', kickUser);
       return {
@@ -66,6 +76,8 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const userInfo = getCurrentUserInfo();
+  
+  console.log('🎯 Layout final userInfo:', userInfo);
 
   const handleSignOut = async () => {
     // Clear guest mode and Kick auth data
@@ -132,17 +144,15 @@ export function Layout({ children }: LayoutProps) {
             
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                {userInfo.avatar ? (
-                  <AvatarImage 
-                    src={userInfo.avatar} 
-                    alt={userInfo.username}
-                    onLoad={() => console.log('✅ Header avatar loaded:', userInfo.avatar)}
-                    onError={(e) => {
-                      console.error('❌ Header avatar failed:', userInfo.avatar);
-                      // Don't replace src here, let AvatarFallback handle it
-                    }}
-                  />
-                ) : null}
+                <AvatarImage 
+                  src={userInfo.avatar} 
+                  alt={userInfo.username}
+                  onLoad={() => console.log('✅ Header avatar loaded successfully:', userInfo.avatar)}
+                  onError={(e) => {
+                    console.error('❌ Header avatar failed to load:', userInfo.avatar);
+                    console.error('Trying to load:', e.currentTarget.src);
+                  }}
+                />
                 <AvatarFallback className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
                   {userInfo.initials}
                 </AvatarFallback>
