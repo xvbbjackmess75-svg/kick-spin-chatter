@@ -24,7 +24,7 @@ serve(async (req) => {
       discordAuthUrl.searchParams.set('client_id', DISCORD_CLIENT_ID)
       discordAuthUrl.searchParams.set('redirect_uri', DISCORD_REDIRECT_URI)
       discordAuthUrl.searchParams.set('response_type', 'code')
-      discordAuthUrl.searchParams.set('scope', 'identify')
+      discordAuthUrl.searchParams.set('scope', 'identify email')
       discordAuthUrl.searchParams.set('state', state)
 
       return new Response(
