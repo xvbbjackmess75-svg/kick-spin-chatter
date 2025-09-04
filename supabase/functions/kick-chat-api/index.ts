@@ -129,6 +129,9 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
+  } catch (error: any) {
+    throw new Error(`Failed to send message: ${error.message}`);
+  }
 }
 
 async function processCommand(body: KickChatRequest, supabase: any): Promise<Response> {
