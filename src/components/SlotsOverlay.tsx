@@ -36,6 +36,7 @@ interface OverlaySettings {
   accent_color: string;
   font_size: string;
   max_visible_calls: number;
+  scrolling_speed: number;
   show_background: boolean;
   show_borders: boolean;
   animation_enabled: boolean;
@@ -54,6 +55,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     accent_color: '#3b82f6',
     font_size: 'medium',
     max_visible_calls: 10,
+    scrolling_speed: 50,
     show_background: true,
     show_borders: true,
     animation_enabled: true
@@ -117,7 +119,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
           const maxScroll = calls.length * 60; // Assuming ~60px per call item
           return newPosition >= maxScroll ? 0 : newPosition;
         });
-      }, 50); // Smooth 50ms intervals for fluid animation
+      }, overlaySettings.scrolling_speed || 50); // Use user-defined scrolling speed
 
       return () => clearInterval(interval);
     } else {

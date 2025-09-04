@@ -428,6 +428,7 @@ export type Database = {
           font_size: string | null
           id: string
           max_visible_calls: number | null
+          scrolling_speed: number | null
           show_background: boolean | null
           show_borders: boolean | null
           text_color: string | null
@@ -443,6 +444,7 @@ export type Database = {
           font_size?: string | null
           id?: string
           max_visible_calls?: number | null
+          scrolling_speed?: number | null
           show_background?: boolean | null
           show_borders?: boolean | null
           text_color?: string | null
@@ -458,6 +460,7 @@ export type Database = {
           font_size?: string | null
           id?: string
           max_visible_calls?: number | null
+          scrolling_speed?: number | null
           show_background?: boolean | null
           show_borders?: boolean | null
           text_color?: string | null

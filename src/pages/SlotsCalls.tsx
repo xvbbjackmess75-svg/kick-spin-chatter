@@ -84,6 +84,7 @@ export default function SlotsCalls() {
     accent_color: '#3b82f6',
     font_size: 'medium',
     max_visible_calls: 10,
+    scrolling_speed: 50,
     show_background: true,
     show_borders: true,
     animation_enabled: true
@@ -925,6 +926,20 @@ export default function SlotsCalls() {
                         onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_calls: parseInt(e.target.value) || 10})}
                         className="w-full"
                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Scrolling Speed (ms)</Label>
+                      <Input
+                        type="number"
+                        min="10"
+                        max="500"
+                        value={overlaySettings.scrolling_speed}
+                        onChange={(e) => setOverlaySettings({...overlaySettings, scrolling_speed: parseInt(e.target.value) || 50})}
+                        className="w-full"
+                        placeholder="50"
+                      />
+                      <p className="text-xs text-muted-foreground">Lower = faster scroll, Higher = slower scroll</p>
                     </div>
                   </div>
                   
