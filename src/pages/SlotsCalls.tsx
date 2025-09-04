@@ -13,7 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { useAutoMonitor } from "@/hooks/useAutoMonitor";
-import { TestCallDialog } from "@/components/TestCallDialog";
 import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette } from "lucide-react";
 
 interface SlotsEvent {
@@ -64,11 +63,6 @@ export default function SlotsCalls() {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
-  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
-  
-  // Test data states
-  const [testSlotName, setTestSlotName] = useState("");
-  const [testUsername, setTestUsername] = useState("");
   
   // Form states
   const [title, setTitle] = useState("");
@@ -854,10 +848,6 @@ export default function SlotsCalls() {
             Copy Overlay URL
           </Button>
           
-          <TestCallDialog 
-            selectedEvent={selectedEvent} 
-            onCallAdded={() => selectedEvent && fetchCalls(selectedEvent.id)} 
-          />
           
           <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
             <DialogTrigger asChild>
