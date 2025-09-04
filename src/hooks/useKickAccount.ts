@@ -51,11 +51,27 @@ export function useKickAccount() {
             } else if (profile.kick_user_id && profile.kick_username) {
               // Fallback to old kick_username field
               console.log('✅ Found Kick account in old fields');
+              
+              // Try to get avatar from user metadata if available
+              let avatarUrl = '';
+              try {
+                const { data: userData } = await supabase.auth.getUser();
+                if (userData.user?.user_metadata?.kick_avatar) {
+                  avatarUrl = userData.user?.user_metadata?.kick_avatar;
+                } else {
+                  // Fallback to standard Kick avatar URL format
+                  avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
+                }
+              } catch {
+                // Fallback to standard format if metadata access fails
+                avatarUrl = `https://files.kick.com/images/user/${profile.kick_username}/profile_image/conversion/300x300-medium.webp`;
+              }
+              
               setKickUser({
                 id: parseInt(profile.kick_user_id),
                 username: profile.kick_username,
                 display_name: profile.kick_username,
-                avatar: '',
+                avatar: avatarUrl,
                 authenticated: true
               });
             }
