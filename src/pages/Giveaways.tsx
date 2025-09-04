@@ -533,10 +533,11 @@ export default function Giveaways() {
       setCurrentGiveaway(null);
       setParticipants([]);
       
+      console.log("🔄 Refreshing giveaways after winner acceptance...");
       // Refresh giveaways to update the UI
       await fetchGiveaways();
       
-      console.log("🔄 Dashboard refreshed, winner added to giveaway");
+      console.log("✅ Dashboard refreshed, winner added to giveaway");
       
     } catch (error) {
       console.error('Error accepting winner:', error);
@@ -639,7 +640,8 @@ export default function Giveaways() {
   // Handle winner reroll
   const handleRerollWinner = () => {
     console.log("🔄 Rerolling winner...");
-    // The roulette component will handle the reroll internally
+    // Don't clear the participants, let the roulette component handle the reroll
+    // The roulette component will automatically restart the selection
   };
 
   const simulateParticipant = async (giveawayId: string) => {

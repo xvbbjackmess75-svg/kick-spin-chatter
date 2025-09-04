@@ -73,7 +73,7 @@ export default function History() {
   }, [winners, searchTerm]);
 
   const fetchWinners = async () => {
-    if (!isSupabaseUser) {
+    if (!isSupabaseUser || !hybridUserId) {
       setLoading(false);
       return;
     }
@@ -94,6 +94,7 @@ export default function History() {
             won_at
           )
         `)
+        .eq('user_id', hybridUserId) // Add user filter
         .order('updated_at', { ascending: false });
 
       console.log("📚 HISTORY: Database query result:", {
