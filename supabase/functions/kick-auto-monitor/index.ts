@@ -421,6 +421,7 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
     }
 
     const channelUsername = profile.linked_kick_username || profile.kick_username;
+    console.log(`🎯 Looking for slots event - Channel: ${channelUsername}, Status: active`);
 
     // Find active slots event for this streamer's channel  
     const { data: activeEvent, error: eventError } = await supabase
@@ -429,6 +430,13 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
       .eq('status', 'active')
       .eq('channel_id', channelUsername)
       .maybeSingle();
+    
+    console.log(`📊 Event lookup result:`, { 
+      activeEvent: activeEvent ? `${activeEvent.title} (${activeEvent.id})` : null, 
+      eventError, 
+      channelUsername,
+      status: 'active'
+    });
 
     if (eventError || !activeEvent) {
       console.log(`❌ No active slots event found for channel: ${channelUsername}`);
