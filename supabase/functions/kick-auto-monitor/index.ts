@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
         
       case 'send_message':
         console.log(`🤖 Processing send_message with token: ${body.token ? 'present' : 'missing'}`);
-        return await sendUserMessage(body.message, body.token, supabase);
+        return await sendUserMessage(body.message, body.token, body.user_id, supabase);
       
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -230,7 +230,7 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
             const command = messageData.content.substring(1).split(' ')[0].toLowerCase();
             console.log(`🎯 Auto-processing command: !${command} from @${messageData.sender?.username}`);
 
-            await processCommandBackground(command, messageData, userId, tokenInfo, supabase);
+            await processCommandBackground(command, messageData, userId, tokenInfo, chatroomId, supabase);
           }
         }
       } catch (error) {
@@ -273,7 +273,7 @@ async function runChatMonitor(userId: string, kickUsername: string, channelId: s
   }
 }
 
-async function processCommandBackground(command: string, messageData: any, userId: string, tokenInfo: any, supabase: any) {
+async function processCommandBackground(command: string, messageData: any, userId: string, tokenInfo: any, chatroomId: string, supabase: any) {
   try {
     // Look up command in database
     const { data: commands, error } = await supabase
@@ -299,7 +299,7 @@ async function processCommandBackground(command: string, messageData: any, userI
     }
 
     // Send bot response
-    await sendBotMessage(commands.response, tokenInfo.access_token);
+    await sendBotMessage(commands.response, tokenInfo.access_token, chatroomId);
     
     // Update usage stats
     await supabase
@@ -322,9 +322,9 @@ async function processCommandBackground(command: string, messageData: any, userI
   }
 }
 
-async function sendBotMessage(message: string, token: string) {
+async function sendBotMessage(message: string, token: string, chatroomId: string) {
   try {
-    const response = await fetch('https://api.kick.com/public/v1/chat', {
+    const response = await fetch(`https://api.kick.com/public/v1/chat/send/${chatroomId}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -332,7 +332,6 @@ async function sendBotMessage(message: string, token: string) {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        type: 'bot',
         content: message
       })
     });
@@ -457,12 +456,23 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
   }
 }
 
-async function sendUserMessage(message: string, token: string, supabase: any): Promise<Response> {
+async function sendUserMessage(message: string, token: string, userId: string, supabase: any): Promise<Response> {
   try {
     console.log(`🤖 Sending bot message: ${message.substring(0, 50)}...`);
     
-    // Use the official Kick Chat API endpoint
-    const response = await fetch('https://api.kick.com/public/v1/chat', {
+    // Get the user's chatroom ID from their profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('kick_channel_id')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!profile?.kick_channel_id) {
+      throw new Error('No chatroom ID found for user');
+    }
+    
+    // Use the correct Kick Chat API endpoint with chatroom ID
+    const response = await fetch(`https://api.kick.com/public/v1/chat/send/${profile.kick_channel_id}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -470,8 +480,7 @@ async function sendUserMessage(message: string, token: string, supabase: any): P
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        content: message,
-        type: 'bot'  // Send as bot account
+        content: message
       })
     });
 
