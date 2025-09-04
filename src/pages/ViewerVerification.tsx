@@ -32,7 +32,7 @@ export default function ViewerVerification() {
   const isVerified = role === 'verified_viewer';
   const canGetVerified = isKickLinked && discordLinked;
   
-  // Redirect admins and higher roles away from viewer verification
+  // Redirect admins and higher roles away from viewer verification, but allow regular users
   useEffect(() => {
     if (!roleLoading && user) {
       if (isAdmin()) {
@@ -52,6 +52,10 @@ export default function ViewerVerification() {
         navigate('/');
         return;
       }
+      
+      // Allow 'user' and 'verified_viewer' roles to stay on this page
+      // - 'user' role can complete verification to become 'verified_viewer'
+      // - 'verified_viewer' role can see their verification status
     }
   }, [role, roleLoading, isAdmin, navigate, toast, user]);
 
