@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      bonus_hunt_bets: {
+        Row: {
+          bet_size: number
+          bonus_multiplier: number | null
+          created_at: string
+          ending_balance: number
+          id: string
+          pnl: number
+          session_id: string
+          slot_id: string
+          starting_balance: number
+        }
+        Insert: {
+          bet_size: number
+          bonus_multiplier?: number | null
+          created_at?: string
+          ending_balance: number
+          id?: string
+          pnl: number
+          session_id: string
+          slot_id: string
+          starting_balance: number
+        }
+        Update: {
+          bet_size?: number
+          bonus_multiplier?: number | null
+          created_at?: string
+          ending_balance?: number
+          id?: string
+          pnl?: number
+          session_id?: string
+          slot_id?: string
+          starting_balance?: number
+        }
+        Relationships: []
+      }
+      bonus_hunt_overlay_settings: {
+        Row: {
+          accent_color: string | null
+          animation_enabled: boolean | null
+          background_color: string | null
+          created_at: string
+          font_size: string | null
+          id: string
+          max_visible_bonuses: number | null
+          show_expected_payouts: boolean | null
+          show_top_multipliers: boolean | null
+          show_upcoming_bonuses: boolean | null
+          text_color: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          animation_enabled?: boolean | null
+          background_color?: string | null
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          max_visible_bonuses?: number | null
+          show_expected_payouts?: boolean | null
+          show_top_multipliers?: boolean | null
+          show_upcoming_bonuses?: boolean | null
+          text_color?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          animation_enabled?: boolean | null
+          background_color?: string | null
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          max_visible_bonuses?: number | null
+          show_expected_payouts?: boolean | null
+          show_top_multipliers?: boolean | null
+          show_upcoming_bonuses?: boolean | null
+          text_color?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bonus_hunt_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_balance: number
+          id: string
+          session_name: string | null
+          starting_balance: number
+          status: string
+          target_bonuses: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_balance: number
+          id?: string
+          session_name?: string | null
+          starting_balance: number
+          status?: string
+          target_bonuses?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_balance?: number
+          id?: string
+          session_name?: string | null
+          starting_balance?: number
+          status?: string
+          target_bonuses?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_settings: {
         Row: {
           api_rate_limit: number | null
@@ -517,6 +640,45 @@ export type Database = {
           linked_kick_username?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      slots: {
+        Row: {
+          added_by_user_id: string | null
+          created_at: string
+          id: string
+          is_user_added: boolean | null
+          max_multiplier: number | null
+          name: string
+          provider: string
+          rtp: number | null
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          added_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_user_added?: boolean | null
+          max_multiplier?: number | null
+          name: string
+          provider: string
+          rtp?: number | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          added_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_user_added?: boolean | null
+          max_multiplier?: number | null
+          name?: string
+          provider?: string
+          rtp?: number | null
+          theme?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
