@@ -147,6 +147,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     if (!userId) return;
 
     try {
+      console.log(`🔍 Fetching active event for userId: ${userId}`);
+      
       // Fetch active event for this user
       const { data: eventData, error: eventError } = await supabase
         .from('slots_events')
@@ -154,6 +156,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         .eq('user_id', userId)
         .eq('status', 'active')
         .single();
+
+      console.log(`📊 Event query result:`, { eventData, eventError });
 
       if (eventError && eventError.code !== 'PGRST116') {
         console.error("Error fetching active event:", eventError);
