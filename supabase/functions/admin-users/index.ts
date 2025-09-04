@@ -73,63 +73,64 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url)
-    const action = url.searchParams.get('action')
+    const action = url.searchParams.get('action') || (req.method === 'GET' ? 'list-users' : null)
 
-    switch (action) {
-      case 'list-users': {
-        // Get all auth users using admin client
-        const { data: authUsers, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers()
-        
-        if (authUsersError) {
-          throw authUsersError
-        }
-
-        // Get profiles for all users
-        const { data: profiles, error: profilesError } = await supabaseAdmin
-          .from('profiles')
-          .select('user_id, display_name, kick_username, kick_user_id, created_at')
-
-        if (profilesError) {
-          throw profilesError
-        }
-
-        // Get user roles
-        const { data: userRoles, error: rolesError } = await supabaseAdmin
-          .from('user_roles')
-          .select('user_id, role')
-
-        if (rolesError) {
-          throw rolesError
-        }
-
-        // Combine the data
-        const users = authUsers.users.map(authUser => {
-          const profile = profiles?.find(p => p.user_id === authUser.id)
-          const roleData = userRoles?.find(r => r.user_id === authUser.id)
-          
-          return {
-            id: authUser.id,
-            email: authUser.email || '',
-            display_name: profile?.display_name,
-            kick_username: profile?.kick_username,
-            kick_user_id: profile?.kick_user_id,
-            role: roleData?.role || 'user',
-            created_at: authUser.created_at
-          }
-        })
-
-        return new Response(
-          JSON.stringify({ users }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+    if (req.method === 'GET' || action === 'list-users') {
+      // Get all auth users using admin client
+      const { data: authUsers, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers()
+      
+      if (authUsersError) {
+        throw authUsersError
       }
 
-      case 'update-role': {
-        const { userId, role } = await req.json()
+      // Get profiles for all users
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, display_name, kick_username, kick_user_id, created_at')
+
+      if (profilesError) {
+        throw profilesError
+      }
+
+      // Get user roles
+      const { data: userRoles, error: rolesError } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id, role')
+
+      if (rolesError) {
+        throw rolesError
+      }
+
+      // Combine the data
+      const users = authUsers.users.map(authUser => {
+        const profile = profiles?.find(p => p.user_id === authUser.id)
+        const roleData = userRoles?.find(r => r.user_id === authUser.id)
         
+        return {
+          id: authUser.id,
+          email: authUser.email || '',
+          display_name: profile?.display_name,
+          kick_username: profile?.kick_username,
+          kick_user_id: profile?.kick_user_id,
+          role: roleData?.role || 'user',
+          created_at: authUser.created_at
+        }
+      })
+
+      return new Response(
+        JSON.stringify({ users }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    if (req.method === 'POST') {
+      const body = await req.json()
+      const { action, userId, role } = body
+      
+      if (action === 'update-role') {
         if (!userId || !role) {
           return new Response(
             JSON.stringify({ error: 'Missing userId or role' }),
@@ -140,15 +141,19 @@ serve(async (req) => {
           )
         }
 
-        // Update user role
+        // Delete existing roles for user
+        await supabaseAdmin
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+
+        // Insert new role
         const { error: updateError } = await supabaseAdmin
           .from('user_roles')
-          .upsert({ 
+          .insert({ 
             user_id: userId, 
             role: role,
             granted_by: user.id 
-          }, { 
-            onConflict: 'user_id,role' 
           })
 
         if (updateError) {
@@ -163,16 +168,15 @@ serve(async (req) => {
           }
         )
       }
-
-      default:
-        return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
     }
+
+    return new Response(
+      JSON.stringify({ error: 'Invalid action or method' }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
 
   } catch (error) {
     console.error('Admin function error:', error)

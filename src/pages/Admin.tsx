@@ -76,13 +76,9 @@ export default function Admin() {
 
     setLoading(true);
     try {
-      // Use the admin edge function to get users
+      // Use the admin edge function to get users - just call it directly for GET
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: new URLSearchParams({ action: 'list-users' })
+        method: 'GET'
       });
 
       if (error) throw error;
