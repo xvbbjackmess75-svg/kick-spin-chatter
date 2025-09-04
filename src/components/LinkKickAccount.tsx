@@ -73,7 +73,12 @@ export function LinkKickAccount() {
         }
       });
 
+      console.log('🔧 OAuth response:', response);
+      console.log('🔧 OAuth response data:', response.data);
+      console.log('🔧 OAuth response error:', response.error);
+
       if (response.error) {
+        console.error('❌ OAuth invoke error:', response.error);
         throw response.error;
       }
 
