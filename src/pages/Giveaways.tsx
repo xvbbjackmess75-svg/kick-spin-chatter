@@ -22,8 +22,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
-import { GiveawayRoulette } from "@/components/GiveawayRoulette";
-import { PendingWinners } from "@/components/PendingWinners";
+import { RouletteModal } from "@/components/RouletteModal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +83,7 @@ export default function Giveaways() {
   const [loading, setLoading] = useState(true);
   const [chatConnected, setChatConnected] = useState(false);
   const [connectedChannel, setConnectedChannel] = useState<string>("");
-  const [showStartButton, setShowStartButton] = useState(false);
+  const [isRouletteModalOpen, setIsRouletteModalOpen] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   
   // Management states
@@ -503,7 +502,7 @@ export default function Giveaways() {
       setCurrentGiveaway(giveaway);
       setParticipants(giveawayParticipants);
       setPendingWinners([]); // Reset pending winners
-      setShowStartButton(false); // Auto-start first roll
+      setIsRouletteModalOpen(true); // Open modal
       
     } catch (error) {
       console.error('Error starting winner selection:', error);
@@ -534,8 +533,7 @@ export default function Giveaways() {
 
     setPendingWinners(prev => [...prev, pendingWinner]);
     
-    // Show start button for next roll
-    setShowStartButton(true);
+    // Winner is now pending
     
     toast({
       title: "Winner Added to Pending!",
@@ -594,7 +592,7 @@ export default function Giveaways() {
       setCurrentGiveaway(null);
       setParticipants([]);
       setPendingWinners([]);
-      setShowStartButton(false);
+      // Winners accepted
       
       // Refresh giveaways list
       await fetchGiveaways();
@@ -648,7 +646,7 @@ export default function Giveaways() {
       console.log("🎯 Adding another winner - available participants:", mappedParticipants.length, "excluded:", previousWinners.length);
       
       setParticipants(mappedParticipants);
-      setShowStartButton(true); // Show button to start rolling
+      // Participants ready for next roll
       
     } catch (error) {
       console.error('Error loading participants for another winner:', error);
@@ -663,7 +661,7 @@ export default function Giveaways() {
   // Start new roll (triggered by button)
   const handleStartNewRoll = () => {
     console.log("🎲 Starting new roll...");
-    setShowStartButton(false); // Hide button and auto-start roulette
+    // Modal handles the roll logic
   };
 
   const handleEndGiveaway = async () => {
@@ -1062,28 +1060,17 @@ export default function Giveaways() {
           </div>
         </div>
 
-        {/* Roulette Section */}
-        {currentGiveaway && participants.length > 0 && (
-          <div className="space-y-6">
-            <GiveawayRoulette 
-              participants={participants}
-              onPendingWinner={handlePendingWinner}
-              onRerollWinner={handleRerollWinner}
-              onStartNewRoll={handleStartNewRoll}
-              currentPendingWinner={null}
-              showStartButton={showStartButton}
-            />
-            
-            {/* Pending Winners Display */}
-            <PendingWinners 
-              pendingWinners={pendingWinners}
-              onRemoveWinner={handleRemovePendingWinner}
-              onAcceptAllWinners={handleAcceptAllWinners}
-              onAddAnotherWinner={handleAddAnotherWinner}
-              isRolling={false}
-            />
-          </div>
-        )}
+        {/* Roulette Modal */}
+        <RouletteModal
+          isOpen={isRouletteModalOpen}
+          onClose={() => setIsRouletteModalOpen(false)}
+          giveaway={currentGiveaway}
+          participants={participants}
+          onEndGiveaway={async (winners) => {
+            await handleAcceptAllWinners();
+            setIsRouletteModalOpen(false);
+          }}
+        />
 
         {/* Giveaways Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
