@@ -65,7 +65,6 @@ export default function BonusHunt() {
   const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [startingBalance, setStartingBalance] = useState<string>('');
-  const [targetBonuses, setTargetBonuses] = useState<string>('10');
 
   // Add slot form state
   const [showAddSlotDialog, setShowAddSlotDialog] = useState(false);
@@ -172,7 +171,7 @@ export default function BonusHunt() {
           session_name: newSessionName || undefined,
           starting_balance: parseFloat(startingBalance),
           current_balance: parseFloat(startingBalance),
-          target_bonuses: parseInt(targetBonuses) || 0,
+          target_bonuses: 0,
           status: 'active'
         })
         .select()
@@ -185,7 +184,6 @@ export default function BonusHunt() {
       setShowNewSessionDialog(false);
       setNewSessionName('');
       setStartingBalance('');
-      setTargetBonuses('10');
       toast({ title: 'Session created successfully!' });
     } catch (error) {
       console.error('Error creating session:', error);
@@ -362,16 +360,6 @@ export default function BonusHunt() {
                       value={startingBalance}
                       onChange={(e) => setStartingBalance(e.target.value)}
                       placeholder="100.00"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="targetBonuses">Target Bonuses</Label>
-                    <Input
-                      id="targetBonuses"
-                      type="number"
-                      value={targetBonuses}
-                      onChange={(e) => setTargetBonuses(e.target.value)}
-                      placeholder="10"
                     />
                   </div>
                   <Button onClick={createSession} className="w-full">
