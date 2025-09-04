@@ -120,6 +120,8 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
     console.log(`🔍 Token validated for user: ${userData.data?.[0]?.name}`);
     
     // Send message using Kick Chat API (correct endpoint)
+    // Note: When type is "bot", the message is sent to the channel attached to the bot's token
+    // broadcaster_user_id is ignored for bot type
     const response = await fetch('https://api.kick.com/public/v1/chat', {
       method: 'POST',
       headers: {
@@ -128,9 +130,9 @@ async function sendMessage(body: KickChatRequest): Promise<Response> {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        type: 'bot', // Use bot type since we're sending as a bot
+        type: 'bot', // This tells Kick to send as the bot account
         content: message
-        // broadcaster_user_id is not required for bot type and will be ignored
+        // broadcaster_user_id is not needed for bot type - message goes to bot's attached channel
       })
     });
 
