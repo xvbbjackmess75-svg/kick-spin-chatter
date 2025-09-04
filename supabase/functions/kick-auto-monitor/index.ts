@@ -458,18 +458,36 @@ async function updateHeartbeat(userId: string, supabase: any): Promise<Response>
 
 async function sendUserMessage(message: string, token: string, supabase: any): Promise<Response> {
   try {
-    console.log(`🤖 Attempting to send bot message: ${message.substring(0, 50)}...`);
+    console.log(`🤖 Sending bot message: ${message.substring(0, 50)}...`);
     
-    // For now, we'll simulate the message sending since Kick's chat API 
-    // may require specific bot setup or different authentication
-    // In a real implementation, you would use the correct Kick bot API endpoint
-    
-    console.log(`✅ Bot message simulated: ${message.substring(0, 50)}...`);
+    // Use the official Kick Chat API endpoint
+    const response = await fetch('https://api.kick.com/public/v1/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        content: message,
+        type: 'bot'  // Send as bot account
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Kick API error: ${response.status} - ${errorText}`);
+      throw new Error(`Kick API error: ${response.status} - ${errorText}`);
+    }
+
+    const responseData = await response.json();
+    console.log(`✅ Bot message sent successfully:`, responseData);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: "Bot message processed successfully"
+        message: "Bot message sent successfully",
+        data: responseData
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
