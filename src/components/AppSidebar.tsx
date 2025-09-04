@@ -24,11 +24,16 @@ import {
   Shield
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useProfile } from "@/hooks/useProfile";
 
 const mainItems = [
-  { title: "Giveaways", url: "/", icon: Gift },
-  { title: "Slots Calls", url: "/slots-calls", icon: Dices },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Bonus Hunt", url: "/bonus-hunt", icon: Trophy },
+];
+
+const streamerItems = [
+  { title: "Giveaways", url: "/giveaways", icon: Gift },
+  { title: "Slots Calls", url: "/slots-calls", icon: Dices },
   { title: "History", url: "/history", icon: History },
 ];
 
@@ -38,6 +43,8 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
   const { isAdmin } = useUserRole();
+  const { profile } = useProfile();
+  const isStreamer = profile?.is_streamer;
 
   const isActive = (path: string) => currentPath === path;
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
@@ -85,6 +92,29 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Streamer Features */}
+        {isStreamer && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-kick-green font-semibold">
+              {!collapsed && "Streaming"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {streamerItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} end className={getNavClass}>
+                        <item.icon className="h-5 w-5 mr-3" />
+                        {!collapsed && <span className="font-medium">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Admin Section */}
         {isAdmin() && (

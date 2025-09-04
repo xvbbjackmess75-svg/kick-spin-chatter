@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
+import ViewerDashboard from "@/components/ViewerDashboard";
 import { 
   Gift, 
   Users,
@@ -20,6 +22,12 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { profile } = useProfile();
+  
+  // Show viewer dashboard if user is not a streamer
+  if (!profile?.is_streamer) {
+    return <ViewerDashboard />;
+  }
   
   // Mock data for demo
   const stats = {
@@ -56,7 +64,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Zap className="h-12 w-12 text-kick-green" />
             <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              KickBot Dashboard
+              Streamer Dashboard
             </h1>
           </div>
           <p className="text-xl text-muted-foreground mb-8">
