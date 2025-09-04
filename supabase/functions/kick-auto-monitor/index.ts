@@ -457,7 +457,26 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
 
     console.log(`✅ Found active slots event: ${activeEvent.title} for ${channelUsername}`);
 
-    // Check if user has already called for this event
+    // Check if user has already called this exact slot for this event
+    const { data: existingSlotCall, error: slotCallError } = await supabase
+      .from('slots_calls')
+      .select('id')
+      .eq('event_id', activeEvent.id)
+      .eq('viewer_kick_id', kickUserId)
+      .eq('slot_name', slotName)
+      .single();
+
+    if (slotCallError && slotCallError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error(`❌ Error checking existing slot call:`, slotCallError);
+      return;
+    }
+
+    if (existingSlotCall) {
+      console.log(`⚠️ Duplicate call prevented: ${username} already called ${slotName}`);
+      return;
+    }
+
+    // Check if user has reached max calls per user for this event
     const { data: existingCalls, error: callsError } = await supabase
       .from('slots_calls')
       .select('*')
