@@ -95,13 +95,22 @@ export default function Giveaways() {
   }, [getChannelInfo, channelName]);
 
   useEffect(() => {
-    if (!authLoading && canUseChatbot) {
+    console.log('🔄 Giveaways useEffect triggered:', {
+      authLoading,
+      canUseChatbot,
+      isSupabaseUser,
+      userId: user?.id
+    });
+    
+    if (!authLoading && user?.id && isSupabaseUser) {
+      console.log('✅ Conditions met, fetching giveaways...');
       fetchGiveaways();
       initializeWebSocket();
     } else if (!authLoading) {
+      console.log('❌ Conditions not met, setting loading to false');
       setLoading(false);
     }
-  }, [authLoading, canUseChatbot]);
+  }, [authLoading, user?.id, isSupabaseUser]);
 
   const fetchGiveaways = async () => {
     // Only fetch giveaways for Supabase authenticated users
