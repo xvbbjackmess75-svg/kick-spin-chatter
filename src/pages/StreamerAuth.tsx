@@ -84,16 +84,22 @@ export default function StreamerAuth() {
             is_streamer: true
           });
 
-        // Assign premium role for streamer panel access
+        // Assign user role for streamer panel access (remove default viewer role first)
+        const { error: deleteViewerRoleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('role', 'viewer');
+
         const { error: roleError } = await supabase
           .from('user_roles')
           .upsert({
             user_id: user.id,
-            role: 'premium'
+            role: 'user'
           });
 
-        if (profileError || roleError) {
-          console.error('Error creating profile or role:', { profileError, roleError });
+        if (profileError || roleError || deleteViewerRoleError) {
+          console.error('Error creating profile or role:', { profileError, roleError, deleteViewerRoleError });
         }
       }
 
