@@ -19,7 +19,7 @@ export const canAccessAdminPanel = (role: UserRole): boolean => {
 
 export function useUserRole() {
   const { user } = useAuth();
-  const [role, setRole] = useState<UserRole>('user');
+  const [role, setRole] = useState<UserRole>('viewer');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
