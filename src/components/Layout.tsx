@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useKickAccount } from "@/hooks/useKickAccount";
@@ -16,8 +16,19 @@ import {
   MonitorPlay,
   Trophy,
   Zap,
-  Phone
+  Phone,
+  Menu,
+  User
 } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,6 +39,8 @@ export function Layout({ children }: LayoutProps) {
   const { profile } = useProfile();
   const { kickUser } = useKickAccount();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
@@ -109,16 +122,70 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation Header */}
-      <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="h-full max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* Logo and Navigation */}
-          <div className="flex items-center gap-8">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
+      <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="h-full max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
+          {/* Logo and Mobile Menu */}
+          <div className="flex items-center gap-4">
+            {/* Mobile Menu Button */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:hidden p-2">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="p-6 border-b">
+                  <h2 className="text-lg font-semibold">Navigation</h2>
+                </div>
+                <nav className="p-4">
+                  <div className="space-y-2">
+                    {navItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+                            isActive(item.path)
+                              ? "bg-primary/10 text-primary border border-primary/20"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          }`}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-6 pt-6 border-t">
+                    <Link
+                      to="/account"
+                      className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <User className="h-5 w-5" />
+                      <span>Account Settings</span>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 px-3 py-3 mt-2 text-muted-foreground hover:text-destructive"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-5 w-5" />
+                      <span>Sign Out</span>
+                    </Button>
+                  </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
+
+            <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
               Kick Bot Dashboard
             </h1>
             
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1">
+            {/* Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -140,78 +207,155 @@ export function Layout({ children }: LayoutProps) {
           </div>
           
           {/* Right Side - Status and User */}
-          <div className="flex items-center gap-4">
-            <Badge variant="outline" className="text-kick-green border-kick-green/30">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Badge variant="outline" className="text-kick-green border-kick-green/30 hidden sm:flex">
               <div className="w-2 h-2 bg-kick-green rounded-full mr-2 animate-pulse" />
               Bot Online
             </Badge>
             
-            <div className="flex items-center gap-3">
-              {/* Simple img-based avatar instead of complex Avatar component */}
-              <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
-                <img 
-                  src={userInfo.avatar} 
-                  alt={userInfo.username}
-                  className="h-full w-full object-cover"
-                  onLoad={() => {
-                    console.log('✅ Header avatar loaded successfully:', userInfo.avatar);
-                  }}
-                  onError={(e) => {
-                    console.error('❌ Header avatar failed to load:', userInfo.avatar);
-                    // Hide the img and show fallback text
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-                <div 
-                  className="absolute inset-0 flex items-center justify-center text-primary-foreground text-sm font-semibold"
-                  style={{ display: 'none' }}
-                >
-                  {userInfo.initials}
-                </div>
-              </div>
-              <Link 
-                to="/account" 
-                className="text-sm font-medium hidden sm:block hover:text-primary transition-colors cursor-pointer"
-              >
-                {userInfo.displayName}
-              </Link>
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-destructive"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline ml-2">Sign Out</span>
-            </Button>
-          </div>
-        </div>
-        
-        {/* Mobile Navigation */}
-        <div className="md:hidden border-t border-border/30">
-          <div className="max-w-7xl mx-auto px-4 py-2">
-            <div className="flex items-center gap-1 overflow-x-auto">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                      isActive(item.path)
-                        ? "bg-primary/10 text-primary border border-primary/20"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
+            {/* Desktop User Menu */}
+            <div className="hidden md:flex items-center gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-muted/50">
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
+                      <img 
+                        src={userInfo.avatar} 
+                        alt={userInfo.username}
+                        className="h-full w-full object-cover"
+                        onLoad={() => {
+                          console.log('✅ Header avatar loaded successfully:', userInfo.avatar);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Header avatar failed to load:', userInfo.avatar);
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center text-primary-foreground text-sm font-semibold"
+                        style={{ display: 'none' }}
+                      >
+                        {userInfo.initials}
+                      </div>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-background border border-border shadow-lg" align="end">
+                  <div className="flex items-center gap-2 p-3 border-b">
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
+                      <img 
+                        src={userInfo.avatar} 
+                        alt={userInfo.username}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center text-primary-foreground text-xs font-semibold"
+                        style={{ display: 'none' }}
+                      >
+                        {userInfo.initials}
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-sm font-medium">{userInfo.displayName}</p>
+                      <p className="text-xs text-muted-foreground">{userInfo.username}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuItem 
+                    className="cursor-pointer"
+                    onClick={() => navigate('/account')}
                   >
-                    <Icon className="h-3 w-3" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Account Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="text-sm font-medium text-muted-foreground">
+                {userInfo.displayName}
+              </span>
+            </div>
+
+            {/* Mobile User Avatar - Clickable */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-muted/50">
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
+                      <img 
+                        src={userInfo.avatar} 
+                        alt={userInfo.username}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center text-primary-foreground text-sm font-semibold"
+                        style={{ display: 'none' }}
+                      >
+                        {userInfo.initials}
+                      </div>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-background border border-border shadow-lg mr-4" align="end">
+                  <div className="flex items-center gap-2 p-3 border-b">
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary/80">
+                      <img 
+                        src={userInfo.avatar} 
+                        alt={userInfo.username}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center text-primary-foreground text-xs font-semibold"
+                        style={{ display: 'none' }}
+                      >
+                        {userInfo.initials}
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-sm font-medium">{userInfo.displayName}</p>
+                      <p className="text-xs text-muted-foreground">{userInfo.username}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuItem 
+                    className="cursor-pointer"
+                    onClick={() => navigate('/account')}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Account Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
