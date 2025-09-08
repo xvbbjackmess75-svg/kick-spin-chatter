@@ -188,7 +188,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
       // Use the secure overlay function that only exposes non-sensitive data
       const { data: callsData, error: callsError } = await supabase
-        .rpc('get_overlay_slots_calls');
+        .rpc('get_overlay_slots_calls', { target_user_id: userId });
 
       console.log('🔍 Raw calls data from function:', callsData);
 

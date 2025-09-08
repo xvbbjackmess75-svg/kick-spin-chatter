@@ -884,7 +884,7 @@ export type Database = {
         Returns: number
       }
       get_overlay_slots_calls: {
-        Args: Record<PropertyKey, never>
+        Args: { target_user_id?: string }
         Returns: {
           bet_amount: number
           call_order: number
