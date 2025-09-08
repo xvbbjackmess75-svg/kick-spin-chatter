@@ -190,12 +190,16 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       const { data: callsData, error: callsError } = await supabase
         .rpc('get_overlay_slots_calls');
 
+      console.log('🔍 Raw calls data from function:', callsData);
+
       if (callsError) {
         console.error("Error fetching calls:", callsError);
         setCalls([]);
       } else {
         // Filter calls for the current event since the function returns all active calls
         const eventCalls = callsData?.filter((call: any) => call.event_id === secureEvent.event_id) || [];
+        console.log('📊 Filtered event calls:', eventCalls);
+        
         // Map the secure data to the expected format (now including usernames and financial data)
         const mappedCalls = eventCalls.map((call: any) => ({
           id: call.id,
@@ -209,6 +213,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
           submitted_at: call.submitted_at,
           call_order: call.call_order,
         }));
+        console.log('🎯 Mapped calls for overlay:', mappedCalls);
         setCalls(mappedCalls);
       }
       
@@ -286,6 +291,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   }
 
   const topCall = getTopCall();
+  console.log('🏆 Top call calculated:', topCall);
+  console.log('📝 All calls for top call calculation:', calls);
 
   // Create duplicated calls for infinite scroll effect when needed
   const infiniteScrollCalls = calls.length > (overlaySettings.max_visible_calls || maxCalls) 
