@@ -546,6 +546,17 @@ export default function BonusHunt() {
     }
   };
 
+  const moveToNextSlot = () => {
+    // Find the next pending slot (without payout recorded)
+    const nextPendingBet = sessionBets.find(bet => !bet.payout_recorded_at);
+    if (nextPendingBet) {
+      setSelectedBetForPayout(nextPendingBet);
+      setPayoutAmount('');
+    } else {
+      toast({ title: 'All payouts recorded!', description: 'No more pending slots found.' });
+    }
+  };
+
   const editPayout = async () => {
     if (!editingPayout || !newPayoutAmount) return;
 
@@ -1087,15 +1098,29 @@ export default function BonusHunt() {
                           placeholder="0.00"
                         />
                       </div>
-                      <div className="flex items-end gap-2">
-                        <Button onClick={recordPayout} disabled={!payoutAmount} className="bg-kick-green hover:bg-kick-green/80">
-                          <Trophy className="h-4 w-4 mr-1" />
-                          Record
-                        </Button>
-                        <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
-                          Cancel
-                        </Button>
-                      </div>
+                       <div className="flex items-end gap-2">
+                         <Button onClick={recordPayout} disabled={!payoutAmount} className="bg-kick-green hover:bg-kick-green/80">
+                           <Trophy className="h-4 w-4 mr-1" />
+                           Record
+                         </Button>
+                         {sessionBets.filter(bet => !bet.payout_recorded_at).length > 1 && (
+                           <Button 
+                             onClick={() => {
+                               recordPayout();
+                               // Small delay to ensure state updates, then move to next
+                               setTimeout(() => moveToNextSlot(), 100);
+                             }} 
+                             disabled={!payoutAmount} 
+                             className="bg-blue-600 hover:bg-blue-700"
+                           >
+                             <Trophy className="h-4 w-4 mr-1" />
+                             Record & Next
+                           </Button>
+                         )}
+                         <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
+                           Cancel
+                         </Button>
+                       </div>
                     </div>
                   </div>
                 ) : editingPayout ? (
