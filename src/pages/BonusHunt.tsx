@@ -168,7 +168,30 @@ export default function BonusHunt() {
         if (parsed.startingBalance) setStartingBalance(parsed.startingBalance);
         if (parsed.betSize) setBetSize(parsed.betSize);
         if (parsed.endingBalance) setEndingBalance(parsed.endingBalance);
+        if (parsed.payoutAmount) setPayoutAmount(parsed.payoutAmount);
+        if (parsed.newPayoutAmount) setNewPayoutAmount(parsed.newPayoutAmount);
       }
+
+      // Set up real-time subscription for bonus hunt bets
+      const betsSubscription = supabase
+        .channel('bonus_hunt_bets_realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bonus_hunt_bets'
+          },
+          (payload) => {
+            console.log('Real-time bet update:', payload);
+            loadSessionBets(); // Reload session bets when changes occur
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(betsSubscription);
+      };
     }
   }, [user]);
 
@@ -178,18 +201,22 @@ export default function BonusHunt() {
     }
   }, [activeSession]);
 
-  // Persist form data
+  // Persist form data including bonus result inputs
   useEffect(() => {
     if (user) {
       const dataToSave = {
         newSessionName,
         startingBalance,
         betSize,
-        endingBalance
+        endingBalance,
+        payoutAmount,
+        newPayoutAmount,
+        selectedBetId: selectedBetForPayout?.id,
+        editingPayoutId: editingPayout?.id
       };
       localStorage.setItem(`bonusHunt_${user.id}`, JSON.stringify(dataToSave));
     }
-  }, [user, newSessionName, startingBalance, betSize, endingBalance]);
+  }, [user, newSessionName, startingBalance, betSize, endingBalance, payoutAmount, newPayoutAmount, selectedBetForPayout?.id, editingPayout?.id]);
 
   const loadSessions = async () => {
     try {
@@ -517,6 +544,7 @@ export default function BonusHunt() {
     try {
       const payout = parseFloat(payoutAmount);
       
+      // Start a transaction to ensure data consistency
       const { error } = await supabase
         .from('bonus_hunt_bets')
         .update({
@@ -527,19 +555,33 @@ export default function BonusHunt() {
 
       if (error) throw error;
 
-      // Update the local state immediately to reflect changes
-      setSessionBets(prev => prev.map(bet => 
-        bet.id === selectedBetForPayout.id 
-          ? { ...bet, payout_amount: payout, payout_recorded_at: new Date().toISOString() }
-          : bet
-      ));
-
+      // Clear form and local storage for this field
       setSelectedBetForPayout(null);
       setPayoutAmount('');
-      toast({ title: 'Payout recorded successfully!' });
+      
+      // Clear persisted payout data
+      const savedData = localStorage.getItem(`bonusHunt_${user?.id}`);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        delete parsed.payoutAmount;
+        delete parsed.selectedBetId;
+        localStorage.setItem(`bonusHunt_${user?.id}`, JSON.stringify(parsed));
+      }
+
+      toast({ 
+        title: 'Bonus result saved!', 
+        description: `${selectedSlot?.name || 'Bonus'} payout of $${payout.toFixed(2)} recorded successfully.`
+      });
+      
+      // Reload session bets to ensure consistency
+      loadSessionBets();
     } catch (error) {
       console.error('Error recording payout:', error);
-      toast({ title: 'Error recording payout', variant: 'destructive' });
+      toast({ 
+        title: 'Error saving bonus result', 
+        description: 'Please try again or check your connection.',
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -559,19 +601,33 @@ export default function BonusHunt() {
 
       if (error) throw error;
 
-      // Update the local state immediately
-      setSessionBets(prev => prev.map(bet => 
-        bet.id === editingPayout.id 
-          ? { ...bet, payout_amount: payout, payout_recorded_at: new Date().toISOString() }
-          : bet
-      ));
-
+      // Clear form and local storage for this field
       setEditingPayout(null);
       setNewPayoutAmount('');
-      toast({ title: 'Payout updated successfully!' });
+      
+      // Clear persisted edit payout data
+      const savedData = localStorage.getItem(`bonusHunt_${user?.id}`);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        delete parsed.newPayoutAmount;
+        delete parsed.editingPayoutId;
+        localStorage.setItem(`bonusHunt_${user?.id}`, JSON.stringify(parsed));
+      }
+
+      toast({ 
+        title: 'Bonus result updated!', 
+        description: `Payout updated to $${payout.toFixed(2)} successfully.`
+      });
+      
+      // Reload session bets to ensure consistency
+      loadSessionBets();
     } catch (error) {
       console.error('Error editing payout:', error);
-      toast({ title: 'Error editing payout', variant: 'destructive' });
+      toast({ 
+        title: 'Error updating bonus result', 
+        description: 'Please try again or check your connection.',
+        variant: 'destructive' 
+      });
     }
   };
 
