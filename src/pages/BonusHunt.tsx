@@ -677,12 +677,23 @@ export default function BonusHunt() {
     if (!user) return;
 
     try {
+      // Only include fields that exist in the bonus_hunt_overlay_settings table
+      const settingsToSave = {
+        user_id: user.id,
+        background_color: overlaySettings.background_color,
+        text_color: overlaySettings.text_color,
+        accent_color: overlaySettings.accent_color,
+        font_size: overlaySettings.font_size,
+        max_visible_bonuses: overlaySettings.max_visible_bonuses,
+        show_upcoming_bonuses: overlaySettings.show_upcoming_bonuses,
+        show_top_multipliers: overlaySettings.show_top_multipliers,
+        show_expected_payouts: overlaySettings.show_expected_payouts,
+        animation_enabled: overlaySettings.animation_enabled
+      };
+
       const { error } = await supabase
         .from('bonus_hunt_overlay_settings')
-        .upsert({
-          user_id: user.id,
-          ...overlaySettings
-        });
+        .upsert(settingsToSave);
 
       if (error) throw error;
 
