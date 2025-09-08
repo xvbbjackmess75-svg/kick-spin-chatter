@@ -886,13 +886,17 @@ export type Database = {
       get_overlay_slots_calls: {
         Args: Record<PropertyKey, never>
         Returns: {
+          bet_amount: number
           call_order: number
           display_status: string
           event_id: string
           id: string
+          multiplier: number
           slot_name: string
           status: string
           submitted_at: string
+          viewer_username: string
+          win_amount: number
         }[]
       }
       get_secure_overlay_event: {
