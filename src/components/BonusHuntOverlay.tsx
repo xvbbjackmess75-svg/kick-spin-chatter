@@ -346,19 +346,42 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
               <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>
                 {session.session_name || 'Bonus Hunt'}
               </h2>
-              <div className="flex items-center gap-2 text-sm opacity-80">
-                <span style={{color: overlaySettings.text_color}}>
-                  Balance: ${session.current_balance?.toFixed(2)}
-                </span>
-                <Badge 
-                  className={
-                    session.bonus_opening_phase ? 'bg-purple-500/20 text-purple-300' :
-                    session.status === 'active' ? 'bg-green-500/20 text-green-300' :
-                    'bg-yellow-500/20 text-yellow-300'
-                  }
-                >
-                  {session.bonus_opening_phase ? 'Opening Bonuses' : session.status}
-                </Badge>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm opacity-80">
+                  <span style={{color: overlaySettings.text_color}}>
+                    Balance: ${session.current_balance?.toFixed(2)}
+                  </span>
+                  <Badge 
+                    className={
+                      session.bonus_opening_phase ? 'bg-purple-500/20 text-purple-300' :
+                      session.status === 'active' ? 'bg-green-500/20 text-green-300' :
+                      'bg-yellow-500/20 text-yellow-300'
+                    }
+                  >
+                    {session.bonus_opening_phase ? 'Opening Bonuses' : session.status}
+                  </Badge>
+                </div>
+                {/* Stats under balance */}
+                <div className="grid grid-cols-3 gap-3 text-xs mt-2">
+                  <div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Total Bets</div>
+                    <div className="font-semibold" style={{color: overlaySettings.accent_color}}>
+                      ${totalBets.toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Total Payouts</div>
+                    <div className="font-semibold text-green-400">
+                      ${totalPayouts.toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>P&L</div>
+                    <div className={`font-semibold ${totalPayouts - totalBets >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${(totalPayouts - totalBets).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

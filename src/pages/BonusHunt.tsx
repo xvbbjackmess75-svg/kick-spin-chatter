@@ -399,17 +399,15 @@ export default function BonusHunt() {
       const { error } = await supabase
         .from('bonus_hunt_sessions')
         .update({
-          bonus_opening_phase: true,
-          bonus_opening_started_at: new Date().toISOString()
-        } as any)
+          bonus_opening_phase: true
+        })
         .eq('id', activeSession.id);
 
       if (error) throw error;
 
       setActiveSession(prev => prev ? { 
         ...prev, 
-        bonus_opening_phase: true, 
-        bonus_opening_started_at: new Date().toISOString() 
+        bonus_opening_phase: true
       } : null);
       toast({ title: 'Bonus opening phase started!' });
     } catch (error) {
