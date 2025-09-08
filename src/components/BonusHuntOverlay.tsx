@@ -294,26 +294,63 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const totalBonuses = bonuses.length;
   const completedBonuses = bonuses.filter(bonus => bonus.payout_recorded_at).length;
   const pendingBonuses = bonuses.filter(bonus => !bonus.payout_recorded_at).length;
-  
-  // Calculate totals for all bonuses
   const totalPayouts = bonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
   const totalBets = bonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
+  const avgMultiplier = totalBets > 0 ? totalPayouts / totalBets : 0;
   
-  // Calculate current average multiplier from OPENED bonuses only
-  const openedBonuses = bonuses.filter(bonus => bonus.payout_recorded_at);
-  const openedPayouts = openedBonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
-  const openedBets = openedBonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
-  const currentAvgMulti = openedBets > 0 ? openedPayouts / openedBets : 0;
-  
-  // Calculate required average multiplier to break even (starting balance / total bets)
+  // Calculate required average multiplier to break even
   const requiredAvgMulti = totalBets > 0 && session ? session.starting_balance / totalBets : 0;
-  
-  // PNL = total payouts - starting balance
-  const currentPnl = session ? totalPayouts - session.starting_balance : 0;
-  const isProfit = currentPnl >= 0;
+  const isProfit = avgMultiplier >= requiredAvgMulti;
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
+      {/* Summary Section */}
+      {overlaySettings.show_expected_payouts && bonuses.length > 0 && (
+        <Card 
+          className="backdrop-blur-sm border"
+          style={{
+            ...getOverlayStyle(),
+            background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))'
+          }}
+        >
+          <CardContent className="p-4">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</div>
+                <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Opened</div>
+                <div className="font-bold text-green-400">{completedBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
+                <div className="font-bold text-orange-400">{pendingBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</div>
+                <div className="font-bold text-blue-400">{requiredAvgMulti.toFixed(1)}x</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</div>
+                <div className={`font-bold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {isProfit ? 'Profit' : `${avgMultiplier.toFixed(1)}x`}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
+                <div className="font-bold text-orange-400">{pendingBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Avg Multi</div>
+                <div className="font-bold" style={{color: overlaySettings.accent_color}}>
+                  {avgMultiplier.toFixed(2)}x
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Session Header */}
       <Card 
@@ -345,19 +382,19 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 {/* Stats under balance */}
                 <div className="grid grid-cols-3 gap-3 text-xs mt-2">
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Current Avg</div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average</div>
                     <div className="font-semibold" style={{color: overlaySettings.accent_color}}>
-                      {currentAvgMulti > 0 ? `${currentAvgMulti.toFixed(1)}x` : '0x'}
+                      {requiredAvgMulti.toFixed(1)}x
                     </div>
                   </div>
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>PNL</div>
-                    <div className={`font-semibold ${currentPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${currentPnl >= 0 ? '+' : ''}${currentPnl.toFixed(2)}
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Starting Balance</div>
+                    <div className="font-semibold text-green-400">
+                      ${session.starting_balance.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Req Avg Mult</div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average Multi</div>
                     <div className={`font-semibold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
                       {isProfit ? 'Profit' : `${requiredAvgMulti.toFixed(1)}x`}
                     </div>
@@ -428,11 +465,6 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                         <Badge className={`${getStatusColor(bonus)} text-xs px-1 py-0`}>
                           {bonus.payout_recorded_at ? 'Opened' : 'Pending'}
                         </Badge>
-                        {bonus.payout_recorded_at && (
-                          <span className="text-blue-400 text-xs">
-                            • Opened bonus
-                          </span>
-                        )}
                         {bonus.payout_amount && (
                           <span className="text-green-400">
                             ${bonus.payout_amount.toFixed(2)}

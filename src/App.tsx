@@ -16,7 +16,7 @@ import DiscordCallback from "./pages/DiscordCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
-import BonusHuntSimple from "./pages/BonusHuntSimple";
+import BonusHunt from "./pages/BonusHunt";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import BonusHuntOverlayPage from "./pages/BonusHuntOverlayPage";
 import Account from "./pages/Account";
@@ -97,7 +97,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <BonusHuntSimple />
+                    <BonusHunt />
                   </Layout>
                 </ProtectedRoute>
               }
