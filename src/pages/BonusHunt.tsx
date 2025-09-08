@@ -186,16 +186,15 @@ export default function BonusHunt() {
       const { data, error } = await supabase
         .from('bonus_hunt_sessions')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('status', { ascending: true }) // active first (a < c), then completed/paused
+        .order('created_at', { ascending: false }); // Then by creation date (newest first)
 
       if (error) throw error;
       setSessions((data || []) as BonusHuntSession[]);
       
-      // Set active session if exists
+      // Set active session if exists, clear if no active session
       const active = (data || []).find(s => s.status === 'active');
-      if (active) {
-        setActiveSession(active as BonusHuntSession);
-      }
+      setActiveSession(active ? active as BonusHuntSession : null);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast({ title: 'Error loading sessions', variant: 'destructive' });
