@@ -468,10 +468,15 @@ export default function BonusHunt() {
   const totalPnL = totalPayouts - totalBetAmount;
   const totalBets = sessionBets.length;
   
-  // Calculate required average multiplier to break even (get back to starting balance)
-  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? activeSession.starting_balance / totalBetAmount : 0;
-  const currentAvgMulti = totalBetAmount > 0 ? totalPayouts / totalBetAmount : 0;
-  const isProfit = currentAvgMulti >= requiredAvgMulti;
+  // Calculate current avg multiplier - only from opened bonuses
+  const openedBets = sessionBets.filter(bet => bet.payout_amount !== null && bet.payout_amount !== undefined);
+  const openedBetAmount = openedBets.reduce((sum, bet) => sum + bet.bet_size, 0);
+  const openedPayouts = openedBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
+  const currentAvgMulti = openedBetAmount > 0 ? openedPayouts / openedBetAmount : 0;
+  
+  // Calculate required average multiplier to break even
+  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? totalBetAmount / activeSession.starting_balance : 0;
+  const isProfit = totalPayouts >= totalBetAmount;
   
   const bonusesLeft = activeSession ? Math.max(0, activeSession.target_bonuses - sessionBets.length) : 0;
 
@@ -609,10 +614,10 @@ export default function BonusHunt() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    ${activeSession.current_balance.toFixed(2)}
+                  <div className="text-2xl font-bold text-primary">
+                    ${activeSession.starting_balance.toFixed(2)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Current Balance</div>
+                  <div className="text-sm text-muted-foreground">Starting Balance</div>
                 </div>
                 <div className="text-center">
                   <div className={`text-2xl font-bold ${sessionStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -844,22 +849,22 @@ export default function BonusHunt() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-purple-50 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{bonusesWithPayouts}</div>
+                    <div className="text-2xl font-bold text-primary">{openedBets.length}</div>
                     <div className="text-sm text-muted-foreground">Opened</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{sessionBets.length - bonusesWithPayouts}</div>
+                    <div className="text-2xl font-bold text-muted-foreground">{sessionBets.length - openedBets.length}</div>
                     <div className="text-sm text-muted-foreground">Pending</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">${totalPayouts.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-kick-green">${totalPayouts.toFixed(2)}</div>
                     <div className="text-sm text-muted-foreground">Total Payouts</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{currentAvgMulti.toFixed(2)}x</div>
-                    <div className="text-sm text-muted-foreground">Actual Multiplier</div>
+                    <div className="text-2xl font-bold text-accent">{currentAvgMulti.toFixed(2)}x</div>
+                    <div className="text-sm text-muted-foreground">Current Avg</div>
                   </div>
                 </div>
 
