@@ -158,7 +158,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       
       // Use secure function that only returns essential overlay data
       const { data: eventData, error: eventError } = await supabase
-        .rpc('get_secure_overlay_event');
+        .rpc('get_secure_overlay_event', { target_user_id: userId });
 
       console.log(`📊 Secure event query result:`, { eventData, eventError });
 
