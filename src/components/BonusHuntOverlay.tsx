@@ -297,6 +297,10 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const totalPayouts = bonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
   const totalBets = bonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
   const avgMultiplier = totalBets > 0 ? totalPayouts / totalBets : 0;
+  
+  // Calculate required average multiplier to break even
+  const requiredAvgMulti = totalBets > 0 && session ? session.starting_balance / totalBets : 0;
+  const isProfit = avgMultiplier >= requiredAvgMulti;
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
@@ -310,14 +314,28 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
           }}
         >
           <CardContent className="p-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Bonuses</div>
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</div>
                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalBonuses}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Opened</div>
                 <div className="font-bold text-green-400">{completedBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
+                <div className="font-bold text-orange-400">{pendingBonuses}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</div>
+                <div className="font-bold text-blue-400">{requiredAvgMulti.toFixed(1)}x</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</div>
+                <div className={`font-bold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {isProfit ? 'Profit' : `${avgMultiplier.toFixed(1)}x`}
+                </div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>

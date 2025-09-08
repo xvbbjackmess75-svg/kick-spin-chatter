@@ -21,6 +21,8 @@ export type Database = {
           created_at: string
           ending_balance: number
           id: string
+          payout_amount: number | null
+          payout_recorded_at: string | null
           pnl: number
           session_id: string
           slot_id: string
@@ -32,6 +34,8 @@ export type Database = {
           created_at?: string
           ending_balance: number
           id?: string
+          payout_amount?: number | null
+          payout_recorded_at?: string | null
           pnl: number
           session_id: string
           slot_id: string
@@ -43,6 +47,8 @@ export type Database = {
           created_at?: string
           ending_balance?: number
           id?: string
+          payout_amount?: number | null
+          payout_recorded_at?: string | null
           pnl?: number
           session_id?: string
           slot_id?: string

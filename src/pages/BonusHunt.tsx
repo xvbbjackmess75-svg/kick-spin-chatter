@@ -427,7 +427,7 @@ export default function BonusHunt() {
         .update({
           payout_amount: payout,
           payout_recorded_at: new Date().toISOString()
-        } as any)
+        })
         .eq('id', selectedBetForPayout.id);
 
       if (error) throw error;
@@ -456,29 +456,29 @@ export default function BonusHunt() {
     console.log('Slots containing "wanted":', slots.filter(s => s.name.toLowerCase().includes('wanted')));
   }
 
-  const totalPnL = sessionBets.reduce((sum, bet) => sum + bet.pnl, 0);
+  // Calculate stats based on payouts vs bets
+  const totalBetAmount = sessionBets.reduce((sum, bet) => sum + bet.bet_size, 0);
+  const totalPayouts = sessionBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
+  const totalPnL = totalPayouts - totalBetAmount;
   const totalBets = sessionBets.length;
-  const averageMultiplier = sessionBets.length > 0 
-    ? sessionBets.reduce((sum, bet) => sum + (bet.bonus_multiplier || 0), 0) / sessionBets.length 
-    : 0;
+  
+  // Calculate required average multiplier to break even (get back to starting balance)
+  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? activeSession.starting_balance / totalBetAmount : 0;
+  const currentAvgMulti = totalBetAmount > 0 ? totalPayouts / totalBetAmount : 0;
+  const isProfit = currentAvgMulti >= requiredAvgMulti;
+  
   const bonusesLeft = activeSession ? Math.max(0, activeSession.target_bonuses - sessionBets.length) : 0;
-  const requiredMultiplier = activeSession && bonusesLeft > 0 
-    ? Math.abs(totalPnL) / bonusesLeft 
-    : 0;
 
   const sessionStats = {
     totalPnL,
     totalBets,
-    averageMultiplier,
+    currentAvgMulti,
+    requiredAvgMulti,
     bonusesLeft,
-    requiredMultiplier
+    isProfit
   };
 
-  const totalPayouts = sessionBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
   const bonusesWithPayouts = sessionBets.filter(bet => bet.payout_amount).length;
-  const actualMultiplier = sessionBets.length > 0 
-    ? totalPayouts / sessionBets.reduce((sum, bet) => sum + bet.bet_size, 0)
-    : 0;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
@@ -623,12 +623,14 @@ export default function BonusHunt() {
                   <div className="text-sm text-muted-foreground">Bonuses Left</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{sessionStats.averageMultiplier.toFixed(1)}x</div>
-                  <div className="text-sm text-muted-foreground">Avg Multiplier</div>
+                  <div className="text-2xl font-bold">{sessionStats.requiredAvgMulti.toFixed(1)}x</div>
+                  <div className="text-sm text-muted-foreground">Required Avg</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{sessionStats.requiredMultiplier.toFixed(1)}x</div>
-                  <div className="text-sm text-muted-foreground">Required Avg</div>
+                  <div className={`text-2xl font-bold ${sessionStats.isProfit ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {sessionStats.isProfit ? 'Profit' : `${sessionStats.currentAvgMulti.toFixed(1)}x`}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Current Avg</div>
                 </div>
               </div>
               
@@ -850,7 +852,7 @@ export default function BonusHunt() {
                     <div className="text-sm text-muted-foreground">Total Payouts</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{actualMultiplier.toFixed(2)}x</div>
+                    <div className="text-2xl font-bold">{currentAvgMulti.toFixed(2)}x</div>
                     <div className="text-sm text-muted-foreground">Actual Multiplier</div>
                   </div>
                 </div>
