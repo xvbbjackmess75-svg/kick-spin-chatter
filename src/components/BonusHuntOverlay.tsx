@@ -428,6 +428,11 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                         <Badge className={`${getStatusColor(bonus)} text-xs px-1 py-0`}>
                           {bonus.payout_recorded_at ? 'Opened' : 'Pending'}
                         </Badge>
+                        {bonus.payout_recorded_at && (
+                          <span className="text-blue-400 text-xs">
+                            • Opened bonus
+                          </span>
+                        )}
                         {bonus.payout_amount && (
                           <span className="text-green-400">
                             ${bonus.payout_amount.toFixed(2)}

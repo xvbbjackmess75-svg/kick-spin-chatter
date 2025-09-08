@@ -1275,9 +1275,29 @@ export default function BonusHunt() {
                       )}
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                 </div>
+                 
+                 {/* Currently Opening Bonus Indicator */}
+                 {activeSession?.bonus_opening_phase && sessionBets.some(bet => !bet.payout_recorded_at) && (
+                   <div className="mt-4 p-3 bg-gradient-to-r from-kick-purple/10 to-blue-500/10 border border-kick-purple/30 rounded-lg">
+                     <div className="flex items-center gap-2 mb-2">
+                       <Gift className="h-4 w-4 text-kick-purple animate-pulse" />
+                       <span className="font-medium text-kick-purple">Currently Opening Bonus</span>
+                     </div>
+                     {(() => {
+                       const nextBonus = sessionBets.find(bet => !bet.payout_recorded_at);
+                       return nextBonus ? (
+                         <div className="text-sm text-muted-foreground">
+                           <span className="font-medium">{nextBonus.slots?.name}</span> 
+                           <span className="text-xs"> • ${nextBonus.bet_size.toFixed(2)} bet</span>
+                           <span className="text-xs"> • Click above to record payout</span>
+                         </div>
+                       ) : null;
+                     })()}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
           ) : activeSession ? (
             <Card>
               <CardContent className="text-center py-8">
