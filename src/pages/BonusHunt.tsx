@@ -106,6 +106,41 @@ export default function BonusHunt() {
       loadSlots();
       fetchOverlaySettings();
       
+      // Set up real-time subscription for sessions and bets
+      const sessionsSubscription = supabase
+        .channel('bonus_hunt_sessions_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bonus_hunt_sessions',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            loadSessions();
+          }
+        )
+        .subscribe();
+
+      const betsSubscription = supabase
+        .channel('bonus_hunt_bets_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bonus_hunt_bets'
+          },
+          (payload: any) => {
+            // Only update if it's for the current active session
+            if (activeSession && payload.new && (payload.new as any).session_id === activeSession.id) {
+              loadSessionBets();
+            }
+          }
+        )
+        .subscribe();
+      
       // Load persisted form data
       const savedData = localStorage.getItem(`bonusHunt_${user.id}`);
       if (savedData) {
@@ -115,8 +150,13 @@ export default function BonusHunt() {
         if (parsed.betSize) setBetSize(parsed.betSize);
         if (parsed.endingBalance) setEndingBalance(parsed.endingBalance);
       }
+
+      return () => {
+        supabase.removeChannel(sessionsSubscription);
+        supabase.removeChannel(betsSubscription);
+      };
     }
-  }, [user]);
+  }, [user, activeSession?.id]);
 
   useEffect(() => {
     if (activeSession) {
@@ -586,10 +626,12 @@ export default function BonusHunt() {
     console.log('Slots containing "wanted":', slots.filter(s => s.name.toLowerCase().includes('wanted')));
   }
 
-  // Calculate stats based on payouts vs bets
+  // Calculate stats based on starting balance vs total spent and payouts
   const totalBetAmount = sessionBets.reduce((sum, bet) => sum + bet.bet_size, 0);
   const totalPayouts = sessionBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
-  const totalPnL = totalPayouts - totalBetAmount;
+  
+  // PNL = total payouts received - starting balance (what we started with)
+  const totalPnL = activeSession ? totalPayouts - activeSession.starting_balance : 0;
   const totalBets = sessionBets.length;
   
   // Calculate current avg multiplier - only from opened bonuses

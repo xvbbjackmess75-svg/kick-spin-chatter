@@ -307,13 +307,23 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const totalBonuses = bonuses.length;
   const completedBonuses = bonuses.filter(bonus => bonus.payout_recorded_at).length;
   const pendingBonuses = bonuses.filter(bonus => !bonus.payout_recorded_at).length;
-  const totalPayouts = bonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
-  const totalBets = bonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
-  const avgMultiplier = totalBets > 0 ? totalPayouts / totalBets : 0;
   
-  // Calculate required average multiplier to break even
-  const requiredAvgMulti = totalBets > 0 && session ? session.starting_balance / totalBets : 0;
-  const isProfit = avgMultiplier >= requiredAvgMulti;
+  // Calculate stats based on starting balance vs total spent and payouts
+  const totalBetAmount = bonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
+  const totalPayouts = bonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
+  
+  // PNL = total payouts received - starting balance (what we started with)
+  const totalPnL = session ? totalPayouts - session.starting_balance : 0;
+  
+  // Calculate current avg multiplier - only from opened bonuses
+  const openedBonuses = bonuses.filter(bonus => bonus.payout_amount !== null && bonus.payout_amount !== undefined);
+  const openedBetAmount = openedBonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
+  const openedPayouts = openedBonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
+  const avgMultiplier = openedBetAmount > 0 ? openedPayouts / openedBetAmount : 0;
+  
+  // Calculate required average multiplier to break even from starting balance
+  const requiredAvgMulti = totalBetAmount > 0 && session ? session.starting_balance / totalBetAmount : 0;
+  const isProfit = totalPnL > 0;
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
@@ -353,9 +363,9 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                  </div>
                </div>
                <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Progress</div>
-                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>
-                   {totalBonuses > 0 ? Math.round((completedBonuses / totalBonuses) * 100) : 0}%
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>P&L</div>
+                 <div className={`font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                   {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
                  </div>
                </div>
              </div>
