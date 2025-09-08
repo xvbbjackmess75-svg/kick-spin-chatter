@@ -711,50 +711,49 @@ export default function BonusHunt() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Bonus Hunt</h1>
-        <div className="flex gap-2">
-          {!activeSession && (
-            <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Hunt
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Start New Bonus Hunt</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="sessionName">Session Name (Optional)</Label>
-                    <Input
-                      id="sessionName"
-                      value={newSessionName}
-                      onChange={(e) => setNewSessionName(e.target.value)}
-                      placeholder="e.g., Morning Hunt"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="startingBalance">Starting Balance</Label>
-                    <Input
-                      id="startingBalance"
-                      type="number"
-                      step="0.01"
-                      value={startingBalance}
-                      onChange={(e) => setStartingBalance(e.target.value)}
-                      placeholder="100.00"
-                    />
-                  </div>
-                  <Button onClick={createSession} className="w-full">
-                    Start Hunt
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
       </div>
 
+      {/* No Active Session - Show Creation UI */}
+      {!activeSession && (
+        <Card className="border-2 border-dashed border-primary/50 bg-primary/5">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Play className="h-6 w-6" />
+              Start New Bonus Hunt
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="max-w-md mx-auto space-y-4">
+              <div>
+                <Label htmlFor="sessionName">Session Name (Optional)</Label>
+                <Input
+                  id="sessionName"
+                  value={newSessionName}
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                  placeholder="e.g., Morning Hunt, Evening Session"
+                />
+              </div>
+              <div>
+                <Label htmlFor="startingBalance">Starting Balance</Label>
+                <Input
+                  id="startingBalance"
+                  type="number"
+                  step="0.01"
+                  value={startingBalance}
+                  onChange={(e) => setStartingBalance(e.target.value)}
+                  placeholder="100.00"
+                />
+              </div>
+              <Button onClick={createSession} className="w-full" size="lg" disabled={!startingBalance}>
+                <Play className="h-4 w-4 mr-2" />
+                Start Bonus Hunt
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Session Display */}
       {activeSession && (
         <>
           {/* Session Stats */}
