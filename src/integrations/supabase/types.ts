@@ -895,6 +895,15 @@ export type Database = {
           submitted_at: string
         }[]
       }
+      get_secure_overlay_event: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_id: string
+          event_status: string
+          event_title: string
+          is_active: boolean
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
