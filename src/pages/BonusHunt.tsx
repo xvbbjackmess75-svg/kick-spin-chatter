@@ -183,6 +183,8 @@ export default function BonusHunt() {
 
   const loadSessions = async () => {
     try {
+      console.log('📊 Loading sessions...');
+      
       const { data, error } = await supabase
         .from('bonus_hunt_sessions')
         .select('*')
@@ -190,10 +192,14 @@ export default function BonusHunt() {
         .order('created_at', { ascending: false }); // Then by creation date (newest first)
 
       if (error) throw error;
+      
+      console.log('📋 Sessions loaded:', data);
       setSessions((data || []) as BonusHuntSession[]);
       
       // Set active session if exists, clear if no active session
       const active = (data || []).find(s => s.status === 'active');
+      console.log('🎯 Active session found:', active);
+      
       setActiveSession(active ? active as BonusHuntSession : null);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -454,6 +460,8 @@ export default function BonusHunt() {
     if (!activeSession) return;
 
     try {
+      console.log('🔄 Updating session status to:', status, 'for session:', activeSession.id);
+      
       const updateData: any = { status };
       if (status === 'completed') {
         updateData.completed_at = new Date().toISOString();
@@ -464,10 +472,16 @@ export default function BonusHunt() {
         .update(updateData)
         .eq('id', activeSession.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error updating session:', error);
+        throw error;
+      }
+
+      console.log('✅ Session status updated successfully in database');
 
       // Clear active session immediately if completed
       if (status === 'completed') {
+        console.log('🧹 Clearing active session and bets');
         setActiveSession(null);
         setSessionBets([]); // Clear the bets as well
       } else {
@@ -475,7 +489,9 @@ export default function BonusHunt() {
       }
       
       // Reload sessions to refresh the list
+      console.log('🔄 Reloading sessions...');
       await loadSessions();
+      
       toast({ title: `Session ${status}!` });
     } catch (error) {
       console.error('Error updating session:', error);
