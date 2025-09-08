@@ -56,7 +56,8 @@ interface BonusHuntBet {
 }
 
 export default function BonusHunt() {
-  const { user } = useAuth();
+  console.log('🔧 BonusHunt component rendering...');
+  const { user, loading: authLoading } = useAuth();
   const [activeSession, setActiveSession] = useState<BonusHuntSession | null>(null);
   const [sessions, setSessions] = useState<BonusHuntSession[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -66,6 +67,8 @@ export default function BonusHunt() {
   const [endingBalance, setEndingBalance] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  console.log('🔧 BonusHunt user state:', { user: user?.email, authLoading, loading });
 
   // New session form state
   const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
@@ -662,8 +665,8 @@ export default function BonusHunt() {
   const openedPayouts = openedBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
   const currentAvgMulti = openedBetAmount > 0 ? openedPayouts / openedBetAmount : 0;
   
-  // Calculate required average multiplier to break even
-  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? totalBetAmount / activeSession.starting_balance : 0;
+  // Calculate required average multiplier to break even - FIXED calculation
+  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? activeSession.starting_balance / totalBetAmount : 0;
   const isProfit = totalBets > 0 ? totalPayouts >= totalBetAmount : false;
   
   const bonusesLeft = activeSession ? Math.max(0, activeSession.target_bonuses - sessionBets.length) : 0;
@@ -679,8 +682,16 @@ export default function BonusHunt() {
 
   const bonusesWithPayouts = sessionBets.filter(bet => bet.payout_amount).length;
 
-  if (loading) {
+  console.log('🔧 BonusHunt render states:', { loading, authLoading, user: !!user, activeSession: !!activeSession, sessionsLength: sessions.length, slotsLength: slots.length });
+  
+  if (authLoading || loading) {
+    console.log('🔧 BonusHunt showing loading state');
     return <div className="flex items-center justify-center h-64">Loading...</div>;
+  }
+
+  if (!user) {
+    console.log('🔧 BonusHunt no user, showing auth message');
+    return <div className="flex items-center justify-center h-64">Please log in to access Bonus Hunt</div>;
   }
 
   return (
