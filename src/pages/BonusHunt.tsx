@@ -1113,14 +1113,14 @@ export default function BonusHunt() {
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-muted-foreground mb-2">Select a bonus to record its payout</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
+                      <p className="text-muted-foreground mb-2">Click on any bonus to record its payout</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
 
       {/* Sessions & History */}
       <Tabs defaultValue="current" className="w-full">
@@ -1138,19 +1138,19 @@ export default function BonusHunt() {
               <CardContent>
                  <div className="space-y-3">
                   {sessionBets.map((bet) => (
-                    <div 
-                      key={bet.id} 
-                      className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                        activeSession?.bonus_opening_phase && !bet.payout_recorded_at
-                          ? 'cursor-pointer hover:bg-primary/10 border-primary/30' 
-                          : ''
-                      } ${bet.payout_recorded_at ? 'bg-kick-green/20 border-kick-green/40' : 'border-border'}`}
-                      onClick={() => {
-                        if (activeSession?.bonus_opening_phase && !bet.payout_recorded_at) {
-                          setSelectedBetForPayout(bet);
-                        }
-                      }}
-                    >
+                     <div 
+                       key={bet.id} 
+                       className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                         !bet.payout_recorded_at
+                           ? 'cursor-pointer hover:bg-primary/10 border-primary/30' 
+                           : ''
+                       } ${bet.payout_recorded_at ? 'bg-kick-green/20 border-kick-green/40' : 'border-border'}`}
+                       onClick={() => {
+                         if (!bet.payout_recorded_at) {
+                           setSelectedBetForPayout(bet);
+                         }
+                       }}
+                     >
                       <div className="flex-1">
                         <div className="font-medium flex items-center gap-2">
                           {bet.slots?.name}
