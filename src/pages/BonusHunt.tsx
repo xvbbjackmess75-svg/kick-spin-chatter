@@ -793,12 +793,21 @@ export default function BonusHunt() {
                       </Button>
                     </>
                   )}
-                  {activeSession.status === 'active' && activeSession.bonus_opening_phase && (
-                    <Badge variant="outline" className="text-kick-purple border-kick-purple/50 bg-kick-purple/10">
-                      <Gift className="h-4 w-4 mr-1" />
-                      Opening Bonuses
-                    </Badge>
-                  )}
+                   {activeSession.status === 'active' && activeSession.bonus_opening_phase && (
+                     <>
+                       <Badge variant="outline" className="text-kick-purple border-kick-purple/50 bg-kick-purple/10">
+                         <Gift className="h-4 w-4 mr-1" />
+                         Opening Bonuses
+                       </Badge>
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         onClick={() => toggleSessionStatus('completed')}
+                       >
+                         Complete Hunt
+                       </Button>
+                     </>
+                   )}
                   {activeSession.status === 'paused' && (
                     <Button
                       size="sm"
