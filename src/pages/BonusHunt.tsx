@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database, Gift, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -82,11 +83,38 @@ export default function BonusHunt() {
   // Bonus opening form state
   const [selectedBetForPayout, setSelectedBetForPayout] = useState<BonusHuntBet | null>(null);
   const [payoutAmount, setPayoutAmount] = useState<string>('');
+  const [editingPayout, setEditingPayout] = useState<BonusHuntBet | null>(null);
+  const [newPayoutAmount, setNewPayoutAmount] = useState('');
+
+  // Overlay customization states
+  const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
+  const [overlaySettings, setOverlaySettings] = useState({
+    background_color: 'rgba(0, 0, 0, 0.95)',
+    text_color: 'hsl(var(--foreground))',
+    accent_color: 'hsl(var(--primary))',
+    font_size: 'medium',
+    max_visible_bonuses: 5,
+    show_expected_payouts: true,
+    show_upcoming_bonuses: true,
+    show_top_multipliers: true,
+    animation_enabled: true
+  });
 
   useEffect(() => {
     if (user) {
       loadSessions();
       loadSlots();
+      fetchOverlaySettings();
+      
+      // Load persisted form data
+      const savedData = localStorage.getItem(`bonusHunt_${user.id}`);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed.newSessionName) setNewSessionName(parsed.newSessionName);
+        if (parsed.startingBalance) setStartingBalance(parsed.startingBalance);
+        if (parsed.betSize) setBetSize(parsed.betSize);
+        if (parsed.endingBalance) setEndingBalance(parsed.endingBalance);
+      }
     }
   }, [user]);
 
@@ -95,6 +123,19 @@ export default function BonusHunt() {
       loadSessionBets();
     }
   }, [activeSession]);
+
+  // Persist form data
+  useEffect(() => {
+    if (user) {
+      const dataToSave = {
+        newSessionName,
+        startingBalance,
+        betSize,
+        endingBalance
+      };
+      localStorage.setItem(`bonusHunt_${user.id}`, JSON.stringify(dataToSave));
+    }
+  }, [user, newSessionName, startingBalance, betSize, endingBalance]);
 
   const loadSessions = async () => {
     try {
@@ -448,6 +489,89 @@ export default function BonusHunt() {
     }
   };
 
+  const editPayout = async () => {
+    if (!editingPayout || !newPayoutAmount) return;
+
+    try {
+      const payout = parseFloat(newPayoutAmount);
+      
+      const { error } = await supabase
+        .from('bonus_hunt_bets')
+        .update({
+          payout_amount: payout,
+          payout_recorded_at: new Date().toISOString()
+        })
+        .eq('id', editingPayout.id);
+
+      if (error) throw error;
+
+      // Update the local state immediately
+      setSessionBets(prev => prev.map(bet => 
+        bet.id === editingPayout.id 
+          ? { ...bet, payout_amount: payout, payout_recorded_at: new Date().toISOString() }
+          : bet
+      ));
+
+      setEditingPayout(null);
+      setNewPayoutAmount('');
+      toast({ title: 'Payout updated successfully!' });
+    } catch (error) {
+      console.error('Error editing payout:', error);
+      toast({ title: 'Error editing payout', variant: 'destructive' });
+    }
+  };
+
+  const fetchOverlaySettings = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('bonus_hunt_overlay_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching overlay settings:", error);
+        return;
+      }
+
+      if (data) {
+        setOverlaySettings(data);
+      }
+    } catch (error) {
+      console.error("Error fetching overlay settings:", error);
+    }
+  };
+
+  const saveOverlaySettings = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('bonus_hunt_overlay_settings')
+        .upsert({
+          user_id: user.id,
+          ...overlaySettings
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Settings saved!",
+        description: "Overlay settings saved successfully!",
+      });
+      setIsOverlayDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving overlay settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save overlay settings",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredSlots = slots.filter(slot =>
     slot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     slot.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -476,7 +600,7 @@ export default function BonusHunt() {
   
   // Calculate required average multiplier to break even
   const requiredAvgMulti = totalBetAmount > 0 && activeSession ? totalBetAmount / activeSession.starting_balance : 0;
-  const isProfit = totalPayouts >= totalBetAmount;
+  const isProfit = totalBets > 0 ? totalPayouts >= totalBetAmount : false;
   
   const bonusesLeft = activeSession ? Math.max(0, activeSession.target_bonuses - sessionBets.length) : 0;
 
@@ -603,10 +727,17 @@ export default function BonusHunt() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`/bonus-hunt-overlay?userId=${user?.id}&maxBonuses=5`, '_blank')}
+                    onClick={() => window.open(`/bonus-hunt-overlay?userId=${user?.id}&maxBonuses=${overlaySettings.max_visible_bonuses}`, '_blank')}
                   >
                     <ExternalLink className="h-4 w-4 mr-1" />
                     Overlay
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsOverlayDialogOpen(true)}
+                  >
+                    Customize Overlay
                   </Button>
                 </div>
               </div>
@@ -620,10 +751,10 @@ export default function BonusHunt() {
                   <div className="text-sm text-muted-foreground">Starting Balance</div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-2xl font-bold ${sessionStats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {sessionStats.totalPnL >= 0 ? '+' : ''}${sessionStats.totalPnL.toFixed(2)}
+                  <div className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Total P&L</div>
+                  <div className="text-sm text-muted-foreground">P&L</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">{sessionStats.totalBets}</div>
@@ -894,6 +1025,32 @@ export default function BonusHunt() {
                       </div>
                     </div>
                   </div>
+                ) : editingPayout ? (
+                  <div className="p-4 border rounded-lg bg-card/50 border-accent/20">
+                    <h4 className="font-semibold mb-3 text-accent">Edit Payout for {editingPayout.slots?.name}</h4>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor="newPayoutAmount">Payout Amount</Label>
+                        <Input
+                          id="newPayoutAmount"
+                          type="number"
+                          step="0.01"
+                          value={newPayoutAmount}
+                          onChange={(e) => setNewPayoutAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <Button onClick={editPayout} disabled={!newPayoutAmount} className="bg-accent hover:bg-accent/80">
+                          <Trophy className="h-4 w-4 mr-1" />
+                          Update
+                        </Button>
+                        <Button variant="outline" onClick={() => setEditingPayout(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-muted-foreground mb-2">Select a bonus to record its payout</p>
@@ -953,13 +1110,26 @@ export default function BonusHunt() {
                         </div>
                       </div>
                       {bet.payout_recorded_at && bet.payout_amount ? (
-                        <div className="text-right ml-4">
-                          <div className="font-medium text-green-600">
-                            ${bet.payout_amount.toFixed(2)}
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="font-medium text-green-600">
+                              ${bet.payout_amount.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {(bet.payout_amount / bet.bet_size).toFixed(1)}x
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {(bet.payout_amount / bet.bet_size).toFixed(1)}x
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPayout(bet);
+                              setNewPayoutAmount(bet.payout_amount?.toString() || '');
+                            }}
+                          >
+                            Edit
+                          </Button>
                         </div>
                       ) : (
                         <div className="text-right ml-4">
@@ -1030,6 +1200,132 @@ export default function BonusHunt() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Overlay Customization Dialog */}
+      <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customize Bonus Hunt Overlay</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Color Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Colors</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Background Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Text Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.text_color.includes('hsl') ? '#ffffff' : overlaySettings.text_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Accent Color</Label>
+                  <Input
+                    type="color"
+                    value={overlaySettings.accent_color.includes('hsl') ? '#3b82f6' : overlaySettings.accent_color}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              <div 
+                className="p-4 rounded-lg border"
+                style={{
+                  backgroundColor: overlaySettings.background_color,
+                  color: overlaySettings.text_color
+                }}
+              >
+                <h4 className="font-bold" style={{ color: overlaySettings.accent_color }}>
+                  Bonus Hunt Session
+                </h4>
+                <div style={{ color: overlaySettings.text_color, fontSize: '14px' }}>
+                  Sample overlay content with your colors
+                </div>
+              </div>
+            </div>
+
+            {/* Display Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Display Settings</h3>
+              
+              <div>
+                <Label>Font Size</Label>
+                <Select value={overlaySettings.font_size} onValueChange={(value) => setOverlaySettings({...overlaySettings, font_size: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Small</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Max Visible Bonuses</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={overlaySettings.max_visible_bonuses}
+                  onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_bonuses: parseInt(e.target.value) || 5})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Show Expected Payouts</Label>
+                <Switch
+                  checked={overlaySettings.show_expected_payouts}
+                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_expected_payouts: checked})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Show Upcoming Bonuses</Label>
+                <Switch
+                  checked={overlaySettings.show_upcoming_bonuses}
+                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_upcoming_bonuses: checked})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Show Top Multipliers</Label>
+                <Switch
+                  checked={overlaySettings.show_top_multipliers}
+                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_top_multipliers: checked})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Animation Enabled</Label>
+                <Switch
+                  checked={overlaySettings.animation_enabled}
+                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, animation_enabled: checked})}
+                />
+              </div>
+            </div>
+
+            <Button onClick={saveOverlaySettings} className="w-full">
+              Save Overlay Settings
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
