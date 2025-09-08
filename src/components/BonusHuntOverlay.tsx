@@ -294,13 +294,23 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const totalBonuses = bonuses.length;
   const completedBonuses = bonuses.filter(bonus => bonus.payout_recorded_at).length;
   const pendingBonuses = bonuses.filter(bonus => !bonus.payout_recorded_at).length;
+  
+  // Calculate totals for all bonuses
   const totalPayouts = bonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
   const totalBets = bonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
-  const avgMultiplier = totalBets > 0 ? totalPayouts / totalBets : 0;
   
-  // Calculate required average multiplier to break even
+  // Calculate current average multiplier from OPENED bonuses only
+  const openedBonuses = bonuses.filter(bonus => bonus.payout_recorded_at);
+  const openedPayouts = openedBonuses.reduce((sum, bonus) => sum + (bonus.payout_amount || 0), 0);
+  const openedBets = openedBonuses.reduce((sum, bonus) => sum + bonus.bet_size, 0);
+  const currentAvgMulti = openedBets > 0 ? openedPayouts / openedBets : 0;
+  
+  // Calculate required average multiplier to break even (starting balance / total bets)
   const requiredAvgMulti = totalBets > 0 && session ? session.starting_balance / totalBets : 0;
-  const isProfit = avgMultiplier >= requiredAvgMulti;
+  
+  // PNL = total payouts - starting balance
+  const currentPnl = session ? totalPayouts - session.starting_balance : 0;
+  const isProfit = currentPnl >= 0;
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
@@ -335,15 +345,15 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 {/* Stats under balance */}
                 <div className="grid grid-cols-3 gap-3 text-xs mt-2">
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average</div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Current Avg</div>
                     <div className="font-semibold" style={{color: overlaySettings.accent_color}}>
-                      {requiredAvgMulti.toFixed(1)}x
+                      {currentAvgMulti > 0 ? `${currentAvgMulti.toFixed(1)}x` : '0x'}
                     </div>
                   </div>
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Starting Balance</div>
-                    <div className="font-semibold text-green-400">
-                      ${session.starting_balance.toFixed(2)}
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>PNL</div>
+                    <div className={`font-semibold ${currentPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${currentPnl >= 0 ? '+' : ''}${currentPnl.toFixed(2)}
                     </div>
                   </div>
                   <div>
