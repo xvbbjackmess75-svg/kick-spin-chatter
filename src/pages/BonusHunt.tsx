@@ -698,7 +698,7 @@ export default function BonusHunt() {
 
       const { error } = await supabase
         .from('bonus_hunt_overlay_settings')
-        .upsert(settingsToSave);
+        .upsert(settingsToSave, { onConflict: 'user_id' });
 
       if (error) {
         console.error('🚨 Database error saving overlay settings:', error);
