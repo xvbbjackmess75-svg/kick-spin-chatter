@@ -505,7 +505,13 @@ export default function BonusHunt() {
     if (!selectedBetForPayout || !payoutAmount) return;
 
     try {
+      console.log('Recording payout for bet:', selectedBetForPayout.id, 'Amount:', payoutAmount);
       const payout = parseFloat(payoutAmount);
+      
+      if (isNaN(payout) || payout < 0) {
+        toast({ title: 'Invalid payout amount', variant: 'destructive' });
+        return;
+      }
       
       const { error } = await supabase
         .from('bonus_hunt_bets')
@@ -515,8 +521,13 @@ export default function BonusHunt() {
         })
         .eq('id', selectedBetForPayout.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error recording payout:', error);
+        throw error;
+      }
 
+      console.log('Payout recorded successfully');
+      
       // Update the local state immediately to reflect changes
       setSessionBets(prev => prev.map(bet => 
         bet.id === selectedBetForPayout.id 
