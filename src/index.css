@@ -39,31 +39,17 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     /* Kick brand colors */
-    --kick-green: 120 100% 50%;
-    --kick-purple: 270 95% 75%;
-    --kick-dark: 220 13% 9%;
+    --kick-green: 120 73% 55%;
+    --kick-purple: 270 95% 70%;
+    --kick-dark: 222 84% 4.9%;
 
     /* Gaming effects */
     --gradient-primary: linear-gradient(135deg, hsl(var(--kick-green)), hsl(var(--kick-purple)));
     --gradient-gaming: linear-gradient(135deg, hsl(var(--kick-green) / 0.8), hsl(var(--kick-purple) / 0.8));
+    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary)));
     --shadow-gaming: 0 10px 30px -10px hsl(var(--kick-green) / 0.3);
     --glow-green: 0 0 40px hsl(var(--kick-green) / 0.4);
     --glow-purple: 0 0 40px hsl(var(--kick-purple) / 0.4);
-
-    /* Kick-specific colors */
-    --kick-green: 120 73% 45%;
-    --kick-purple: 270 95% 60%;
-    --kick-dark: 222 47% 11%;
-    
-    /* Gaming gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--kick-green)), hsl(var(--kick-purple)));
-    --gradient-gaming: linear-gradient(45deg, hsl(var(--kick-dark)), hsl(var(--kick-purple)));
-    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary)));
-    
-    /* Gaming shadows and glows */
-    --shadow-gaming: 0 4px 20px -2px hsl(var(--kick-green) / 0.1);
-    --glow-green: 0 0 20px hsl(var(--kick-green) / 0.4);
-    --glow-purple: 0 0 20px hsl(var(--kick-purple) / 0.4);
 
     --sidebar-background: 0 0% 98%;
 

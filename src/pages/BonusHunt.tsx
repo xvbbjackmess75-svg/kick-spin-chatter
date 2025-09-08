@@ -432,9 +432,15 @@ export default function BonusHunt() {
 
       if (error) throw error;
 
+      // Update the local state immediately to reflect changes
+      setSessionBets(prev => prev.map(bet => 
+        bet.id === selectedBetForPayout.id 
+          ? { ...bet, payout_amount: payout, payout_recorded_at: new Date().toISOString() }
+          : bet
+      ));
+
       setSelectedBetForPayout(null);
       setPayoutAmount('');
-      loadSessionBets();
       toast({ title: 'Payout recorded successfully!' });
     } catch (error) {
       console.error('Error recording payout:', error);
@@ -575,7 +581,7 @@ export default function BonusHunt() {
                     </>
                   )}
                   {activeSession.status === 'active' && activeSession.bonus_opening_phase && (
-                    <Badge variant="outline" className="text-purple-600 border-purple-600">
+                    <Badge variant="outline" className="text-kick-purple border-kick-purple/50 bg-kick-purple/10">
                       <Gift className="h-4 w-4 mr-1" />
                       Opening Bonuses
                     </Badge>
@@ -833,7 +839,7 @@ export default function BonusHunt() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Gift className="h-5 w-5 text-purple-600" />
+                  <Gift className="h-5 w-5 text-kick-purple" />
                   Bonus Opening Phase
                 </CardTitle>
               </CardHeader>
@@ -858,8 +864,8 @@ export default function BonusHunt() {
                 </div>
 
                 {selectedBetForPayout ? (
-                  <div className="p-4 border rounded-lg bg-blue-50">
-                    <h4 className="font-semibold mb-3">Record Payout for {selectedBetForPayout.slots?.name}</h4>
+                  <div className="p-4 border rounded-lg bg-card/50 border-primary/20">
+                    <h4 className="font-semibold mb-3 text-primary">Record Payout for {selectedBetForPayout.slots?.name}</h4>
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <Label htmlFor="payoutAmount">Payout Amount</Label>
@@ -873,7 +879,7 @@ export default function BonusHunt() {
                         />
                       </div>
                       <div className="flex items-end gap-2">
-                        <Button onClick={recordPayout} disabled={!payoutAmount}>
+                        <Button onClick={recordPayout} disabled={!payoutAmount} className="bg-kick-green hover:bg-kick-green/80">
                           <Trophy className="h-4 w-4 mr-1" />
                           Record
                         </Button>
@@ -914,9 +920,9 @@ export default function BonusHunt() {
                       key={bet.id} 
                       className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
                         activeSession?.bonus_opening_phase && !bet.payout_recorded_at
-                          ? 'cursor-pointer hover:bg-blue-50 border-blue-200' 
+                          ? 'cursor-pointer hover:bg-primary/10 border-primary/30' 
                           : ''
-                      } ${bet.payout_recorded_at ? 'bg-green-50 border-green-200' : ''}`}
+                      } ${bet.payout_recorded_at ? 'bg-kick-green/20 border-kick-green/40' : 'border-border'}`}
                       onClick={() => {
                         if (activeSession?.bonus_opening_phase && !bet.payout_recorded_at) {
                           setSelectedBetForPayout(bet);
