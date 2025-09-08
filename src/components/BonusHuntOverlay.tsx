@@ -382,21 +382,21 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 {/* Stats under balance */}
                 <div className="grid grid-cols-3 gap-3 text-xs mt-2">
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Total Bets</div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average</div>
                     <div className="font-semibold" style={{color: overlaySettings.accent_color}}>
-                      ${totalBets.toFixed(2)}
+                      {requiredAvgMulti.toFixed(1)}x
                     </div>
                   </div>
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Total Payouts</div>
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Starting Balance</div>
                     <div className="font-semibold text-green-400">
-                      ${totalPayouts.toFixed(2)}
+                      ${session.starting_balance.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>P&L</div>
-                    <div className={`font-semibold ${totalPayouts - totalBets >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${(totalPayouts - totalBets).toFixed(2)}
+                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average Multi</div>
+                    <div className={`font-semibold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {isProfit ? 'Profit' : `${requiredAvgMulti.toFixed(1)}x`}
                     </div>
                   </div>
                 </div>
