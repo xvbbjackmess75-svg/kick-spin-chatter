@@ -324,7 +324,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       </Card>
 
       {/* Top Call Display */}
-      {topCall && (
+      {topCall ? (
         <Card 
           className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
           style={getOverlayStyle()}
@@ -341,6 +341,22 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                 </span>
                 <span style={{color: overlaySettings.text_color}} className="ml-1">
                   ${topCall.win_amount?.toFixed(0)} ({topCall.multiplier?.toFixed(0)}x)
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card 
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+          style={getOverlayStyle()}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Trophy className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
+              <div className="flex-1">
+                <span className="font-semibold" style={{color: overlaySettings.text_color}}>
+                  Top Call: No completed calls yet
                 </span>
               </div>
             </div>
