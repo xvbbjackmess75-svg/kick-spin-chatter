@@ -183,12 +183,15 @@ export default function BonusHunt() {
   }, [user, newSessionName, startingBalance, betSize, endingBalance]);
 
   const loadSessions = async () => {
+    if (!user) return; // Don't load sessions if no user
+    
     try {
-      console.log('📊 Loading sessions...');
+      console.log('📊 Loading sessions for user:', user.id);
       
       const { data, error } = await supabase
         .from('bonus_hunt_sessions')
         .select('*')
+        .eq('user_id', user.id) // Filter by current user only
         .order('status', { ascending: true }) // active first (a < c), then completed/paused
         .order('created_at', { ascending: false }); // Then by creation date (newest first)
 
