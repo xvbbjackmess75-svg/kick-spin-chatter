@@ -18,6 +18,7 @@ import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
 import BonusHunt from "./pages/BonusHunt";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
+import BonusHuntOverlayPage from "./pages/BonusHuntOverlayPage";
 import Account from "./pages/Account";
 import KickOnboarding from "./pages/KickOnboarding";
 import Admin from "./pages/Admin";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/discord/callback" element={<DiscordCallback />} />
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
+            <Route path="/bonus-hunt-overlay" element={<BonusHuntOverlayPage />} />
             <Route
               path="/"
               element={

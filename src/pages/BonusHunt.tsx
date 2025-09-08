@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database } from 'lucide-react';
+import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database, Gift, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BonusHuntSession {
@@ -24,6 +24,8 @@ interface BonusHuntSession {
   created_at: string;
   updated_at: string;
   completed_at?: string;
+  bonus_opening_phase?: boolean;
+  bonus_opening_started_at?: string;
 }
 
 interface Slot {
@@ -47,6 +49,8 @@ interface BonusHuntBet {
   pnl: number;
   created_at: string;
   slots?: Slot;
+  payout_amount?: number;
+  payout_recorded_at?: string;
 }
 
 export default function BonusHunt() {
@@ -74,6 +78,10 @@ export default function BonusHunt() {
   const [newSlotMaxMultiplier, setNewSlotMaxMultiplier] = useState<string>('');
   const [newSlotTheme, setNewSlotTheme] = useState('');
   const [importingAllSlots, setImportingAllSlots] = useState(false);
+
+  // Bonus opening form state
+  const [selectedBetForPayout, setSelectedBetForPayout] = useState<BonusHuntBet | null>(null);
+  const [payoutAmount, setPayoutAmount] = useState<string>('');
 
   useEffect(() => {
     if (user) {
@@ -384,6 +392,58 @@ export default function BonusHunt() {
     }
   };
 
+  const startBonusOpening = async () => {
+    if (!activeSession) return;
+
+    try {
+      const { error } = await supabase
+        .from('bonus_hunt_sessions')
+        .update({
+          bonus_opening_phase: true,
+          bonus_opening_started_at: new Date().toISOString()
+        } as any)
+        .eq('id', activeSession.id);
+
+      if (error) throw error;
+
+      setActiveSession(prev => prev ? { 
+        ...prev, 
+        bonus_opening_phase: true, 
+        bonus_opening_started_at: new Date().toISOString() 
+      } : null);
+      toast({ title: 'Bonus opening phase started!' });
+    } catch (error) {
+      console.error('Error starting bonus opening:', error);
+      toast({ title: 'Error starting bonus opening', variant: 'destructive' });
+    }
+  };
+
+  const recordPayout = async () => {
+    if (!selectedBetForPayout || !payoutAmount) return;
+
+    try {
+      const payout = parseFloat(payoutAmount);
+      
+      const { error } = await supabase
+        .from('bonus_hunt_bets')
+        .update({
+          payout_amount: payout,
+          payout_recorded_at: new Date().toISOString()
+        } as any)
+        .eq('id', selectedBetForPayout.id);
+
+      if (error) throw error;
+
+      setSelectedBetForPayout(null);
+      setPayoutAmount('');
+      loadSessionBets();
+      toast({ title: 'Payout recorded successfully!' });
+    } catch (error) {
+      console.error('Error recording payout:', error);
+      toast({ title: 'Error recording payout', variant: 'destructive' });
+    }
+  };
+
   const filteredSlots = slots.filter(slot =>
     slot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     slot.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -415,6 +475,12 @@ export default function BonusHunt() {
     bonusesLeft,
     requiredMultiplier
   };
+
+  const totalPayouts = sessionBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
+  const bonusesWithPayouts = sessionBets.filter(bet => bet.payout_amount).length;
+  const actualMultiplier = sessionBets.length > 0 
+    ? totalPayouts / sessionBets.reduce((sum, bet) => sum + bet.bet_size, 0)
+    : 0;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
@@ -480,8 +546,8 @@ export default function BonusHunt() {
                     {activeSession.status}
                   </Badge>
                 </CardTitle>
-                <div className="flex gap-2">
-                  {activeSession.status === 'active' && (
+                 <div className="flex gap-2">
+                  {activeSession.status === 'active' && !activeSession.bonus_opening_phase && (
                     <>
                       <Button
                         variant="outline"
@@ -491,6 +557,16 @@ export default function BonusHunt() {
                         <Pause className="h-4 w-4 mr-1" />
                         Pause
                       </Button>
+                      {sessionBets.length > 0 && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={startBonusOpening}
+                        >
+                          <Gift className="h-4 w-4 mr-1" />
+                          Start Opening
+                        </Button>
+                      )}
                       <Button
                         variant="destructive"
                         size="sm"
@@ -499,6 +575,12 @@ export default function BonusHunt() {
                         Complete
                       </Button>
                     </>
+                  )}
+                  {activeSession.status === 'active' && activeSession.bonus_opening_phase && (
+                    <Badge variant="outline" className="text-purple-600 border-purple-600">
+                      <Gift className="h-4 w-4 mr-1" />
+                      Opening Bonuses
+                    </Badge>
                   )}
                   {activeSession.status === 'paused' && (
                     <Button
@@ -509,6 +591,14 @@ export default function BonusHunt() {
                       Resume
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/bonus-hunt-overlay?userId=${user?.id}&maxBonuses=5`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Overlay
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -560,7 +650,7 @@ export default function BonusHunt() {
           </Card>
 
           {/* Hunt Interface */}
-          {activeSession.status === 'active' && (
+          {activeSession.status === 'active' && !activeSession.bonus_opening_phase && (
             <Card>
               <CardHeader>
                 <CardTitle>Hunt Bonus</CardTitle>
@@ -737,6 +827,70 @@ export default function BonusHunt() {
               </CardContent>
             </Card>
           )}
+
+          {/* Bonus Opening Interface */}
+          {activeSession.status === 'active' && activeSession.bonus_opening_phase && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-purple-600" />
+                  Bonus Opening Phase
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-purple-50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{bonusesWithPayouts}</div>
+                    <div className="text-sm text-muted-foreground">Opened</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{sessionBets.length - bonusesWithPayouts}</div>
+                    <div className="text-sm text-muted-foreground">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">${totalPayouts.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">Total Payouts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{actualMultiplier.toFixed(2)}x</div>
+                    <div className="text-sm text-muted-foreground">Actual Multiplier</div>
+                  </div>
+                </div>
+
+                {selectedBetForPayout ? (
+                  <div className="p-4 border rounded-lg bg-blue-50">
+                    <h4 className="font-semibold mb-3">Record Payout for {selectedBetForPayout.slots?.name}</h4>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor="payoutAmount">Payout Amount</Label>
+                        <Input
+                          id="payoutAmount"
+                          type="number"
+                          step="0.01"
+                          value={payoutAmount}
+                          onChange={(e) => setPayoutAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <Button onClick={recordPayout} disabled={!payoutAmount}>
+                          <Trophy className="h-4 w-4 mr-1" />
+                          Record
+                        </Button>
+                        <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground mb-2">Select a bonus to record its payout</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -754,11 +908,31 @@ export default function BonusHunt() {
                 <CardTitle>Session Bets</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                 <div className="space-y-3">
                   {sessionBets.map((bet) => (
-                    <div key={bet.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div 
+                      key={bet.id} 
+                      className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                        activeSession?.bonus_opening_phase && !bet.payout_recorded_at
+                          ? 'cursor-pointer hover:bg-blue-50 border-blue-200' 
+                          : ''
+                      } ${bet.payout_recorded_at ? 'bg-green-50 border-green-200' : ''}`}
+                      onClick={() => {
+                        if (activeSession?.bonus_opening_phase && !bet.payout_recorded_at) {
+                          setSelectedBetForPayout(bet);
+                        }
+                      }}
+                    >
                       <div className="flex-1">
-                        <div className="font-medium">{bet.slots?.name}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {bet.slots?.name}
+                          {bet.payout_recorded_at && (
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              <Trophy className="h-3 w-3 mr-1" />
+                              Opened
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">{bet.slots?.provider}</div>
                       </div>
                       <div className="text-right">
@@ -767,14 +941,25 @@ export default function BonusHunt() {
                           {bet.bonus_multiplier ? `${bet.bonus_multiplier.toFixed(1)}x` : '0x'}
                         </div>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className={`font-medium ${bet.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}
+                      {bet.payout_recorded_at && bet.payout_amount ? (
+                        <div className="text-right ml-4">
+                          <div className="font-medium text-green-600">
+                            ${bet.payout_amount.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {(bet.payout_amount / bet.bet_size).toFixed(1)}x
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(bet.created_at).toLocaleTimeString()}
+                      ) : (
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${bet.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(bet.created_at).toLocaleTimeString()}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
