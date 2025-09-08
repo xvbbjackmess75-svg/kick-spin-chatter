@@ -667,9 +667,13 @@ export default function SlotsCalls() {
 
       if (error) throw error;
 
+      const statusMessage = status === 'closed' ? 'Entry closed - Event now visible in overlay!' : 
+                           status === 'completed' ? 'Event completed' : 
+                           `Event ${status}`;
+
       toast({
         title: "Success",
-        description: `Event ${status}`,
+        description: statusMessage,
       });
 
       fetchEvents();
@@ -1239,7 +1243,7 @@ export default function SlotsCalls() {
                             variant="outline"
                             size="sm"
                           >
-                            Close Event
+                            Close Entry
                           </Button>
                         </div>
                       </>
