@@ -32,10 +32,14 @@ interface BonusHuntOverlayProps {
 
 interface BonusHuntOverlaySettings {
   background_color: string;
+  border_color: string;
   text_color: string;
   accent_color: string;
   font_size: string;
   max_visible_bonuses: number;
+  scrolling_speed: number;
+  show_background: boolean;
+  show_borders: boolean;
   animation_enabled: boolean;
   show_upcoming_bonuses: boolean;
   show_top_multipliers: boolean;
@@ -50,10 +54,14 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [overlaySettings, setOverlaySettings] = useState<BonusHuntOverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
+    border_color: '#3b82f6',
     text_color: '#ffffff',
     accent_color: '#3b82f6',
     font_size: 'medium',
     max_visible_bonuses: 5,
+    scrolling_speed: 50,
+    show_background: true,
+    show_borders: true,
     animation_enabled: true,
     show_upcoming_bonuses: true,
     show_top_multipliers: true,
@@ -117,10 +125,10 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
           // Reset to 0 when we've scrolled past all items to create infinite loop
           const maxScroll = bonuses.length * 80; // Assuming ~80px per bonus item
           return newPosition >= maxScroll ? 0 : newPosition;
-        });
-      }, 50);
+         });
+       }, overlaySettings.scrolling_speed || 50); // Use user-defined scrolling speed
 
-      return () => clearInterval(interval);
+       return () => clearInterval(interval);
     } else {
       setScrollPosition(0);
     }
@@ -144,10 +152,14 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
       if (data) {
         setOverlaySettings({
           background_color: data.background_color || 'rgba(0, 0, 0, 0.95)',
+          border_color: (data as any).border_color || '#3b82f6',
           text_color: data.text_color || '#ffffff',
           accent_color: data.accent_color || '#3b82f6',
           font_size: data.font_size || 'medium',
           max_visible_bonuses: data.max_visible_bonuses || 5,
+          scrolling_speed: (data as any).scrolling_speed || 50,
+          show_background: (data as any).show_background ?? true,
+          show_borders: (data as any).show_borders ?? true,
           animation_enabled: data.animation_enabled ?? true,
           show_upcoming_bonuses: data.show_upcoming_bonuses ?? true,
           show_top_multipliers: data.show_top_multipliers ?? true,
@@ -255,7 +267,8 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   };
 
   const getOverlayStyle = () => ({
-    backgroundColor: overlaySettings.background_color,
+    backgroundColor: overlaySettings.show_background ? overlaySettings.background_color : 'transparent',
+    borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
     color: overlaySettings.text_color
   });
 
@@ -307,54 +320,52 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
       {/* Summary Section */}
       {overlaySettings.show_expected_payouts && bonuses.length > 0 && (
         <Card 
-          className="backdrop-blur-sm border"
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
           style={{
             ...getOverlayStyle(),
-            background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))'
+            background: overlaySettings.show_background ? 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' : 'transparent'
           }}
         >
-          <CardContent className="p-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</div>
-                <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalBonuses}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Opened</div>
-                <div className="font-bold text-green-400">{completedBonuses}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
-                <div className="font-bold text-orange-400">{pendingBonuses}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</div>
-                <div className="font-bold text-blue-400">{requiredAvgMulti.toFixed(1)}x</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</div>
-                <div className={`font-bold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {isProfit ? 'Profit' : `${avgMultiplier.toFixed(1)}x`}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
-                <div className="font-bold text-orange-400">{pendingBonuses}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Avg Multi</div>
-                <div className="font-bold" style={{color: overlaySettings.accent_color}}>
-                  {avgMultiplier.toFixed(2)}x
-                </div>
-              </div>
-            </div>
-          </CardContent>
+           <CardContent className="p-4">
+             <div className="grid grid-cols-3 gap-2">
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</div>
+                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalBonuses}</div>
+               </div>
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Opened</div>
+                 <div className="font-bold text-green-400">{completedBonuses}</div>
+               </div>
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
+                 <div className="font-bold text-orange-400">{pendingBonuses}</div>
+               </div>
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Req Avg Mult</div>
+                 <div className={`font-bold ${isProfit ? 'text-green-400' : 'text-blue-400'}`}>
+                   {isProfit ? 'Profit' : `${requiredAvgMulti.toFixed(1)}x`}
+                 </div>
+               </div>
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</div>
+                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>
+                   {avgMultiplier.toFixed(1)}x
+                 </div>
+               </div>
+               <div className="space-y-1">
+                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Progress</div>
+                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>
+                   {totalBonuses > 0 ? Math.round((completedBonuses / totalBonuses) * 100) : 0}%
+                 </div>
+               </div>
+             </div>
+           </CardContent>
         </Card>
       )}
 
       {/* Session Header */}
       <Card 
-        className="backdrop-blur-sm border"
+        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
         style={getOverlayStyle()}
       >
         <CardContent className="p-4">
@@ -393,9 +404,9 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                       ${session.starting_balance.toFixed(2)}
                     </div>
                   </div>
-                  <div>
-                    <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Required Average Multi</div>
-                    <div className={`font-semibold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
+                   <div>
+                     <div style={{color: overlaySettings.text_color, opacity: 0.7}}>Req Avg Mult</div>
+                     <div className={`font-semibold ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
                       {isProfit ? 'Profit' : `${requiredAvgMulti.toFixed(1)}x`}
                     </div>
                   </div>
@@ -406,9 +417,47 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
         </CardContent>
       </Card>
 
+      {/* Currently Opening Bonus */}
+      {session?.bonus_opening_phase && bonuses.length > 0 && (
+        <Card 
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+          style={getOverlayStyle()}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Gift className="h-4 w-4" style={{color: overlaySettings.accent_color}} />
+              <h3 className="font-semibold" style={{color: overlaySettings.text_color}}>Currently Opening</h3>
+            </div>
+            {(() => {
+              const nextBonusToOpen = bonuses.find(bonus => !bonus.payout_recorded_at);
+              return nextBonusToOpen ? (
+                <div className="p-3 rounded-lg" style={{
+                  backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+                }}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm" style={{color: overlaySettings.accent_color}}>
+                      {nextBonusToOpen.slot_name}
+                    </span>
+                    <span style={{color: overlaySettings.text_color}}>•</span>
+                    <span className="text-sm" style={{color: overlaySettings.text_color}}>
+                      ${nextBonusToOpen.bet_size.toFixed(2)} spin
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center py-2 text-sm opacity-70" style={{color: overlaySettings.text_color}}>
+                  All bonuses opened!
+                </p>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Bonuses Queue */}
       <Card 
-        className="backdrop-blur-sm border"
+        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
         style={getOverlayStyle()}
       >
         <CardContent className="p-4">
@@ -437,63 +486,68 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 }}
               >
                 {infiniteScrollBonuses.map((bonus, index) => (
-                  <div
-                    key={`${bonus.id}-${Math.floor(index / bonuses.length)}`}
-                    className="flex items-center justify-between p-3 rounded-lg border border-opacity-50 transition-all duration-500"
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      borderColor: overlaySettings.accent_color,
-                      minHeight: '72px' // Consistent height for smooth scrolling
-                    }}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span 
-                          className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
-                          style={{
-                            backgroundColor: overlaySettings.accent_color + '40',
-                            color: overlaySettings.accent_color
-                          }}
-                        >
-                          #{(index % bonuses.length) + 1}
-                        </span>
-                        <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>
-                          {bonus.slot_name}
-                        </span>
-                      </div>
-                      <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
-                        <Badge className={`${getStatusColor(bonus)} text-xs px-1 py-0`}>
-                          {bonus.payout_recorded_at ? 'Opened' : 'Pending'}
-                        </Badge>
-                        {bonus.payout_amount && (
-                          <span className="text-green-400">
-                            ${bonus.payout_amount.toFixed(2)}
-                          </span>
-                        )}
-                        {bonus.bonus_multiplier && (
-                          <span className="text-yellow-400">
-                            {bonus.bonus_multiplier.toFixed(2)}x
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                   <div
+                     key={`${bonus.id}-${Math.floor(index / bonuses.length)}`}
+                     className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-500`}
+                     style={{
+                       backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                       borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
+                       minHeight: '72px' // Consistent height for smooth scrolling
+                     }}
+                   >
+                     <div className="flex-1">
+                       <div className="flex items-center gap-2 flex-wrap">
+                         <span 
+                           className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
+                           style={{
+                             backgroundColor: overlaySettings.accent_color + '40',
+                             color: overlaySettings.accent_color
+                           }}
+                         >
+                           #{(index % bonuses.length) + 1}
+                         </span>
+                         <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>
+                           {bonus.slot_name}
+                         </span>
+                         {bonus.payout_recorded_at && (
+                           <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300">
+                             Opened
+                           </span>
+                         )}
+                       </div>
+                       <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
+                         <Badge className={`${getStatusColor(bonus)} text-xs px-1 py-0`}>
+                           {bonus.payout_recorded_at ? 'Opened' : 'Pending'}
+                         </Badge>
+                         {bonus.payout_amount && (
+                           <span className="text-green-400">
+                             ${bonus.payout_amount.toFixed(2)}
+                           </span>
+                         )}
+                         {bonus.bonus_multiplier && (
+                           <span className="text-yellow-400">
+                             {bonus.bonus_multiplier.toFixed(2)}x
+                           </span>
+                         )}
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>
               
-              {/* Gradient overlay for smooth fade effect */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-4 pointer-events-none"
-                style={{
-                  background: `linear-gradient(to bottom, ${overlaySettings.background_color}, transparent)`
-                }}
-              />
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none"
-                style={{
-                  background: `linear-gradient(to top, ${overlaySettings.background_color}, transparent)`
-                }}
-              />
+               {/* Gradient overlay for smooth fade effect */}
+               <div 
+                 className="absolute top-0 left-0 right-0 h-4 pointer-events-none"
+                 style={{
+                   background: overlaySettings.show_background ? `linear-gradient(to bottom, ${overlaySettings.background_color}, transparent)` : 'transparent'
+                 }}
+               />
+               <div 
+                 className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none"
+                 style={{
+                   background: overlaySettings.show_background ? `linear-gradient(to top, ${overlaySettings.background_color}, transparent)` : 'transparent'
+                 }}
+               />
             </div>
           )}
         </CardContent>
