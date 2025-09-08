@@ -327,52 +327,6 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
-      {/* Summary Section */}
-      {overlaySettings.show_expected_payouts && bonuses.length > 0 && (
-        <Card 
-          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
-          style={{
-            ...getOverlayStyle(),
-            background: overlaySettings.show_background ? 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' : 'transparent'
-          }}
-        >
-           <CardContent className="p-4">
-             <div className="grid grid-cols-3 gap-2">
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</div>
-                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>{totalBonuses}</div>
-               </div>
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Opened</div>
-                 <div className="font-bold text-green-400">{completedBonuses}</div>
-               </div>
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Pending</div>
-                 <div className="font-bold text-orange-400">{pendingBonuses}</div>
-               </div>
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Req Avg Mult</div>
-                 <div className={`font-bold ${isProfit ? 'text-green-400' : 'text-blue-400'}`}>
-                   {isProfit ? 'Profit' : `${requiredAvgMulti.toFixed(1)}x`}
-                 </div>
-               </div>
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</div>
-                 <div className="font-bold" style={{color: overlaySettings.accent_color}}>
-                   {avgMultiplier.toFixed(1)}x
-                 </div>
-               </div>
-               <div className="space-y-1">
-                 <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>P&L</div>
-                 <div className={`font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                   {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-                 </div>
-               </div>
-             </div>
-           </CardContent>
-        </Card>
-      )}
-
       {/* Session Header */}
       <Card 
         className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}

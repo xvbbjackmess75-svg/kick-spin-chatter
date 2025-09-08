@@ -90,10 +90,14 @@ export default function BonusHunt() {
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [overlaySettings, setOverlaySettings] = useState({
     background_color: 'rgba(0, 0, 0, 0.95)',
+    border_color: '#3b82f6',
     text_color: 'hsl(var(--foreground))',
     accent_color: 'hsl(var(--primary))',
     font_size: 'medium',
     max_visible_bonuses: 5,
+    scrolling_speed: 50,
+    show_background: true,
+    show_borders: true,
     show_expected_payouts: true,
     show_upcoming_bonuses: true,
     show_top_multipliers: true,
@@ -577,7 +581,21 @@ export default function BonusHunt() {
       }
 
       if (data) {
-        setOverlaySettings(data);
+        setOverlaySettings({
+          background_color: data.background_color || 'rgba(0, 0, 0, 0.95)',
+          border_color: (data as any).border_color || '#3b82f6',
+          text_color: data.text_color || '#ffffff',
+          accent_color: data.accent_color || '#3b82f6',
+          font_size: data.font_size || 'medium',
+          max_visible_bonuses: data.max_visible_bonuses || 5,
+          scrolling_speed: (data as any).scrolling_speed || 50,
+          show_background: (data as any).show_background ?? true,
+          show_borders: (data as any).show_borders ?? true,
+          show_expected_payouts: data.show_expected_payouts ?? true,
+          show_upcoming_bonuses: data.show_upcoming_bonuses ?? true,
+          show_top_multipliers: data.show_top_multipliers ?? true,
+          animation_enabled: data.animation_enabled ?? true
+        });
       }
     } catch (error) {
       console.error("Error fetching overlay settings:", error);
@@ -1245,57 +1263,245 @@ export default function BonusHunt() {
 
       {/* Overlay Customization Dialog */}
       <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Customize Bonus Hunt Overlay</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            {/* Color Settings */}
+            {/* Color Templates */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Colors</h3>
+              <h3 className="text-lg font-semibold">Color Templates</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(0, 0, 0, 0.95)',
+                    border_color: '#3b82f6',
+                    text_color: '#ffffff',
+                    accent_color: '#3b82f6'
+                  })}
+                >
+                  <div className="w-full h-8 bg-black/95 rounded mb-2 border border-blue-500"></div>
+                  <div className="text-sm font-medium">Classic Dark</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(16, 185, 129, 0.9)',
+                    border_color: '#10b981',
+                    text_color: '#ffffff',
+                    accent_color: '#fbbf24'
+                  })}
+                >
+                  <div className="w-full h-8 bg-emerald-500/90 rounded mb-2 border border-emerald-500"></div>
+                  <div className="text-sm font-medium">Emerald Gold</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(139, 69, 19, 0.95)',
+                    border_color: '#f59e0b',
+                    text_color: '#fbbf24',
+                    accent_color: '#f59e0b'
+                  })}
+                >
+                  <div className="w-full h-8 bg-amber-800/95 rounded mb-2 border border-amber-500"></div>
+                  <div className="text-sm font-medium">Golden Brown</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(30, 41, 59, 0.95)',
+                    border_color: '#8b5cf6',
+                    text_color: '#e2e8f0',
+                    accent_color: '#8b5cf6'
+                  })}
+                >
+                  <div className="w-full h-8 bg-slate-700/95 rounded mb-2 border border-violet-500"></div>
+                  <div className="text-sm font-medium">Purple Slate</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(220, 38, 127, 0.9)',
+                    border_color: '#ec4899',
+                    text_color: '#ffffff',
+                    accent_color: '#fde047'
+                  })}
+                >
+                  <div className="w-full h-8 bg-pink-600/90 rounded mb-2 border border-pink-500"></div>
+                  <div className="text-sm font-medium">Pink Neon</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(17, 24, 39, 0.98)',
+                    border_color: '#ef4444',
+                    text_color: '#f9fafb',
+                    accent_color: '#ef4444'
+                  })}
+                >
+                  <div className="w-full h-8 bg-gray-900/98 rounded mb-2 border border-red-500"></div>
+                  <div className="text-sm font-medium">Dark Red</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'transparent',
+                    border_color: '#06b6d4',
+                    text_color: '#ffffff',
+                    accent_color: '#06b6d4',
+                    show_background: false
+                  })}
+                >
+                  <div className="w-full h-8 bg-transparent rounded mb-2 border border-cyan-500"></div>
+                  <div className="text-sm font-medium">Transparent</div>
+                </button>
+                
+                <button
+                  className="p-3 rounded-lg border-2 hover:border-primary transition-colors"
+                  onClick={() => setOverlaySettings({
+                    ...overlaySettings,
+                    background_color: 'rgba(124, 58, 237, 0.9)',
+                    border_color: '#a855f7',
+                    text_color: '#faf5ff',
+                    accent_color: '#22d3ee'
+                  })}
+                >
+                  <div className="w-full h-8 bg-violet-600/90 rounded mb-2 border border-purple-500"></div>
+                  <div className="text-sm font-medium">Cyber Purple</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Advanced Color Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Advanced Colors</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Background Color</Label>
-                  <Input
-                    type="color"
-                    value={overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color}
-                    onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={overlaySettings.background_color.includes('rgba') ? '#000000' : overlaySettings.background_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
+                      className="w-16"
+                    />
+                    <Input
+                      type="text"
+                      value={overlaySettings.background_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, background_color: e.target.value})}
+                      placeholder="rgba(0, 0, 0, 0.95)"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Border Color</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={overlaySettings.border_color || '#3b82f6'}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, border_color: e.target.value})}
+                      className="w-16"
+                    />
+                    <Input
+                      type="text"
+                      value={overlaySettings.border_color || '#3b82f6'}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, border_color: e.target.value})}
+                      placeholder="#3b82f6"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Text Color</Label>
-                  <Input
-                    type="color"
-                    value={overlaySettings.text_color.includes('hsl') ? '#ffffff' : overlaySettings.text_color}
-                    onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={overlaySettings.text_color.includes('hsl') ? '#ffffff' : overlaySettings.text_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
+                      className="w-16"
+                    />
+                    <Input
+                      type="text"
+                      value={overlaySettings.text_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, text_color: e.target.value})}
+                      placeholder="#ffffff"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Accent Color</Label>
-                  <Input
-                    type="color"
-                    value={overlaySettings.accent_color.includes('hsl') ? '#3b82f6' : overlaySettings.accent_color}
-                    onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={overlaySettings.accent_color.includes('hsl') ? '#3b82f6' : overlaySettings.accent_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
+                      className="w-16"
+                    />
+                    <Input
+                      type="text"
+                      value={overlaySettings.accent_color}
+                      onChange={(e) => setOverlaySettings({...overlaySettings, accent_color: e.target.value})}
+                      placeholder="#3b82f6"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Enhanced Preview */}
             <div className="space-y-2">
-              <Label>Preview</Label>
+              <Label>Live Preview</Label>
               <div 
-                className="p-4 rounded-lg border"
+                className={`p-4 rounded-lg transition-all duration-300 ${overlaySettings.show_borders ? 'border-2' : 'border-0'}`}
                 style={{
-                  backgroundColor: overlaySettings.background_color,
-                  color: overlaySettings.text_color
+                  backgroundColor: overlaySettings.show_background ? overlaySettings.background_color : 'transparent',
+                  borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
+                  color: overlaySettings.text_color,
+                  fontSize: overlaySettings.font_size === 'small' ? '14px' : overlaySettings.font_size === 'large' ? '18px' : '16px'
                 }}
               >
-                <h4 className="font-bold" style={{ color: overlaySettings.accent_color }}>
-                  Bonus Hunt Session
-                </h4>
-                <div style={{ color: overlaySettings.text_color, fontSize: '14px' }}>
-                  Sample overlay content with your colors
+                <div className="flex items-center gap-3 mb-3">
+                  <Gift className="h-6 w-6" style={{ color: overlaySettings.accent_color }} />
+                  <h4 className="font-bold text-lg" style={{ color: overlaySettings.text_color }}>
+                    Bonus Hunt Session
+                  </h4>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono px-2 py-1 rounded" style={{ 
+                      backgroundColor: overlaySettings.accent_color + '40', 
+                      color: overlaySettings.accent_color 
+                    }}>
+                      #1
+                    </span>
+                    <span className="font-medium" style={{ color: overlaySettings.accent_color }}>
+                      Sample Slot
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300">
+                      Opened
+                    </span>
+                  </div>
+                  <div className="text-sm opacity-80">
+                    This is how your overlay will look with the current settings
+                  </div>
                 </div>
               </div>
             </div>
@@ -1304,67 +1510,92 @@ export default function BonusHunt() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Display Settings</h3>
               
-              <div>
-                <Label>Font Size</Label>
-                <Select value={overlaySettings.font_size} onValueChange={(value) => setOverlaySettings({...overlaySettings, font_size: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="small">Small</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="large">Large</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Font Size</Label>
+                  <Select value={overlaySettings.font_size} onValueChange={(value) => setOverlaySettings({...overlaySettings, font_size: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Small</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="large">Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Max Visible Bonuses</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={overlaySettings.max_visible_bonuses}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_bonuses: parseInt(e.target.value) || 5})}
+                  />
+                </div>
+
+                <div>
+                  <Label>Scrolling Speed (ms)</Label>
+                  <Input
+                    type="number"
+                    min="10"
+                    max="200"
+                    value={overlaySettings.scrolling_speed || 50}
+                    onChange={(e) => setOverlaySettings({...overlaySettings, scrolling_speed: parseInt(e.target.value) || 50})}
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label>Max Visible Bonuses</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={overlaySettings.max_visible_bonuses}
-                  onChange={(e) => setOverlaySettings({...overlaySettings, max_visible_bonuses: parseInt(e.target.value) || 5})}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between">
+                  <Label>Show Background</Label>
+                  <Switch
+                    checked={overlaySettings.show_background ?? true}
+                    onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_background: checked})}
+                  />
+                </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Show Expected Payouts</Label>
-                <Switch
-                  checked={overlaySettings.show_expected_payouts}
-                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_expected_payouts: checked})}
-                />
-              </div>
+                <div className="flex items-center justify-between">
+                  <Label>Show Borders</Label>
+                  <Switch
+                    checked={overlaySettings.show_borders ?? true}
+                    onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_borders: checked})}
+                  />
+                </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Show Upcoming Bonuses</Label>
-                <Switch
-                  checked={overlaySettings.show_upcoming_bonuses}
-                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_upcoming_bonuses: checked})}
-                />
-              </div>
+                <div className="flex items-center justify-between">
+                  <Label>Animation Enabled</Label>
+                  <Switch
+                    checked={overlaySettings.animation_enabled}
+                    onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, animation_enabled: checked})}
+                  />
+                </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Show Top Multipliers</Label>
-                <Switch
-                  checked={overlaySettings.show_top_multipliers}
-                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_top_multipliers: checked})}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label>Animation Enabled</Label>
-                <Switch
-                  checked={overlaySettings.animation_enabled}
-                  onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, animation_enabled: checked})}
-                />
+                <div className="flex items-center justify-between">
+                  <Label>Show Top Multipliers</Label>
+                  <Switch
+                    checked={overlaySettings.show_top_multipliers}
+                    onCheckedChange={(checked) => setOverlaySettings({...overlaySettings, show_top_multipliers: checked})}
+                  />
+                </div>
               </div>
             </div>
 
-            <Button onClick={saveOverlaySettings} className="w-full">
-              Save Overlay Settings
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={saveOverlaySettings} className="flex-1">
+                Save Overlay Settings
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(`/bonus-hunt-overlay?userId=${user?.id}&maxBonuses=${overlaySettings.max_visible_bonuses}`, '_blank')}
+                className="flex-1"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Test Overlay
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
