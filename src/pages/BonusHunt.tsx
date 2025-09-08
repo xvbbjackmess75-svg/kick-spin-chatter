@@ -677,6 +677,9 @@ export default function BonusHunt() {
     if (!user) return;
 
     try {
+      console.log('🔧 Saving overlay settings for user:', user.id);
+      console.log('🔧 Current overlay settings state:', overlaySettings);
+      
       // Only include fields that exist in the bonus_hunt_overlay_settings table
       const settingsToSave = {
         user_id: user.id,
@@ -691,19 +694,25 @@ export default function BonusHunt() {
         animation_enabled: overlaySettings.animation_enabled
       };
 
+      console.log('🔧 Settings to save:', settingsToSave);
+
       const { error } = await supabase
         .from('bonus_hunt_overlay_settings')
         .upsert(settingsToSave);
 
-      if (error) throw error;
+      if (error) {
+        console.error('🚨 Database error saving overlay settings:', error);
+        throw error;
+      }
 
+      console.log('✅ Overlay settings saved successfully');
       toast({
         title: "Settings saved!",
         description: "Overlay settings saved successfully!",
       });
       setIsOverlayDialogOpen(false);
     } catch (error) {
-      console.error("Error saving overlay settings:", error);
+      console.error("🚨 Error saving overlay settings:", error);
       toast({
         title: "Error",
         description: "Failed to save overlay settings",
