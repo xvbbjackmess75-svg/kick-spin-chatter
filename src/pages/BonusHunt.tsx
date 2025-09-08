@@ -17,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface BonusHuntSession {
   id: string;
+  user_id: string;
   session_name?: string;
   starting_balance: number;
   current_balance: number;
@@ -458,23 +459,46 @@ export default function BonusHunt() {
 
   const toggleSessionStatus = async (status: 'active' | 'paused' | 'completed') => {
     if (!activeSession) return;
+    if (!user) {
+      console.error('❌ No authenticated user');
+      toast({ title: 'Authentication required', variant: 'destructive' });
+      return;
+    }
 
     try {
       console.log('🔄 Updating session status to:', status, 'for session:', activeSession.id);
+      console.log('👤 Current user:', user.id);
+      console.log('🏠 Session owner:', activeSession.user_id);
+      
+      // Check if user owns this session
+      if (activeSession.user_id !== user.id) {
+        console.error('❌ User does not own this session');
+        toast({ title: 'Permission denied - not your session', variant: 'destructive' });
+        return;
+      }
       
       const updateData: any = { status };
       if (status === 'completed') {
         updateData.completed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
+      const { data: updateResult, error } = await supabase
         .from('bonus_hunt_sessions')
         .update(updateData)
-        .eq('id', activeSession.id);
+        .eq('id', activeSession.id)
+        .select(); // Add select to see what was actually updated
+
+      console.log('🔍 Update result:', updateResult);
+      console.log('🔍 Update error:', error);
 
       if (error) {
         console.error('❌ Database error updating session:', error);
         throw error;
+      }
+
+      if (!updateResult || updateResult.length === 0) {
+        console.error('❌ No rows were updated - possible RLS issue');
+        throw new Error('Session update failed - no rows affected');
       }
 
       console.log('✅ Session status updated successfully in database');
