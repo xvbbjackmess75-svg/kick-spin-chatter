@@ -598,9 +598,9 @@ export default function BonusHunt() {
   const openedPayouts = openedBets.reduce((sum, bet) => sum + (bet.payout_amount || 0), 0);
   const currentAvgMulti = openedBetAmount > 0 ? openedPayouts / openedBetAmount : 0;
   
-  // Calculate required average multiplier to break even
-  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? totalBetAmount / activeSession.starting_balance : 0;
-  const isProfit = totalBets > 0 ? totalPayouts >= totalBetAmount : false;
+  // Calculate required average multiplier to break even from starting balance
+  const requiredAvgMulti = totalBetAmount > 0 && activeSession ? activeSession.starting_balance / totalBetAmount : 0;
+  const isProfit = totalPnL > 0;
   
   const bonusesLeft = activeSession ? Math.max(0, activeSession.target_bonuses - sessionBets.length) : 0;
 
@@ -765,13 +765,13 @@ export default function BonusHunt() {
                   <div className="text-sm text-muted-foreground">Bonuses Left</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{sessionStats.requiredAvgMulti.toFixed(1)}x</div>
+                  <div className={`text-2xl font-bold ${sessionStats.isProfit ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {sessionStats.isProfit ? 'Profit' : `${sessionStats.requiredAvgMulti.toFixed(1)}x`}
+                  </div>
                   <div className="text-sm text-muted-foreground">Required Avg</div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-2xl font-bold ${sessionStats.isProfit ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {sessionStats.isProfit ? 'Profit' : `${sessionStats.currentAvgMulti.toFixed(1)}x`}
-                  </div>
+                  <div className="text-2xl font-bold">{sessionStats.currentAvgMulti.toFixed(1)}x</div>
                   <div className="text-sm text-muted-foreground">Current Avg</div>
                 </div>
               </div>
