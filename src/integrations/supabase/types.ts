@@ -898,6 +898,7 @@ export type Database = {
       get_secure_overlay_event: {
         Args: Record<PropertyKey, never>
         Returns: {
+          event_bet_size: number
           event_id: string
           event_status: string
           event_title: string

@@ -339,24 +339,26 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         style={getOverlayStyle()}
       >
         <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <Dices className="h-6 w-6" style={{color: overlaySettings.accent_color}} />
-            <div className="flex-1">
-              <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
-              <div className="flex items-center gap-2 text-sm opacity-80">
-                <span style={{color: overlaySettings.text_color}}>Event Active</span>
-                <Badge
-                  className={
-                    event.status === 'active' ? 'bg-green-500/20 text-green-300' :
-                    event.status === 'closed' ? 'bg-yellow-500/20 text-yellow-300' :
-                    'bg-blue-500/20 text-blue-300'
-                  }
-                >
-                  {event.status}
-                </Badge>
+            <div className="flex items-center gap-3">
+              <Dices className="h-6 w-6" style={{color: overlaySettings.accent_color}} />
+              <div className="flex-1">
+                <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
+                <div className="flex items-center gap-2 text-sm opacity-80">
+                  <span style={{color: overlaySettings.text_color}}>
+                    {event.status === 'closed' ? 'Entry Closed - Drawing Soon!' : 'Event Active'}
+                  </span>
+                  <Badge
+                    className={
+                      event.status === 'active' ? 'bg-green-500/20 text-green-300' :
+                      event.status === 'closed' ? 'bg-orange-500/20 text-orange-300' :
+                      'bg-blue-500/20 text-blue-300'
+                    }
+                  >
+                    {event.status === 'closed' ? 'Entry Closed' : event.status}
+                  </Badge>
+                </div>
               </div>
             </div>
-          </div>
         </CardContent>
       </Card>
 
