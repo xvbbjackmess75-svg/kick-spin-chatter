@@ -154,37 +154,34 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     if (!userId) return;
 
     try {
-      console.log(`🔍 Fetching secure overlay data for userId: ${userId}`);
+      console.log(`🔍 Fetching active event for userId: ${userId}`);
       
-      // Use secure function that only returns essential overlay data
+      // Fetch active event for this user
       const { data: eventData, error: eventError } = await supabase
-        .rpc('get_secure_overlay_event');
+        .from('slots_events')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
 
-      console.log(`📊 Secure event query result:`, { eventData, eventError });
+      console.log(`📊 Event query result:`, { eventData, eventError });
 
-      if (eventError) {
-        console.error("Error fetching secure overlay event:", eventError);
+      if (eventError && eventError.code !== 'PGRST116') {
+        console.error("Error fetching active event:", eventError);
         setEvent(null);
         setCalls([]);
         setLoading(false);
         return;
       }
 
-      if (!eventData || eventData.length === 0) {
+      if (!eventData) {
         setEvent(null);
         setCalls([]);
         setLoading(false);
         return;
       }
 
-      // Map secure event data to expected format
-      const secureEvent = eventData[0];
-      setEvent({
-        id: secureEvent.event_id,
-        title: secureEvent.event_title,
-        bet_size: 0, // Hide bet size for security
-        status: secureEvent.event_status
-      });
+      setEvent(eventData);
 
       // Use the secure overlay function that only exposes non-sensitive data
       const { data: callsData, error: callsError } = await supabase
@@ -195,7 +192,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         setCalls([]);
       } else {
         // Filter calls for the current event since the function returns all active calls
-        const eventCalls = callsData?.filter((call: any) => call.event_id === secureEvent.event_id) || [];
+        const eventCalls = callsData?.filter((call: any) => call.event_id === eventData.id) || [];
         // Map the secure data to the expected format (without sensitive fields)
         const mappedCalls = eventCalls.map((call: any) => ({
           id: call.id,
@@ -344,7 +341,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             <div className="flex-1">
               <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
               <div className="flex items-center gap-2 text-sm opacity-80">
-                <span style={{color: overlaySettings.text_color}}>Event Active</span>
+                <span style={{color: overlaySettings.text_color}}>Bet: ${event.bet_size}</span>
                 <Badge
                   className={
                     event.status === 'active' ? 'bg-green-500/20 text-green-300' :
