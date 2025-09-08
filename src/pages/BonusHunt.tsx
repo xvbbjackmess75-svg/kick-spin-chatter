@@ -400,7 +400,7 @@ export default function BonusHunt() {
         .from('bonus_hunt_sessions')
         .update({
           bonus_opening_phase: true
-        })
+        } as any)
         .eq('id', activeSession.id);
 
       if (error) throw error;

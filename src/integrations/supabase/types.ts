@@ -108,6 +108,7 @@ export type Database = {
       }
       bonus_hunt_sessions: {
         Row: {
+          bonus_opening_phase: boolean | null
           completed_at: string | null
           created_at: string
           current_balance: number
@@ -120,6 +121,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bonus_opening_phase?: boolean | null
           completed_at?: string | null
           created_at?: string
           current_balance: number
@@ -132,6 +134,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bonus_opening_phase?: boolean | null
           completed_at?: string | null
           created_at?: string
           current_balance?: number
