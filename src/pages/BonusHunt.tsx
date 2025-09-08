@@ -257,6 +257,8 @@ export default function BonusHunt() {
           bonus_multiplier,
           pnl,
           created_at,
+          payout_amount,
+          payout_recorded_at,
           slots!slot_id (
             id,
             name,
