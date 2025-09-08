@@ -294,7 +294,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   return (
     <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
-      {/* Event Header with Top Call */}
+      {/* Event Header */}
       <Card 
         className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
         style={getOverlayStyle()}
@@ -304,33 +304,49 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               <Dices className="h-6 w-6" style={{color: overlaySettings.accent_color}} />
               <div className="flex-1">
                 <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
-                <div className="space-y-2">
-                  {event.status === 'closed' && (
-                    <div className="text-sm">
-                      <div className="font-semibold text-orange-300">Entry Closed - Drawing Soon!</div>
-                      <div className="text-red-400 font-medium">Entry Closed</div>
-                      {topCall && (
-                        <div className="mt-2 text-sm" style={{color: overlaySettings.text_color}}>
-                          <span className="font-semibold">Top Call: </span>
-                          <span className="text-green-400">{topCall.viewer_username}</span>
-                          <span> ${topCall.win_amount?.toFixed(0)} ({topCall.multiplier?.toFixed(0)}x)</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {event.status === 'active' && (
-                    <div className="flex items-center gap-2 text-sm opacity-80">
-                      <span style={{color: overlaySettings.text_color}}>Event Active</span>
-                      <Badge className="bg-green-500/20 text-green-300">
-                        {event.status}
-                      </Badge>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 text-sm opacity-80">
+                  <span style={{color: overlaySettings.text_color}}>
+                    {event.status === 'closed' ? 'Entry Closed - Drawing Soon!' : 'Event Active'}
+                  </span>
+                  <Badge
+                    className={
+                      event.status === 'active' ? 'bg-green-500/20 text-green-300' :
+                      event.status === 'closed' ? 'bg-orange-500/20 text-orange-300' :
+                      'bg-blue-500/20 text-blue-300'
+                    }
+                  >
+                    {event.status === 'closed' ? 'Entry Closed' : event.status}
+                  </Badge>
                 </div>
               </div>
             </div>
         </CardContent>
       </Card>
+
+      {/* Top Call Display */}
+      {topCall && (
+        <Card 
+          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
+          style={getOverlayStyle()}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Trophy className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
+              <div className="flex-1">
+                <span className="font-semibold" style={{color: overlaySettings.text_color}}>
+                  Top Call: 
+                </span>
+                <span className="text-green-400 ml-2">
+                  {topCall.viewer_username}
+                </span>
+                <span style={{color: overlaySettings.text_color}} className="ml-1">
+                  ${topCall.win_amount?.toFixed(0)} ({topCall.multiplier?.toFixed(0)}x)
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Winner Display - Disabled for security as we don't have access to win data */}
       {/* Winner section removed to protect sensitive gambling data */}
