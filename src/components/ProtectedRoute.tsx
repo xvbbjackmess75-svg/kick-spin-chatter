@@ -1,4 +1,4 @@
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 
 interface ProtectedRouteProps {
@@ -8,12 +8,22 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   
+  console.log('🔐 ProtectedRoute check:', { user: !!user, loading });
+  
   // Check for guest mode or Kick authentication
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   const kickUser = localStorage.getItem('kick_user');
   const isKickAuthenticated = kickUser ? JSON.parse(kickUser).authenticated : false;
 
+  console.log('🔐 ProtectedRoute auth states:', { 
+    isGuestMode, 
+    isKickAuthenticated, 
+    hasUser: !!user,
+    userEmail: user?.email 
+  });
+
   if (loading) {
+    console.log('🔐 ProtectedRoute showing loading...');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -25,9 +35,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Allow access if user is authenticated OR in guest mode OR authenticated with Kick
-  if (!user && !isGuestMode && !isKickAuthenticated) {
+  const hasAccess = user || isGuestMode || isKickAuthenticated;
+  console.log('🔐 ProtectedRoute access decision:', { hasAccess, redirectingToAuth: !hasAccess });
+  
+  if (!hasAccess) {
     return <Navigate to="/auth" replace />;
   }
 
+  console.log('🔐 ProtectedRoute allowing access, rendering children');
   return <>{children}</>;
 }
