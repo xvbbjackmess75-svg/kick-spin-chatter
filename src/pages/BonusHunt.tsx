@@ -1103,20 +1103,24 @@ export default function BonusHunt() {
                            <Trophy className="h-4 w-4 mr-1" />
                            Record
                          </Button>
-                         {sessionBets.filter(bet => !bet.payout_recorded_at).length > 1 && (
-                           <Button 
-                             onClick={() => {
-                               recordPayout();
-                               // Small delay to ensure state updates, then move to next
-                               setTimeout(() => moveToNextSlot(), 100);
-                             }} 
-                             disabled={!payoutAmount} 
-                             className="bg-blue-600 hover:bg-blue-700"
-                           >
-                             <Trophy className="h-4 w-4 mr-1" />
-                             Record & Next
-                           </Button>
-                         )}
+                         {(() => {
+                           // Check if there are more pending slots after the current one
+                           const pendingSlots = sessionBets.filter(bet => !bet.payout_recorded_at && bet.id !== selectedBetForPayout?.id);
+                           return pendingSlots.length > 0 && (
+                             <Button 
+                               onClick={() => {
+                                 recordPayout();
+                                 // Small delay to ensure state updates, then move to next
+                                 setTimeout(() => moveToNextSlot(), 100);
+                               }} 
+                               disabled={!payoutAmount} 
+                               className="bg-blue-600 hover:bg-blue-700"
+                             >
+                               <Trophy className="h-4 w-4 mr-1" />
+                               Record & Next
+                             </Button>
+                           );
+                         })()}
                          <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
                            Cancel
                          </Button>
