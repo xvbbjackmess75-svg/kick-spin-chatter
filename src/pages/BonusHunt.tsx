@@ -466,11 +466,16 @@ export default function BonusHunt() {
 
       if (error) throw error;
 
-      setActiveSession(prev => prev ? { ...prev, status, ...(status === 'completed' ? { completed_at: new Date().toISOString() } : {}) } : null);
+      // Clear active session immediately if completed
       if (status === 'completed') {
         setActiveSession(null);
+        setSessionBets([]); // Clear the bets as well
+      } else {
+        setActiveSession(prev => prev ? { ...prev, status } : null);
       }
-      loadSessions();
+      
+      // Reload sessions to refresh the list
+      await loadSessions();
       toast({ title: `Session ${status}!` });
     } catch (error) {
       console.error('Error updating session:', error);
