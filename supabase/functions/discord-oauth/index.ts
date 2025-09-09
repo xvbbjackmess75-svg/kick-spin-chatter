@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, state } = await req.json()
+    const { action, code, state, user_id } = await req.json()
 
     const DISCORD_CLIENT_ID = Deno.env.get('DISCORD_CLIENT_ID')!
     const DISCORD_CLIENT_SECRET = Deno.env.get('DISCORD_CLIENT_SECRET')!
     const DISCORD_REDIRECT_URI = `${req.headers.get('origin') || 'https://kick-spin-chatter.lovable.app'}/discord/callback`
+
+    console.log('🎮 Discord OAuth action:', action)
 
     if (action === 'authorize') {
       // Generate Discord OAuth URL
@@ -26,6 +29,8 @@ serve(async (req) => {
       discordAuthUrl.searchParams.set('response_type', 'code')
       discordAuthUrl.searchParams.set('scope', 'identify email')
       discordAuthUrl.searchParams.set('state', state)
+
+      console.log('🔗 Generated Discord OAuth URL')
 
       return new Response(
         JSON.stringify({
@@ -40,6 +45,8 @@ serve(async (req) => {
     }
 
     if (action === 'exchange') {
+      console.log('🔄 Exchanging Discord code for tokens')
+      
       // Exchange code for access token
       const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
         method: 'POST',
@@ -57,11 +64,12 @@ serve(async (req) => {
 
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.text()
-        console.error('Discord token exchange error:', errorData)
+        console.error('❌ Discord token exchange error:', errorData)
         throw new Error(`Discord token exchange failed: ${tokenResponse.status}`)
       }
 
       const tokenData = await tokenResponse.json()
+      console.log('✅ Got Discord tokens')
 
       // Get user info from Discord
       const userResponse = await fetch('https://discord.com/api/users/@me', {
@@ -75,6 +83,7 @@ serve(async (req) => {
       }
 
       const userData = await userResponse.json()
+      console.log('✅ Got Discord user data:', userData.username)
 
       return new Response(
         JSON.stringify({
@@ -95,6 +104,69 @@ serve(async (req) => {
       )
     }
 
+    if (action === 'link') {
+      console.log('🔗 Linking Discord account to profile for user:', user_id)
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      
+      const { discord_user_id, discord_username, discord_avatar, discord_discriminator } = await req.json()
+      
+      // Check if this Discord account is already linked to another profile
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('linked_discord_user_id', discord_user_id)
+        .neq('user_id', user_id)
+        .single()
+      
+      if (existingProfile) {
+        console.log('⚠️ Discord account already linked to another profile')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Discord account is already linked to another account' 
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          },
+        )
+      }
+      
+      // Get Discord avatar URL
+      const avatarUrl = discord_avatar 
+        ? `https://cdn.discordapp.com/avatars/${discord_user_id}/${discord_avatar}.png`
+        : `https://ui-avatars.com/api/?name=${discord_username}&background=5865F2&color=fff&size=200&bold=true`
+      
+      // Update the profile with Discord account info
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          linked_discord_user_id: discord_user_id,
+          linked_discord_username: discord_username,
+          linked_discord_avatar: avatarUrl,
+          linked_discord_discriminator: discord_discriminator
+        })
+        .eq('user_id', user_id)
+      
+      if (updateError) {
+        console.error('❌ Failed to link Discord account:', updateError)
+        throw new Error('Failed to link Discord account to profile')
+      }
+      
+      console.log('✅ Discord account linked successfully')
+      
+      return new Response(
+        JSON.stringify({ success: true }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      )
+    }
+
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       {
@@ -104,7 +176,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Discord OAuth error:', error)
+    console.error('❌ Discord OAuth error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {

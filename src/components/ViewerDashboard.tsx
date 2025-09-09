@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useKickAccount } from "@/hooks/useKickAccount";
+import { useDiscordAccount } from "@/hooks/useDiscordAccount";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +31,8 @@ export default function ViewerDashboard() {
   const { role } = useUserRole();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isKickLinked } = useKickAccount();
+  const { isDiscordLinked, discordUser } = useDiscordAccount();
   const [linkingDiscord, setLinkingDiscord] = useState(false);
 
   const handleDiscordLink = async () => {
@@ -75,27 +79,27 @@ export default function ViewerDashboard() {
       icon: Shield,
       title: "Verified Status",
       description: "Link Kick + Discord for verified viewer badge",
-      available: profile?.kick_username ? "partial" : false,
-      action: profile?.kick_username ? "Link Discord" : "Link Kick Account"
+      available: isKickLinked ? "partial" : false,
+      action: isKickLinked ? "Link Discord" : "Link Kick Account"
     },
     {
       icon: Gift,
       title: "Giveaway Benefits",
       description: "Extra chances in verified-only giveaways",
-      available: profile?.kick_username ? true : false
+      available: isKickLinked ? true : false
     },
     {
       icon: Star,
       title: "Community Trust",
       description: "Build reputation with streamers and viewers",
-      available: profile?.kick_username ? true : false
+      available: isKickLinked ? true : false
     }
   ];
 
   const accountStatus = {
-    kickLinked: !!profile?.kick_username,
-    discordLinked: user ? !!localStorage.getItem(`discord_linked_${user.id}`) : false,
-    verified: profile?.kick_username && user ? !!localStorage.getItem(`discord_linked_${user.id}`) : false
+    kickLinked: isKickLinked,
+    discordLinked: isDiscordLinked,
+    verified: isKickLinked && isDiscordLinked
   };
 
   return (
@@ -179,7 +183,7 @@ export default function ViewerDashboard() {
                 <div>
                   <p className="font-medium">Discord Account</p>
                   <p className="text-sm text-muted-foreground">
-                    {accountStatus.discordLinked ? 'Linked' : 'Not linked'}
+                    {accountStatus.discordLinked ? `Linked: ${discordUser?.username}` : 'Not linked'}
                   </p>
                 </div>
               </div>

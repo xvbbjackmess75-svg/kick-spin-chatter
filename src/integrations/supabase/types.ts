@@ -665,6 +665,10 @@ export type Database = {
           kick_channel_id: string | null
           kick_user_id: string | null
           kick_username: string | null
+          linked_discord_avatar: string | null
+          linked_discord_discriminator: string | null
+          linked_discord_user_id: string | null
+          linked_discord_username: string | null
           linked_kick_avatar: string | null
           linked_kick_user_id: string | null
           linked_kick_username: string | null
@@ -681,6 +685,10 @@ export type Database = {
           kick_channel_id?: string | null
           kick_user_id?: string | null
           kick_username?: string | null
+          linked_discord_avatar?: string | null
+          linked_discord_discriminator?: string | null
+          linked_discord_user_id?: string | null
+          linked_discord_username?: string | null
           linked_kick_avatar?: string | null
           linked_kick_user_id?: string | null
           linked_kick_username?: string | null
@@ -697,6 +705,10 @@ export type Database = {
           kick_channel_id?: string | null
           kick_user_id?: string | null
           kick_username?: string | null
+          linked_discord_avatar?: string | null
+          linked_discord_discriminator?: string | null
+          linked_discord_user_id?: string | null
+          linked_discord_username?: string | null
           linked_kick_avatar?: string | null
           linked_kick_user_id?: string | null
           linked_kick_username?: string | null

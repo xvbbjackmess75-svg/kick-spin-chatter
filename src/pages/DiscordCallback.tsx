@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useDiscordAccount } from '@/hooks/useDiscordAccount';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function DiscordCallback() {
@@ -9,6 +10,7 @@ export default function DiscordCallback() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { linkDiscordAccount } = useDiscordAccount();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -36,7 +38,19 @@ export default function DiscordCallback() {
         return;
       }
 
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to link Discord account",
+          variant: "destructive"
+        });
+        navigate('/auth');
+        return;
+      }
+
       try {
+        console.log('🔄 Processing Discord callback...');
+        
         // Exchange code for tokens using our edge function
         const { data, error: exchangeError } = await supabase.functions.invoke('discord-oauth', {
           body: {
@@ -48,31 +62,26 @@ export default function DiscordCallback() {
 
         if (exchangeError) throw exchangeError;
 
-        // Store Discord user data
-        const discordUser = {
+        console.log('✅ Got Discord user data:', data.user.username);
+
+        // Link the Discord account to the user's profile
+        await linkDiscordAccount({
           id: data.user.id,
           username: data.user.username,
           discriminator: data.user.discriminator,
           avatar: data.user.avatar,
-          global_name: data.user.global_name,
-          authenticated: true
-        };
-
-        // Store in localStorage for now (you might want to store in Supabase later)
-        if (user) {
-          localStorage.setItem(`discord_user_${user.id}`, JSON.stringify(discordUser));
-          localStorage.setItem(`discord_linked_${user.id}`, 'true');
-        }
+          global_name: data.user.global_name
+        });
 
         toast({
           title: "Discord Account Linked!",
-          description: "Your Discord account has been successfully connected",
+          description: `Your Discord account @${data.user.username} has been successfully connected`,
         });
 
         navigate('/viewer-verification');
 
       } catch (error) {
-        console.error('Discord callback error:', error);
+        console.error('❌ Discord callback error:', error);
         toast({
           title: "Discord Linking Failed",
           description: "Failed to link Discord account. Please try again.",
@@ -83,7 +92,7 @@ export default function DiscordCallback() {
     };
 
     handleCallback();
-  }, [searchParams, navigate, toast, user]);
+  }, [searchParams, navigate, toast, user, linkDiscordAccount]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">

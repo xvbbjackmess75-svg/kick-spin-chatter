@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole, isViewerRole } from '@/hooks/useUserRole';
 import { useKickAccount } from '@/hooks/useKickAccount';
+import { useDiscordAccount } from '@/hooks/useDiscordAccount';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Shield, 
@@ -21,16 +22,16 @@ import {
 import { LinkKickAccount } from '@/components/LinkKickAccount';
 
 export default function ViewerVerification() {
-  const [discordLinked, setDiscordLinked] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { role, loading: roleLoading, isAdmin, hasStreamerAccess, hasAdminAccess } = useUserRole();
   const { isKickLinked } = useKickAccount();
+  const { isDiscordLinked, discordUser } = useDiscordAccount();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const isVerified = role === 'verified_viewer';
-  const canGetVerified = isKickLinked && discordLinked;
+  const canGetVerified = isKickLinked && isDiscordLinked;
   
   // Redirect non-viewer roles to appropriate panels
   useEffect(() => {
@@ -57,22 +58,7 @@ export default function ViewerVerification() {
     }
   }, [role, roleLoading, hasAdminAccess, hasStreamerAccess, navigate, toast, user]);
 
-  useEffect(() => {
-    // Check if Discord is already linked (you can implement this based on your Discord integration)
-    checkDiscordStatus();
-  }, [user]);
-
-  const checkDiscordStatus = async () => {
-    if (!user) return;
-    
-    try {
-      // Check if Discord is linked via localStorage
-      const discordStatus = localStorage.getItem(`discord_linked_${user.id}`);
-      setDiscordLinked(!!discordStatus);
-    } catch (error) {
-      console.error('Error checking Discord status:', error);
-    }
-  };
+  // Discord is now handled by the useDiscordAccount hook - no need to manually check
 
   const handleLinkDiscord = async () => {
     setLoading(true);
@@ -220,11 +206,11 @@ export default function ViewerVerification() {
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 Link Discord Account
-                {discordLinked && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {isDiscordLinked && <CheckCircle className="h-4 w-4 text-green-500" />}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {discordLinked ? (
+              {isDiscordLinked ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded border border-green-500/20">
                     <CheckCircle className="h-5 w-5 text-green-500" />
