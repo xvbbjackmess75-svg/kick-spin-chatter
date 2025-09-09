@@ -31,9 +31,10 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      // Check if user is a streamer - if so, redirect to streamer portal
+      // Since this is the VIEWER auth page, ensure user gets viewer-only access
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Check if user is marked as a streamer in profile
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_streamer')
@@ -50,6 +51,26 @@ export default function Auth() {
           navigate('/streamer-auth');
           setLoading(false);
           return;
+        }
+        
+        // CRITICAL: Since this is viewer login, reset roles to ONLY viewer
+        // Remove any higher-level roles that might grant streamer access
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id)
+          .in('role', ['user', 'premium', 'vip_plus']);
+
+        // Ensure viewer role exists
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: user.id,
+            role: 'viewer'
+          });
+
+        if (roleError) {
+          console.error('Error ensuring viewer role:', roleError);
         }
         
         // Force a page reload to ensure role state is fresh
