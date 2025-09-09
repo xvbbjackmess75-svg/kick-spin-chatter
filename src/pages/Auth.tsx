@@ -51,8 +51,14 @@ export default function Auth() {
           setLoading(false);
           return;
         }
+        
+        // Force a page reload to ensure role state is fresh
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
+      } else {
+        navigate('/');
       }
-      navigate('/');
     }
     
     setLoading(false);

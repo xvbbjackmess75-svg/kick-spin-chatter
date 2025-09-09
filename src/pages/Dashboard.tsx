@@ -24,7 +24,19 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const { role } = useUserRole();
+  const { role, loading } = useUserRole();
+  
+  // Show loading while role is being determined
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Show viewer dashboard for viewer roles, streamer dashboard for all others
   if (isViewerRole(role)) {
