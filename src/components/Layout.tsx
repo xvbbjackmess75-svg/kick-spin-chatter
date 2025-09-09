@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { 
   Settings, 
@@ -38,6 +39,7 @@ export function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
   const { profile } = useProfile();
   const { kickUser } = useKickAccount();
+  const { role } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -103,13 +105,26 @@ export function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const navItems = [
-    { path: "/", label: "Dashboard", icon: Home },
-    { path: "/giveaways", label: "Giveaways", icon: Gift },
-    { path: "/bonus-hunt", label: "Bonus Hunt", icon: Zap },
-    { path: "/slots-calls", label: "Slots Calls", icon: Phone },
-    { path: "/history", label: "History", icon: Trophy },
-  ];
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    if (role === 'viewer' || role === 'verified_viewer') {
+      // Viewer role gets limited access - only dashboard and account settings
+      return [
+        { path: "/", label: "Dashboard", icon: Home },
+      ];
+    } else {
+      // Streamer roles (user, premium, vip_plus, admin) get full access
+      return [
+        { path: "/", label: "Dashboard", icon: Home },
+        { path: "/giveaways", label: "Giveaways", icon: Gift },
+        { path: "/bonus-hunt", label: "Bonus Hunt", icon: Zap },
+        { path: "/slots-calls", label: "Slots Calls", icon: Phone },
+        { path: "/history", label: "History", icon: Trophy },
+      ];
+    }
+  };
+
+  const navItems = getNavItems();
 
   return (
     <div className="min-h-screen bg-background">

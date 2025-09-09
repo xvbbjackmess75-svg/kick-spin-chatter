@@ -38,6 +38,8 @@ export default function Dashboard() {
     );
   }
   
+  console.log('🎯 Dashboard role check:', { role, isViewerRole: isViewerRole(role) });
+  
   // Show viewer dashboard for viewer roles, streamer dashboard for all others
   if (isViewerRole(role)) {
     return <ViewerDashboard />;
