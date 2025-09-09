@@ -71,10 +71,11 @@ export default function Auth() {
         variant: "destructive"
       });
     } else {
-      // After successful signup, create viewer profile
+      // After successful signup, create viewer profile and assign ONLY viewer role
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // First, create the profile
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -85,6 +86,24 @@ export default function Auth() {
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
+        }
+
+        // Remove any existing roles that might have been auto-assigned
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Then, assign ONLY the viewer role (not user role)
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'viewer'
+          });
+
+        if (roleError) {
+          console.error('Error assigning viewer role:', roleError);
         }
       }
 
