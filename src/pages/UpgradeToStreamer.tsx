@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useProfile } from '@/hooks/useProfile';
+import { PageHeader } from '@/components/PageHeader';
 import { 
   Crown,
   Users, 
@@ -167,6 +168,8 @@ export default function UpgradeToStreamer() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHeader />
+      
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 px-4">
         <div className="absolute inset-0 bg-gradient-gaming opacity-20" />
