@@ -43,7 +43,8 @@ import {
   Trash2,
   Edit,
   UserX,
-  MoreVertical
+  MoreVertical,
+  LogIn
 } from "lucide-react";
 
 interface RouletteParticipant {
@@ -72,7 +73,7 @@ interface PendingWinner {
 }
 
 export default function Giveaways() {
-  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
+  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, loading: authLoading } = useHybridAuth();
   const { user } = useAuth();
   const { kickUser, kickToken, canUseChatbot, getChannelInfo } = useKickAccount();
   const { toast } = useToast();
@@ -1076,8 +1077,8 @@ export default function Giveaways() {
     );
   }
 
-  // Guest mode - show demo/informational content (only if not authenticated)
-  if (isGuestMode && !isAuthenticated) {
+  // If not authenticated, show login message
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -1086,52 +1087,17 @@ export default function Giveaways() {
               <Gift className="h-16 w-16 text-primary mx-auto mb-4" />
               <h1 className="text-3xl font-bold text-foreground mb-4">Giveaway Manager</h1>
               <p className="text-xl text-muted-foreground mb-6">
-                This is where you'll manage your Kick.com giveaways with real-time chat integration.
-              </p>
-              <p className="text-muted-foreground mb-8">
-                <strong>Guest Mode:</strong> You're viewing this as a guest. To create and manage real giveaways, 
-                please sign up for an account or connect your Kick account.
+                Login to manage your Kick.com giveaways with real-time chat integration.
               </p>
               <Button 
-                className="gaming-button" 
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => window.location.href = '/auth'} 
+                className="gaming-button"
+                size="lg"
               >
-                Sign Up to Get Started
+                <LogIn className="h-5 w-5 mr-2" />
+                Login to Continue
               </Button>
             </div>
-          </div>
-
-          {/* Demo Features */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="gaming-card">
-              <CardContent className="p-6 text-center">
-                <Monitor className="h-12 w-12 text-accent mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Real-time Chat Monitoring</h3>
-                <p className="text-sm text-muted-foreground">
-                  Monitor your Kick chat for giveaway keywords and automatically add participants.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gaming-card">
-              <CardContent className="p-6 text-center">
-                <Trophy className="h-12 w-12 text-kick-green mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Fair Winner Selection</h3>
-                <p className="text-sm text-muted-foreground">
-                  Advanced roulette system ensures every participant has an equal chance to win.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gaming-card">
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Participant Management</h3>
-                <p className="text-sm text-muted-foreground">
-                  Track participants, manage entries, and handle multiple winners per giveaway.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

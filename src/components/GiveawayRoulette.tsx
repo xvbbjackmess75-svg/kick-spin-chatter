@@ -224,7 +224,7 @@ export function GiveawayRoulette({
           <Crown className="h-5 w-5 text-kick-green" />
         </CardTitle>
         <p className="text-center text-muted-foreground">
-          {participants.length} participants {!localStorage.getItem('guest_mode') && '• Provably Fair System'}
+          {participants.length} participants • Provably Fair System
         </p>
       </CardHeader>
       

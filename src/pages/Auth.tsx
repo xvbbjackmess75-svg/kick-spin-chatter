@@ -102,15 +102,6 @@ export default function Auth() {
     setLoading(false);
   };
 
-  const handleContinueAsGuest = () => {
-    localStorage.setItem('guest_mode', 'true');
-    toast({
-      title: "Guest Mode",
-      description: "You're now accessing the dashboard as a guest.",
-      variant: "default"
-    });
-    navigate('/');
-  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -244,7 +235,7 @@ export default function Auth() {
               </TabsContent>
             </Tabs>
             
-            <div className="mt-6 pt-4 border-t border-border space-y-3">
+            <div className="mt-6 pt-4 border-t border-border">
               <Button 
                 onClick={() => navigate('/streamer-auth')}
                 variant="outline" 
@@ -253,17 +244,8 @@ export default function Auth() {
                 <Crown className="h-4 w-4 mr-2" />
                 I'm a Streamer
               </Button>
-              
-              <Button 
-                onClick={handleContinueAsGuest}
-                variant="outline" 
-                className="w-full"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Continue as Guest
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Access streamer tools or explore as guest
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Access full streamer features and tools
               </p>
             </div>
           </CardContent>

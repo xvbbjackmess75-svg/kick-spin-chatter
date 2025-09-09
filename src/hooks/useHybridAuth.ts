@@ -32,15 +32,7 @@ export function useHybridAuth() {
         }
       }
 
-      // Guest mode
-      const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-      if (isGuestMode) {
-        setHybridUserId('guest');
-        setLoading(false);
-        return;
-      }
-
-      // No authentication
+      // No authentication found
       setHybridUserId(null);
       setLoading(false);
     };
@@ -48,17 +40,15 @@ export function useHybridAuth() {
     determineUserId();
   }, [user]);
 
-  const isAuthenticated = !!hybridUserId && hybridUserId !== 'guest';
+  const isAuthenticated = !!hybridUserId;
   const isKickUser = hybridUserId?.startsWith('kick_') || false;
   const isSupabaseUser = !!user;
-  const isGuestMode = hybridUserId === 'guest';
 
   return {
     hybridUserId,
     isAuthenticated,
     isKickUser,
     isSupabaseUser,
-    isGuestMode,
     loading,
     user
   };

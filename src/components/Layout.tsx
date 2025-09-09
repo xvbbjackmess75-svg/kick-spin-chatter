@@ -42,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+  
 
   // Determine current user info
   const getCurrentUserInfo = () => {
@@ -74,13 +74,6 @@ export function Layout({ children }: LayoutProps) {
         avatar: profile?.avatar_url || null,
         initials: displayName.slice(0, 2).toUpperCase() || 'U'
       };
-    } else if (isGuestMode) {
-      return {
-        username: 'Guest',
-        displayName: 'Guest User',
-        avatar: null,
-        initials: 'G'
-      };
     }
     return {
       username: 'User',
@@ -95,8 +88,7 @@ export function Layout({ children }: LayoutProps) {
   console.log('🎯 Layout final userInfo:', userInfo);
 
   const handleSignOut = async () => {
-    // Clear guest mode and Kick auth data
-    localStorage.removeItem('guest_mode');
+    // Clear Kick auth data
     localStorage.removeItem('kick_user');
     localStorage.removeItem('kick_token');
     

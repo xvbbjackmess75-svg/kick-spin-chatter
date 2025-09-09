@@ -17,7 +17,8 @@ import {
   Crown,
   Gift,
   Users,
-  Clock
+  Clock,
+  LogIn
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -40,7 +41,7 @@ interface Winner {
 }
 
 export default function History() {
-  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, isGuestMode, loading: authLoading } = useHybridAuth();
+  const { hybridUserId, isAuthenticated, isKickUser, isSupabaseUser, loading: authLoading } = useHybridAuth();
   const { canUseChatbot } = useKickAccount();
   const { toast } = useToast();
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -142,8 +143,8 @@ export default function History() {
     );
   }
 
-  // Guest mode - show login message (only if not authenticated)
-  if (isGuestMode && !isAuthenticated) {
+  // If not authenticated, show login message
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto">
@@ -152,12 +153,14 @@ export default function History() {
               <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
               <h1 className="text-3xl font-bold text-foreground mb-4">History</h1>
               <p className="text-xl text-muted-foreground mb-8">
-                You need to login to access your giveaway history and winning records.
+                Login to access your giveaway history and winning records.
               </p>
               <Button 
-                className="gaming-button" 
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => window.location.href = '/auth'} 
+                className="gaming-button"
+                size="lg"
               >
+                <LogIn className="h-5 w-5 mr-2" />
                 Login to View History
               </Button>
             </div>
@@ -371,8 +374,8 @@ export default function History() {
                                   </div>
                                 </div>
 
-                                {/* Provably Fair Info - Hidden for guest users */}
-                                {winner.winning_ticket && !localStorage.getItem('guest_mode') && (
+                                {/* Provably Fair Info */}
+                                {winner.winning_ticket && (
                                   <div className="flex-1">
                                     <div className="grid grid-cols-3 gap-3 text-center">
                                       <div>

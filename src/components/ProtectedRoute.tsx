@@ -8,8 +8,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   
-  // Check for guest mode or Kick authentication
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+  // Check for Kick authentication
   const kickUser = localStorage.getItem('kick_user');
   const isKickAuthenticated = kickUser ? JSON.parse(kickUser).authenticated : false;
 
@@ -24,8 +23,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Allow access if user is authenticated OR in guest mode OR authenticated with Kick
-  if (!user && !isGuestMode && !isKickAuthenticated) {
+  // Allow access if user is authenticated via Supabase or Kick
+  if (!user && !isKickAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 
