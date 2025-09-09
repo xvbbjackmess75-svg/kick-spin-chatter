@@ -33,12 +33,11 @@ export default function ViewerRegistration() {
         return;
       }
 
-      // After successful signup, assign viewer role
+      // After successful signup, create viewer profile and assign ONLY viewer role
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // The user role should be automatically assigned by the trigger
-        // But let's also create a profile entry
+        // First, create the profile
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -49,6 +48,24 @@ export default function ViewerRegistration() {
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
+        }
+
+        // Remove any existing roles that might have been auto-assigned
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Then, assign ONLY the viewer role (not user role)
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'viewer'
+          });
+
+        if (roleError) {
+          console.error('Error assigning viewer role:', roleError);
         }
       }
 
