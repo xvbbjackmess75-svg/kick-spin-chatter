@@ -68,6 +68,14 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* Showcase background pattern */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
   .dark {
     --background: 220 13% 9%;
     --foreground: 210 40% 98%;
