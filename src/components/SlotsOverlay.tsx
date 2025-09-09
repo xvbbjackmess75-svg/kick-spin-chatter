@@ -235,18 +235,25 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   };
 
   const getTopCall = () => {
-    const completedCalls = calls.filter(call => call.status === 'completed' && call.multiplier);
-    if (completedCalls.length === 0) return null;
+    // First try to get completed calls with both win_amount and multiplier
+    const completedCallsWithWin = calls.filter(call => 
+      call.status === 'completed' && call.multiplier && call.win_amount
+    );
+    
+    if (completedCallsWithWin.length > 0) {
+      return completedCallsWithWin.reduce((topCall, call) => {
+        if (!topCall || (call.multiplier || 0) > (topCall.multiplier || 0)) {
+          return call;
+        }
+        if (call.multiplier === topCall.multiplier && call.call_order < topCall.call_order) {
+          return call;
+        }
+        return topCall;
+      }, completedCallsWithWin[0]);
+    }
 
-    return completedCalls.reduce((topCall, call) => {
-      if (!topCall || (call.multiplier || 0) > (topCall.multiplier || 0)) {
-        return call;
-      }
-      if (call.multiplier === topCall.multiplier && call.call_order < topCall.call_order) {
-        return call;
-      }
-      return topCall;
-    }, completedCalls[0]);
+    // If no calls with multiplier/win_amount, return null
+    return null;
   };
 
   const getFontSizeClass = (size: string) => {
@@ -293,6 +300,9 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const topCall = getTopCall();
   console.log('🏆 Top call calculated:', topCall);
   console.log('📝 All calls for top call calculation:', calls);
+  console.log('📊 Completed calls with win data:', calls.filter(call => 
+    call.status === 'completed' && call.multiplier && call.win_amount
+  ));
 
   // Create duplicated calls for infinite scroll effect when needed
   const infiniteScrollCalls = calls.length > (overlaySettings.max_visible_calls || maxCalls) 
