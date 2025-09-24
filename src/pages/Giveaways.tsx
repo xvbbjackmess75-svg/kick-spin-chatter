@@ -51,6 +51,7 @@ interface RouletteParticipant {
   id: number;
   username: string;
   avatar?: string;
+  isVerified?: boolean;
 }
 
 interface Giveaway {
@@ -536,11 +537,28 @@ export default function Giveaways() {
 
       if (error) throw error;
       
-      const giveawayParticipants: RouletteParticipant[] = (data || []).map((p, index) => ({
-        id: index,
-        username: p.kick_username,
-        avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
-      }));
+      // Fetch verification status for each participant
+      const participantsWithVerification = await Promise.all(
+        (data || []).map(async (p, index) => {
+          // Check if the participant has both Kick and Discord linked
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('linked_kick_user_id, linked_discord_user_id')
+            .eq('linked_kick_username', p.kick_username)
+            .single();
+          
+          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          
+          return {
+            id: index,
+            username: p.kick_username,
+            avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`,
+            isVerified
+          };
+        })
+      );
+      
+      const giveawayParticipants: RouletteParticipant[] = participantsWithVerification;
       
       console.log('🎯 Giveaway participants with avatars:', giveawayParticipants.slice(0, 3));
       
@@ -778,11 +796,25 @@ export default function Giveaways() {
         return;
       }
 
-      const mappedParticipants: RouletteParticipant[] = availableParticipants.map((p, index) => ({
-        id: index + 1,
-        username: p.kick_username,
-        avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`
-      }));
+      const mappedParticipants: RouletteParticipant[] = await Promise.all(
+        availableParticipants.map(async (p, index) => {
+          // Check if the participant has both Kick and Discord linked
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('linked_kick_user_id, linked_discord_user_id')
+            .eq('linked_kick_username', p.kick_username)
+            .single();
+          
+          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          
+          return {
+            id: index + 1,
+            username: p.kick_username,
+            avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`,
+            isVerified
+          };
+        })
+      );
 
       console.log("🎯 Adding another winner - available participants:", mappedParticipants.length, "excluded:", previousWinners.length);
       

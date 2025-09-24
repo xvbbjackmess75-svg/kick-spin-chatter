@@ -4,11 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, RotateCcw, Play, Trophy, Users, CheckCircle2 } from 'lucide-react';
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 interface Participant {
   id: number;
   username: string;
   avatar?: string;
+  isVerified?: boolean;
 }
 
 interface WinnerResult {
@@ -385,6 +387,14 @@ export function GiveawayRoulette({
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-xs text-foreground">{participant.username}</span>
+                    {participant.isVerified && (
+                      <VerificationBadge 
+                        isVerified={true} 
+                        size="sm" 
+                        showText={false}
+                        className="ml-1"
+                      />
+                    )}
                   </div>
                 ))}
               </div>

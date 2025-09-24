@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Zap, Crown } from "lucide-react";
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 interface Participant {
   id: number;
   username: string;
   avatar: string;
   isWinner?: boolean;
+  isVerified?: boolean;
 }
 
 interface RouletteWheelProps {
@@ -196,6 +198,14 @@ export function RouletteWheel({ participants, isSpinning, onSpin, winner }: Roul
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs text-foreground">{participant.username}</span>
+                      {participant.isVerified && (
+                        <VerificationBadge 
+                          isVerified={true} 
+                          size="sm" 
+                          showText={false}
+                          className="ml-1"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

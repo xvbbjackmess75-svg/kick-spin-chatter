@@ -4,12 +4,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Crown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 interface Participant {
   id: number;
   username: string;
   avatar: string;
   isWinner?: boolean;
+  isVerified?: boolean;
 }
 
 interface HorizontalRouletteProps {
@@ -276,6 +278,14 @@ export function HorizontalRoulette({
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-xs text-foreground">{participant.username}</span>
+                    {participant.isVerified && (
+                      <VerificationBadge 
+                        isVerified={true} 
+                        size="sm" 
+                        showText={false}
+                        className="ml-1"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
