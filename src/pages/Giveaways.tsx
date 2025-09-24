@@ -298,6 +298,27 @@ export default function Giveaways() {
       if (message.content && message.content.toLowerCase().includes(keyword.toLowerCase())) {
         console.log(`✅ Keyword "${keyword}" detected from user: ${message.username}`);
         
+        // Check if giveaway requires verification
+        if (giveaway.verified_only) {
+          console.log(`🔍 Checking verification status for ${message.username} (verified_only giveaway)`);
+          
+          // Check if the user is verified (has both Kick and Discord linked)
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+            .eq('linked_kick_username', message.username)
+            .single();
+          
+          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          
+          if (!isVerified) {
+            console.log(`❌ User ${message.username} is not verified - skipping entry for verified-only giveaway`);
+            continue;
+          }
+          
+          console.log(`✅ User ${message.username} is verified - allowing entry`);
+        }
+        
         try {
           const { data: existingParticipant } = await supabase
             .from('giveaway_participants')
@@ -316,7 +337,8 @@ export default function Giveaways() {
             .insert({
               giveaway_id: giveaway.id,
               kick_username: message.username,
-              kick_user_id: message.userId?.toString() || message.username
+              kick_user_id: message.userId?.toString() || message.username,
+              is_verified: giveaway.verified_only ? true : false
             });
 
           if (insertError) {
@@ -922,6 +944,22 @@ export default function Giveaways() {
 
   const simulateParticipant = async (giveawayId: string) => {
     try {
+      // First check if this giveaway requires verification
+      const { data: giveawayData } = await supabase
+        .from('giveaways')
+        .select('verified_only, title')
+        .eq('id', giveawayId)
+        .single();
+      
+      if (giveawayData?.verified_only) {
+        toast({
+          title: "Cannot Add Test Participant",
+          description: "This giveaway requires verified users only. Test participants are not verified.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const randomUsernames = [
         'StreamFan99', 'GamingKing', 'ChatMaster', 'ProGamer',
         'StreamQueen', 'GameLover', 'ChatBot', 'WinnerVibes',
@@ -937,7 +975,8 @@ export default function Giveaways() {
         .insert({
           giveaway_id: giveawayId,
           kick_username: uniqueUsername,
-          kick_user_id: uniqueUsername
+          kick_user_id: uniqueUsername,
+          is_verified: false
         });
       
       if (error) throw error;
