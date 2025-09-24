@@ -408,19 +408,19 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
         {/* Top Call Highlight */}
         {topCall && (
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold mb-2" style={{color: overlaySettings.text_color}}>
+          <div className="mb-3">
+            <h2 className="text-xs font-semibold mb-1" style={{color: overlaySettings.text_color}}>
               🏆 Top Call
             </h2>
             <div 
-              className="p-3 rounded-md border-2 border-dashed"
+              className="p-2 rounded-md border-2 border-dashed"
               style={{
                 backgroundColor: overlaySettings.show_background ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
                 borderColor: '#22c55e'
               }}
             >
               <div className="text-center">
-                <div className="text-lg font-bold mb-1" style={{color: '#22c55e'}}>
+                <div className="text-sm font-bold mb-0.5" style={{color: '#22c55e'}}>
                   {topCall.viewer_username}
                 </div>
                 <div className="text-xs mb-1" style={{color: overlaySettings.text_color}}>
