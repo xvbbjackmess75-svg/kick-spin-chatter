@@ -69,7 +69,7 @@ export function LinkKickAccount() {
       const response = await supabase.functions.invoke('kick-oauth', {
         body: { 
           action: 'authorize',
-          origin: 'https://kick-spin-chatter.lovable.app'
+          origin: 'https://kickhelper.app'
         }
       });
 

@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       
       const code = body.code
       const codeVerifier = body.code_verifier
-      const origin = 'https://kick-spin-chatter.lovable.app'
+      const frontendUrl = 'https://kickhelper.app'  // Use the same URL as authorize
       
       console.log('🔧 Params received successfully')
       
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')
       console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
       console.log('🔧 Using KICK_CLIENT_SECRET:', clientSecret ? 'PRESENT' : 'MISSING')
-      const redirectUri = `${origin}/auth/callback`
+      const redirectUri = `${frontendUrl}/auth/callback`  // Must match the authorize URL exactly
 
       const tokenResponse = await fetch('https://id.kick.com/oauth/token', {
         method: 'POST',
