@@ -142,11 +142,20 @@ serve(async (req) => {
     if (req.method === 'POST') {
       let body;
       try {
-        body = await req.json()
+        const requestText = await req.text()
+        console.log('Raw request body:', requestText)
+        
+        if (!requestText.trim()) {
+          throw new Error('Empty request body')
+        }
+        
+        body = JSON.parse(requestText)
+        console.log('Parsed body:', body)
       } catch (error) {
-        console.log('Error parsing JSON body:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown JSON parsing error'
+        console.log('Error parsing JSON body:', errorMessage)
         return new Response(
-          JSON.stringify({ error: 'Invalid JSON body' }),
+          JSON.stringify({ error: `Invalid JSON body: ${errorMessage}` }),
           { 
             status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -204,9 +213,10 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Admin function error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    console.error('Admin function error:', errorMessage)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
