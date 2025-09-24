@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key } from 'lucide-react';
+import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key, MessageSquare } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import KickChatPoster from '@/components/KickChatPoster';
 
 interface FeaturePermission {
   id: string;
@@ -310,10 +311,11 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="roles">Role Manager</TabsTrigger>
           <TabsTrigger value="slots">Slot Management</TabsTrigger>
+          <TabsTrigger value="chat">Chat Poster</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
 
@@ -598,6 +600,20 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Kick Chat Poster
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <KickChatPoster />
             </CardContent>
           </Card>
         </TabsContent>
