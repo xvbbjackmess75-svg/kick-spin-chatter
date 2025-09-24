@@ -450,7 +450,13 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             <div 
               className="relative overflow-hidden rounded-xl"
               style={{ 
-                height: `${Math.min(calls.length, overlaySettings.max_visible_calls || maxCalls) * 80}px`,
+                height: `${(() => {
+                  const visibleCalls = Math.min(calls.length, overlaySettings.max_visible_calls || maxCalls);
+                  const itemHeight = 72; // minHeight of each call
+                  const spacing = Math.max(0, visibleCalls - 1) * 8; // space-y-2 between items
+                  const containerPadding = 32; // p-4 top and bottom
+                  return visibleCalls * itemHeight + spacing + containerPadding;
+                })()}px`,
                 backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
                 border: overlaySettings.show_borders ? `1px solid ${overlaySettings.border_color}` : 'none'
               }}
