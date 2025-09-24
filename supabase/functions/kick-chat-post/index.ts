@@ -100,23 +100,37 @@ Deno.serve(async (req) => {
     // Get admin's auth data to access their Kick token
     const { data: adminUser, error: adminUserError } = await supabaseClient.auth.admin.getUserById(adminUserId)
     
+    console.log('🔍 Admin user query error:', adminUserError)
+    console.log('🔍 Admin user data structure:', JSON.stringify(adminUser, null, 2))
+    
     if (adminUserError || !adminUser.user) {
       console.error('❌ Admin user not found:', adminUserError)
       return new Response(JSON.stringify({ 
-        error: 'Admin account not found' 
+        error: 'Admin account not found',
+        details: adminUserError?.message || 'Unknown error'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
+    console.log('🔍 Admin user metadata:', JSON.stringify(adminUser.user.user_metadata, null, 2))
+    console.log('🔍 Admin app metadata:', JSON.stringify(adminUser.user.app_metadata, null, 2))
+
     const adminKickToken = adminUser.user.user_metadata?.kick_access_token
+    
+    console.log('🔍 Admin Kick token exists:', !!adminKickToken)
+    console.log('🔍 Admin Kick token (first 10 chars):', adminKickToken?.substring(0, 10))
     
     if (!adminKickToken) {
       console.error('❌ Admin Kick token not found. Admin needs to link Kick account via OAuth.')
+      console.error('💡 Admin user metadata keys:', Object.keys(adminUser.user.user_metadata || {}))
       return new Response(JSON.stringify({ 
         error: 'Admin Kick account not linked. Please contact administrator to link their Kick account via OAuth.',
-        details: 'The admin account must go through Kick OAuth to obtain an access token before chat posting can work.'
+        details: 'The admin account must go through Kick OAuth to obtain an access token before chat posting can work.',
+        adminUserId: adminUserId,
+        hasMetadata: !!adminUser.user.user_metadata,
+        metadataKeys: Object.keys(adminUser.user.user_metadata || {})
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
