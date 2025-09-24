@@ -20,7 +20,10 @@ Deno.serve(async (req) => {
     if (action === 'authorize') {
       console.log('🔧 Authorize action')
       
-      const clientId = Deno.env.get('KICK_CLIENT_ID')
+      const clientId = Deno.env.get('KICK_CLIENT_ID')!
+      if (!clientId) {
+        throw new Error('Missing KICK_CLIENT_ID environment variable')
+      }
       console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
       const frontendUrl = 'https://kickhelper.app'
       const redirectUri = `${frontendUrl}/auth/callback`
@@ -82,8 +85,15 @@ Deno.serve(async (req) => {
       }
 
       console.log('🔧 Starting Kick token exchange...')
-      const clientId = Deno.env.get('KICK_CLIENT_ID')
-      const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')
+    const clientId = Deno.env.get('KICK_CLIENT_ID')
+    const clientSecret = Deno.env.get('KICK_CLIENT_SECRET')
+    
+    if (!clientId || !clientSecret) {
+      return new Response(JSON.stringify({ error: 'Missing KICK_CLIENT_ID or KICK_CLIENT_SECRET' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
       console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
       console.log('🔧 Using KICK_CLIENT_SECRET:', clientSecret ? 'PRESENT' : 'MISSING')
       const redirectUri = `${frontendUrl}/auth/callback`  // Must match the authorize URL exactly
@@ -215,8 +225,9 @@ Deno.serve(async (req) => {
             throw new Error(`Official API failed with status ${userResponse.status}: ${userResponse.statusText}`)
           }
         } catch (error) {
-          console.error('❌ User info fetch failed:', error.message)
-          console.error('❌ Error details:', error.stack)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          console.error('❌ User info fetch failed:', errorMessage)
+          console.error('❌ Error details:', error instanceof Error ? error.stack : 'No stack trace')
           
           // Create a fallback user with some randomness to avoid conflicts
           const randomId = Math.random().toString(36).substr(2, 8)
@@ -259,12 +270,14 @@ Deno.serve(async (req) => {
     throw new Error('Invalid action: ' + action)
 
   } catch (error) {
-    console.error('🚨 Function error:', error.message)
-    console.error('🚨 Error stack:', error.stack)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('🚨 Function error:', errorMessage)
+    console.error('🚨 Error stack:', errorStack)
     
     return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack,
+      error: errorMessage,
+      stack: errorStack,
       timestamp: new Date().toISOString()
     }), {
       status: 500,

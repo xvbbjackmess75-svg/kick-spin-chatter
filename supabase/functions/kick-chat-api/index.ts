@@ -38,8 +38,9 @@ const handler = async (req: Request): Promise<Response> => {
       body = await req.json();
       console.log("📦 Request body parsed successfully:", { action: body.action, channel_id: body.channel_id });
     } catch (parseError) {
-      console.error("❌ Failed to parse request body:", parseError);
-      throw new Error(`Invalid JSON in request body: ${parseError.message}`);
+      const errorMessage = parseError instanceof Error ? parseError.message : 'Invalid JSON'
+      console.error("❌ Failed to parse request body:", errorMessage);
+      throw new Error(`Invalid JSON in request body: ${errorMessage}`);
     }
 
     // Initialize Supabase client

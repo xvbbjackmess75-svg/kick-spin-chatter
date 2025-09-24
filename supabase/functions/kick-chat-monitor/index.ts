@@ -28,7 +28,7 @@ async function processCommand(command: string, messageData: any, chatroomId: str
 
     // Special handling for slots calls (!kgs command)
     if (command === 'kgs') {
-      await processSlotsCall(messageData, chatroomId, socket, supabase, globalChannelName);
+      await processSlotsCall(messageData, chatroomId, socket, supabase, globalChannelName || undefined);
       return;
     }
 
@@ -376,9 +376,10 @@ serve(async (req) => {
 
         } catch (error) {
           console.error("Error joining channel:", error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           socket.send(JSON.stringify({
             type: 'error',
-            message: `Failed to join channel: ${error.message}`
+            message: `Failed to join channel: ${errorMessage}`
           }));
         }
       }

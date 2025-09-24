@@ -163,10 +163,11 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in import-slots function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
       JSON.stringify({ 
         error: 'Failed to import slots', 
-        details: error.message 
+        details: errorMessage
       }),
       { 
         status: 500, 
