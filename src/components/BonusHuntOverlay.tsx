@@ -420,6 +420,42 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
           </div>
         </div>
 
+        {/* Current Avg and Required Avg Highlighted Box */}
+        <div className="mb-8">
+          <div 
+            className="grid grid-cols-2 gap-6 p-6 rounded-xl border-2"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+              borderColor: overlaySettings.accent_color
+            }}
+          >
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <TrendingUp className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
+                <span className="text-sm font-medium opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</span>
+              </div>
+              <div className="text-3xl font-bold" style={{color: overlaySettings.accent_color}}>
+                {avgMultiplier.toFixed(2)}x
+              </div>
+              <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+                {openedBonuses.length} bonuses opened
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Target className="h-5 w-5" style={{color: isProfit ? '#22c55e' : '#f59e0b'}} />
+                <span className="text-sm font-medium opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</span>
+              </div>
+              <div className="text-3xl font-bold" style={{color: isProfit ? '#22c55e' : '#f59e0b'}}>
+                {isProfit ? 'PROFIT!' : `${requiredAvgMulti.toFixed(2)}x`}
+              </div>
+              <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+                {isProfit ? 'Session in profit' : 'To break even'}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Currently Opening Bonus */}
         {session?.bonus_opening_phase && bonuses.length > 0 && (
           <div className="mb-8">

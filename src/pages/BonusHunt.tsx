@@ -924,34 +924,6 @@ export default function BonusHunt() {
                   <div className="text-sm text-muted-foreground">Bonuses Left</div>
                 </div>
               </div>
-
-              {/* Current Avg and Required Avg Highlighted Box */}
-              <div className="grid grid-cols-2 gap-4 p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-medium text-muted-foreground">Current Avg</span>
-                  </div>
-                  <div className="text-3xl font-bold text-primary">
-                    {sessionStats.currentAvgMulti.toFixed(2)}x
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {openedBets.length} bonuses opened
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Target className="h-5 w-5 text-accent" />
-                    <span className="text-sm font-medium text-muted-foreground">Required Avg</span>
-                  </div>
-                  <div className={`text-3xl font-bold ${sessionStats.isProfit ? 'text-green-600' : 'text-accent'}`}>
-                    {sessionStats.isProfit ? 'PROFIT!' : `${sessionStats.requiredAvgMulti.toFixed(2)}x`}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {sessionStats.isProfit ? 'Session in profit' : 'To break even'}
-                  </div>
-                </div>
-              </div>
               
               {activeSession.target_bonuses > 0 && (
                 <div className="mt-4">
