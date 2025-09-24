@@ -76,6 +76,10 @@ export function useDiscordAccount() {
     if (!authLoading && user) {
       console.log('🚀 Auth loaded and user present, checking Discord account...');
       setTimeout(checkDiscordAccount, 100);
+    } else if (!authLoading && !user) {
+      console.log('🔍 Auth loaded but no user, setting Discord user to null');
+      setDiscordUser(null);
+      setLoading(false);
     } else {
       checkDiscordAccount();
     }

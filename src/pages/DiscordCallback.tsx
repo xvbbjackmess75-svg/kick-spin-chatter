@@ -9,11 +9,18 @@ export default function DiscordCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { linkDiscordAccount } = useDiscordAccount();
 
   useEffect(() => {
     const handleCallback = async () => {
+      console.log('🔄 Discord callback - user:', user?.email || 'null', 'authLoading:', authLoading);
+      
+      // Wait for auth to finish loading
+      if (authLoading) {
+        console.log('⏳ Discord callback waiting for auth to load...');
+        return;
+      }
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
@@ -92,7 +99,7 @@ export default function DiscordCallback() {
     };
 
     handleCallback();
-  }, [searchParams, navigate, toast, user, linkDiscordAccount]);
+  }, [searchParams, navigate, toast, user, linkDiscordAccount, authLoading]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
