@@ -105,17 +105,26 @@ const KickChatPoster = () => {
     } catch (error: any) {
       console.error('❌ Post failed:', error);
       
+      let errorMessage = error.message || 'Unknown error';
+      
+      // Check for specific admin setup error
+      if (errorMessage.includes('Admin Kick account not linked')) {
+        errorMessage = 'Admin needs to link their Kick account first. Contact administrator.';
+        toast.error('Setup Required: The admin account must link their Kick account via OAuth before chat posting can work.');
+      } else {
+        toast.error(`Failed to post message: ${errorMessage}`);
+      }
+      
       const newPost: PostHistory = {
         id: Date.now().toString(),
         channel: userChannel || 'unknown',
         message: message.trim(),
         timestamp: new Date(),
         success: false,
-        error: error.message || 'Unknown error'
+        error: errorMessage
       };
 
       setPostHistory(prev => [newPost, ...prev.slice(0, 9)]);
-      toast.error(`Failed to post message: ${error.message || 'Unknown error'}`);
     } finally {
       setIsPosting(false);
     }

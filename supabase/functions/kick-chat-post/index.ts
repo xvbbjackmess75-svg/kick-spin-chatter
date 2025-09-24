@@ -90,17 +90,28 @@ Deno.serve(async (req) => {
     // Get admin's auth data to access their Kick token
     const { data: adminUser, error: adminUserError } = await supabaseClient.auth.admin.getUserById(adminUserId)
     
-    if (adminUserError || !adminUser.user?.user_metadata?.kick_access_token) {
-      console.error('❌ Admin Kick token not found:', adminUserError)
+    if (adminUserError || !adminUser.user) {
+      console.error('❌ Admin user not found:', adminUserError)
       return new Response(JSON.stringify({ 
-        error: 'Admin Kick account not properly configured' 
+        error: 'Admin account not found' 
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const adminKickToken = adminUser.user.user_metadata.kick_access_token
+    const adminKickToken = adminUser.user.user_metadata?.kick_access_token
+    
+    if (!adminKickToken) {
+      console.error('❌ Admin Kick token not found. Admin needs to link Kick account via OAuth.')
+      return new Response(JSON.stringify({ 
+        error: 'Admin Kick account not linked. Please contact administrator to link their Kick account via OAuth.',
+        details: 'The admin account must go through Kick OAuth to obtain an access token before chat posting can work.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     console.log('🔑 Using admin Kick token for posting')
 
     const channelName = profile.kick_username
@@ -189,12 +200,14 @@ Deno.serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('🚨 Function error:', error.message)
-    console.error('🚨 Error stack:', error.stack)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('🚨 Function error:', errorMessage)
+    console.error('🚨 Error stack:', errorStack)
     
     return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack,
+      error: errorMessage,
+      stack: errorStack,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
