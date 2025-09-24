@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, state, user_id } = await req.json()
+    const requestBody = await req.json()
+    const { action, code, state, user_id, discord_user_id, discord_username, discord_avatar, discord_discriminator } = requestBody
 
     const DISCORD_CLIENT_ID = Deno.env.get('DISCORD_CLIENT_ID')!
     const DISCORD_CLIENT_SECRET = Deno.env.get('DISCORD_CLIENT_SECRET')!
@@ -111,8 +112,6 @@ serve(async (req) => {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      
-      const { discord_user_id, discord_username, discord_avatar, discord_discriminator } = await req.json()
       
       // Check if this Discord account is already linked to another profile
       const { data: existingProfile } = await supabase
