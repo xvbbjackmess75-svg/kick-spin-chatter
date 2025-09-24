@@ -277,15 +277,9 @@ export function HorizontalRoulette({
                         {participant.username.slice(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-foreground">{participant.username}</span>
-                    {participant.isVerified && (
-                      <VerificationBadge 
-                        isVerified={true} 
-                        size="sm" 
-                        showText={false}
-                        className="ml-1"
-                      />
-                    )}
+                    <span className="text-xs text-foreground">
+                      {participant.isVerified && '🛡️ '}{participant.username}
+                    </span>
                   </div>
                 ))}
               </div>

@@ -98,28 +98,49 @@ export default function History() {
         .eq('user_id', hybridUserId) // Add user filter
         .order('updated_at', { ascending: false });
 
-      console.log("📚 HISTORY: Database query result:", {
-        error,
-        dataLength: data?.length || 0,
-        data: data?.map(d => ({
-          id: d.id,
-          title: d.title,
-          status: d.status,
-          winnersCount: d.giveaway_winners?.length || 0,
-          updated_at: d.updated_at
-        }))
-      });
-
-      if (error) throw error;
-      
-      // Transform data to group winners by giveaway
-      const transformedData = data?.map(giveaway => ({
-        ...giveaway,
-        winners: giveaway.giveaway_winners || []
-      })) || [];
-      
-      setWinners(transformedData);
-      console.log("📚 HISTORY: Winners set, total giveaways:", transformedData.length);
+      // After fetching, check verification status for each winner
+      if (data) {
+        const winnersWithVerification = await Promise.all(
+          data.map(async (giveaway) => {
+            const winnersWithVerificationStatus = await Promise.all(
+              (giveaway.giveaway_winners || []).map(async (winner) => {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('linked_kick_user_id, linked_discord_user_id')
+                  .eq('linked_kick_username', winner.winner_username)
+                  .single();
+                
+                const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+                
+                return {
+                  ...winner,
+                  isVerified
+                };
+              })
+            );
+            
+            return {
+              ...giveaway,
+              winners: winnersWithVerificationStatus
+            };
+          })
+        );
+        
+        setWinners(winnersWithVerification as Winner[]);
+        console.log("📚 HISTORY: Winners set with verification, total giveaways:", winnersWithVerification.length);
+      } else {
+        // Fallback without verification data
+        const transformedData = data?.map(giveaway => ({
+          ...giveaway,
+          winners: (giveaway.giveaway_winners || []).map(winner => ({
+            ...winner,
+            isVerified: false
+          }))
+        })) || [];
+        
+        setWinners(transformedData as Winner[]);
+        console.log("📚 HISTORY: Winners set without verification, total giveaways:", transformedData.length);
+      }
     } catch (error) {
       console.error('Error fetching winners:', error);
       toast({
@@ -367,7 +388,9 @@ export default function History() {
                                     </Avatar>
                                   </div>
                                   <div>
-                                    <h6 className="font-semibold text-foreground">{winner.winner_username}</h6>
+                                    <h6 className="font-semibold text-foreground">
+                                      {(winner as any).isVerified && '🛡️ '}{winner.winner_username}
+                                    </h6>
                                     <p className="text-sm text-muted-foreground">
                                       Won on {format(new Date(winner.won_at), 'MMM dd, yyyy HH:mm')}
                                     </p>

@@ -11,6 +11,7 @@ interface PendingWinner {
   winningTicket: number;
   totalTickets: number;
   ticketsPerParticipant: number;
+  isVerified?: boolean;
 }
 
 interface PendingWinnersProps {
@@ -67,7 +68,9 @@ export function PendingWinners({
                   </Avatar>
                 </div>
                 <div>
-                  <h6 className="font-semibold text-foreground">{winner.username}</h6>
+                  <h6 className="font-semibold text-foreground">
+                    {winner.isVerified && '🛡️ '}{winner.username}
+                  </h6>
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     <span>Ticket #{winner.winningTicket}</span>
                     <span>{winner.totalTickets} total tickets</span>

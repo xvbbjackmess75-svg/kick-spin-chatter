@@ -71,6 +71,7 @@ interface PendingWinner {
   winningTicket: number;
   totalTickets: number;
   ticketsPerParticipant: number;
+  isVerified?: boolean;
 }
 
 export default function Giveaways() {
@@ -672,7 +673,8 @@ export default function Giveaways() {
       avatar: winner.avatar,
       winningTicket: result.winningTicket,
       totalTickets: result.totalTickets,
-      ticketsPerParticipant: result.ticketsPerParticipant
+      ticketsPerParticipant: result.ticketsPerParticipant,
+      isVerified: winner.isVerified
     };
 
     setPendingWinners(prev => [...prev, pendingWinner]);
