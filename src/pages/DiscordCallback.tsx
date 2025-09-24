@@ -13,7 +13,14 @@ export default function DiscordCallback() {
   const { linkDiscordAccount } = useDiscordAccount();
 
   useEffect(() => {
+    let isProcessing = false;
+    
     const handleCallback = async () => {
+      if (isProcessing) {
+        console.log('🔄 Discord callback already processing, skipping...');
+        return;
+      }
+      
       console.log('🔄 Discord callback - user:', user?.email || 'null', 'authLoading:', authLoading);
       
       // Wait for auth to finish loading
@@ -21,6 +28,8 @@ export default function DiscordCallback() {
         console.log('⏳ Discord callback waiting for auth to load...');
         return;
       }
+
+      isProcessing = true;
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
@@ -95,6 +104,8 @@ export default function DiscordCallback() {
           variant: "destructive"
         });
         navigate('/viewer-verification');
+      } finally {
+        isProcessing = false;
       }
     };
 

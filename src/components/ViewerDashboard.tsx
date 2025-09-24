@@ -77,10 +77,10 @@ export default function ViewerDashboard() {
     },
     {
       icon: Shield,
-      title: "Verified Status",
+      title: "Verified Status", 
       description: "Link Kick + Discord for verified viewer badge",
-      available: isKickLinked ? "partial" : false,
-      action: isKickLinked ? "Link Discord" : "Link Kick Account"
+      available: isKickLinked && isDiscordLinked ? true : (isKickLinked || isDiscordLinked ? "partial" : false),
+      action: !isKickLinked ? "Link Kick Account" : !isDiscordLinked ? "Link Discord" : "Verified"
     },
     {
       icon: Gift,
