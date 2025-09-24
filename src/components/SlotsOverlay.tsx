@@ -336,20 +336,20 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         </div>
 
         {/* Stats Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* Total Calls */}
           <div 
-            className="p-6 rounded-xl border"
+            className="p-3 rounded-lg border"
             style={{
               backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
               borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
             }}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="h-5 w-5" style={{color: '#22c55e'}} />
-              <span className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>Total Calls</span>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4" style={{color: '#22c55e'}} />
+              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total Calls</span>
             </div>
-            <div className="text-2xl font-bold" style={{color: '#22c55e'}}>
+            <div className="text-lg font-bold" style={{color: '#22c55e'}}>
               {totalCalls}
             </div>
           </div>
@@ -408,25 +408,25 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
         {/* Top Call Highlight */}
         {topCall && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3" style={{color: overlaySettings.text_color}}>
               🏆 Top Call
             </h2>
             <div 
-              className="p-6 rounded-xl border-2 border-dashed"
+              className="p-4 rounded-lg border-2 border-dashed"
               style={{
                 backgroundColor: overlaySettings.show_background ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
                 borderColor: '#22c55e'
               }}
             >
               <div className="text-center">
-                <div className="text-3xl font-bold mb-2" style={{color: '#22c55e'}}>
+                <div className="text-xl font-bold mb-1" style={{color: '#22c55e'}}>
                   {topCall.viewer_username}
                 </div>
-                <div className="text-lg mb-2" style={{color: overlaySettings.text_color}}>
+                <div className="text-sm mb-2" style={{color: overlaySettings.text_color}}>
                   {topCall.slot_name}
                 </div>
-                <div className="flex items-center justify-center gap-4 text-sm" style={{color: overlaySettings.text_color, opacity: 0.8}}>
+                <div className="flex items-center justify-center gap-3 text-xs" style={{color: overlaySettings.text_color, opacity: 0.8}}>
                   <span>Win: ${topCall.win_amount?.toFixed(0)}</span>
                   <span>•</span>
                   <span>Multiplier: {topCall.multiplier?.toFixed(1)}x</span>
@@ -438,7 +438,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
         {/* Calls Grid */}
         <div>
-          <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+          <h2 className="text-lg font-semibold mb-3" style={{color: overlaySettings.text_color}}>
             Calls Queue ({calls.length})
           </h2>
           
@@ -452,9 +452,9 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
               style={{ 
                 height: `${(() => {
                   const visibleCalls = Math.min(calls.length, overlaySettings.max_visible_calls || maxCalls);
-                  const itemHeight = 72; // minHeight of each call
-                  const spacing = Math.max(0, visibleCalls - 1) * 8; // space-y-2 between items
-                  const containerPadding = 32; // p-4 top and bottom
+                  const itemHeight = 48; // reduced minHeight of each call
+                  const spacing = Math.max(0, visibleCalls - 1) * 6; // space-y-1.5 between items
+                  const containerPadding = 16; // p-2 top and bottom
                   return visibleCalls * itemHeight + spacing + containerPadding;
                 })()}px`,
                 backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
@@ -463,7 +463,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             >
               <div 
                 ref={scrollContainerRef}
-                className="space-y-2 p-4 transition-transform duration-75 ease-linear"
+                className="space-y-1.5 p-2 transition-transform duration-75 ease-linear"
                 style={{
                   transform: `translateY(-${scrollPosition}px)`,
                   willChange: 'transform'
@@ -472,18 +472,18 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                 {infiniteScrollCalls.map((call, index) => (
                   <div
                     key={`${call.id}-${Math.floor(index / calls.length)}`}
-                    className={`flex items-center justify-between p-4 rounded-lg transition-all duration-500 ${
+                    className={`flex items-center justify-between p-2 rounded-md transition-all duration-500 ${
                       overlaySettings.show_borders ? 'border border-opacity-30' : ''
                     }`}
                     style={{
                       backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                       borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
-                      minHeight: '72px'
+                      minHeight: '48px'
                     }}
                   >
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-2 flex-1">
                       <span 
-                        className="text-sm font-mono px-3 py-1 rounded-full font-bold min-w-[50px] text-center"
+                        className="text-xs font-mono px-2 py-1 rounded-full font-bold min-w-[32px] text-center"
                         style={{
                           backgroundColor: overlaySettings.accent_color,
                           color: '#000000'
@@ -493,33 +493,33 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                       </span>
                       
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="font-bold text-lg" style={{color: overlaySettings.accent_color}}>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-sm" style={{color: overlaySettings.accent_color}}>
                             {call.viewer_username}
                           </span>
-                          <Target className="h-4 w-4" style={{color: overlaySettings.text_color, opacity: 0.6}} />
-                          <span className="font-medium" style={{color: overlaySettings.text_color}}>
+                          <Target className="h-3 w-3" style={{color: overlaySettings.text_color, opacity: 0.6}} />
+                          <span className="font-medium text-xs" style={{color: overlaySettings.text_color}}>
                             {call.slot_name}
                           </span>
                         </div>
                         
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           <div 
-                            className={`px-2 py-1 rounded text-xs font-medium ${
+                            className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                               call.status === 'completed' ? 'bg-green-500/20 text-green-300' :
                               call.status === 'pending' ? 'bg-orange-500/20 text-orange-300' :
                               'bg-gray-500/20 text-gray-300'
                             }`}
                           >
-                            {call.status === 'completed' ? 'Completed' : call.status === 'pending' ? 'Pending' : call.status}
+                            {call.status === 'completed' ? 'Done' : call.status === 'pending' ? 'Pending' : call.status}
                           </div>
                           
                           {call.status === 'completed' && call.win_amount && call.multiplier && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-green-400 font-bold">
+                            <div className="flex items-center gap-1">
+                              <span className="text-green-400 font-bold text-xs">
                                 ${call.win_amount.toFixed(0)}
                               </span>
-                              <span className="text-green-300">
+                              <span className="text-green-300 text-xs">
                                 ({call.multiplier.toFixed(1)}x)
                               </span>
                             </div>

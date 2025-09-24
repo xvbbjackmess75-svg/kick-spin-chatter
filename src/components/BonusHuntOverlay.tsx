@@ -421,20 +421,20 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
         </div>
 
         {/* Current Avg and Required Avg Highlighted Box */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div 
-            className="grid grid-cols-2 gap-6 p-6 rounded-xl border-2"
+            className="grid grid-cols-2 gap-3 p-4 rounded-lg border-2"
             style={{
               backgroundColor: overlaySettings.show_background ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
               borderColor: overlaySettings.accent_color
             }}
           >
             <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
-                <span className="text-sm font-medium opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</span>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <TrendingUp className="h-4 w-4" style={{color: overlaySettings.accent_color}} />
+                <span className="text-xs font-medium opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</span>
               </div>
-              <div className="text-3xl font-bold" style={{color: overlaySettings.accent_color}}>
+              <div className="text-xl font-bold" style={{color: overlaySettings.accent_color}}>
                 {avgMultiplier.toFixed(2)}x
               </div>
               <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.7}}>
@@ -442,11 +442,11 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
               </div>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Target className="h-5 w-5" style={{color: isProfit ? '#22c55e' : '#f59e0b'}} />
-                <span className="text-sm font-medium opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</span>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Target className="h-4 w-4" style={{color: isProfit ? '#22c55e' : '#f59e0b'}} />
+                <span className="text-xs font-medium opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</span>
               </div>
-              <div className="text-3xl font-bold" style={{color: isProfit ? '#22c55e' : '#f59e0b'}}>
+              <div className="text-xl font-bold" style={{color: isProfit ? '#22c55e' : '#f59e0b'}}>
                 {isProfit ? 'PROFIT!' : `${requiredAvgMulti.toFixed(2)}x`}
               </div>
               <div className="text-xs mt-1" style={{color: overlaySettings.text_color, opacity: 0.7}}>
@@ -458,31 +458,31 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
         {/* Currently Opening Bonus */}
         {session?.bonus_opening_phase && bonuses.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3" style={{color: overlaySettings.text_color}}>
               Currently Opening
             </h2>
             {(() => {
               const nextBonusToOpen = bonuses.find(bonus => !bonus.payout_recorded_at);
               return nextBonusToOpen ? (
                 <div 
-                  className="p-6 rounded-xl border-2 border-dashed"
+                  className="p-4 rounded-lg border-2 border-dashed"
                   style={{
                     backgroundColor: overlaySettings.show_background ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
                     borderColor: '#8b5cf6'
                   }}
                 >
                   <div className="text-center">
-                    <div className="text-2xl font-bold mb-2" style={{color: '#8b5cf6'}}>
+                    <div className="text-xl font-bold mb-1" style={{color: '#8b5cf6'}}>
                       {nextBonusToOpen.slot_name}
                     </div>
-                    <div className="text-lg" style={{color: overlaySettings.text_color}}>
+                    <div className="text-sm" style={{color: overlaySettings.text_color}}>
                       ${nextBonusToOpen.bet_size.toFixed(2)} spin
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+                <div className="text-center py-6" style={{color: overlaySettings.text_color, opacity: 0.7}}>
                   All bonuses have been opened!
                 </div>
               );
@@ -492,7 +492,7 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
         {/* Bonuses Grid */}
         <div>
-          <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+          <h2 className="text-lg font-semibold mb-3" style={{color: overlaySettings.text_color}}>
             Bonus Queue ({bonuses.length})
           </h2>
           
@@ -506,9 +506,9 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
               style={{ 
                 height: `${(() => {
                   const visibleBonuses = Math.min(bonuses.length, overlaySettings.max_visible_bonuses || maxBonuses);
-                  const itemHeight = 72; // minHeight of each bonus
-                  const spacing = Math.max(0, visibleBonuses - 1) * 8; // space-y-2 between items
-                  const containerPadding = 32; // p-4 top and bottom
+                  const itemHeight = 48; // reduced minHeight of each bonus
+                  const spacing = Math.max(0, visibleBonuses - 1) * 6; // space-y-1.5 between items
+                  const containerPadding = 16; // p-2 top and bottom
                   return visibleBonuses * itemHeight + spacing + containerPadding;
                 })()}px`,
                 backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.02)' : 'transparent'
@@ -516,7 +516,7 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
             >
               <div 
                 ref={scrollContainerRef}
-                className="space-y-2 p-4 transition-transform duration-75 ease-linear"
+                className="space-y-1.5 p-2 transition-transform duration-75 ease-linear"
                 style={{
                   transform: `translateY(-${scrollPosition}px)`,
                   willChange: 'transform'
@@ -525,7 +525,7 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 {infiniteScrollBonuses.map((bonus, index) => (
                   <div
                     key={`${bonus.id}-${Math.floor(index / bonuses.length)}`}
-                    className="flex items-center justify-between p-4 rounded-lg border"
+                    className="flex items-center justify-between p-2 rounded-md border"
                     style={{
                       backgroundColor: bonus.payout_recorded_at 
                         ? 'rgba(34, 197, 94, 0.1)' 
@@ -533,12 +533,12 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                       borderColor: bonus.payout_recorded_at 
                         ? '#22c55e' 
                         : '#f97316',
-                      minHeight: '72px'
+                      minHeight: '48px'
                     }}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                       <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
                         style={{
                           backgroundColor: overlaySettings.accent_color,
                           color: '#000000'
@@ -547,10 +547,10 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                         #{(index % bonuses.length) + 1}
                       </div>
                       <div>
-                        <div className="font-medium" style={{color: overlaySettings.text_color}}>
+                        <div className="font-medium text-sm" style={{color: overlaySettings.text_color}}>
                           {bonus.slot_name}
                         </div>
-                        <div className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>
+                        <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>
                           ${bonus.bet_size.toFixed(2)} spin
                         </div>
                       </div>
@@ -559,18 +559,18 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                     <div className="text-right">
                       {bonus.payout_recorded_at ? (
                         <div>
-                          <div className="font-bold text-green-400">
+                          <div className="font-bold text-green-400 text-sm">
                             ${bonus.payout_amount?.toFixed(2)}
                           </div>
                           {bonus.bonus_multiplier && (
-                            <div className="text-sm text-yellow-400">
+                            <div className="text-xs text-yellow-400">
                               {bonus.bonus_multiplier.toFixed(2)}x
                             </div>
                           )}
                         </div>
                       ) : (
                         <div 
-                          className="px-3 py-1 rounded-full text-sm font-medium"
+                          className="px-2 py-1 rounded-full text-xs font-medium"
                           style={{
                             backgroundColor: '#f97316',
                             color: '#000000'
