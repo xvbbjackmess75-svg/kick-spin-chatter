@@ -104,12 +104,33 @@ Deno.serve(async (req) => {
       })
 
       console.log('🔧 Token response received:', tokenResponse.status)
+      console.log('🔧 Full redirect URI being sent:', redirectUri)
+      console.log('🔧 Full request params being sent:', {
+        grant_type: 'authorization_code',
+        client_id: clientId ? `${clientId.substring(0, 8)}...` : 'MISSING',
+        client_secret: clientSecret ? 'PRESENT' : 'MISSING',
+        redirect_uri: redirectUri,
+        code: code ? `${code.substring(0, 10)}...` : 'MISSING',
+        code_verifier: codeVerifier ? `${codeVerifier.substring(0, 10)}...` : 'MISSING'
+      })
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text()
         console.error('❌ Token exchange failed:', errorText)
+        console.error('❌ Request details for debugging:')
+        console.error('   - Client ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
+        console.error('   - Redirect URI:', redirectUri)
+        console.error('   - Code:', code ? `${code.substring(0, 10)}...` : 'MISSING')
         return new Response(JSON.stringify({ 
           error: `Token exchange failed: ${tokenResponse.status} - ${errorText}`,
+          debug_info: {
+            status: tokenResponse.status,
+            redirect_uri_sent: redirectUri,
+            client_id_present: !!clientId,
+            client_secret_present: !!clientSecret,
+            code_present: !!code,
+            code_verifier_present: !!codeVerifier
+          }
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
