@@ -23,11 +23,12 @@ export function useDiscordAccount() {
       // Wait for auth to finish loading
       if (authLoading) {
         console.log('⏳ Auth still loading, waiting...');
+        setLoading(true);
         return;
       }
       
       if (!user) {
-        console.log('❌ No user, setting discordUser to null');
+        console.log('❌ No user after auth loaded, setting discordUser to null');
         setDiscordUser(null);
         setLoading(false);
         return;
@@ -71,7 +72,13 @@ export function useDiscordAccount() {
       }
     };
 
-    checkDiscordAccount();
+    // Add a small delay to ensure auth state has settled
+    if (!authLoading && user) {
+      console.log('🚀 Auth loaded and user present, checking Discord account...');
+      setTimeout(checkDiscordAccount, 100);
+    } else {
+      checkDiscordAccount();
+    }
   }, [user, authLoading]);
 
   const isDiscordLinked = !!discordUser?.authenticated;
