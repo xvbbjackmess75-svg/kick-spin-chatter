@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useKickAccount } from '@/hooks/useKickAccount';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PostHistory {
   id: string;
@@ -18,43 +18,67 @@ interface PostHistory {
 }
 
 const KickChatPoster = () => {
-  const [channelName, setChannelName] = useState('');
   const [message, setMessage] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [postHistory, setPostHistory] = useState<PostHistory[]>([]);
+  const [userChannel, setUserChannel] = useState<string>('');
   const { kickUser } = useKickAccount();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Get the user's linked Kick channel
+    if (user) {
+      loadUserChannel();
+    }
+  }, [user]);
+
+  const loadUserChannel = async () => {
+    if (!user) return;
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('kick_username')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      
+      if (profile?.kick_username) {
+        setUserChannel(profile.kick_username);
+      }
+    } catch (error) {
+      console.error('Error loading user channel:', error);
+    }
+  };
 
   const handlePostMessage = async () => {
-    if (!channelName.trim() || !message.trim()) {
-      toast.error('Please enter both channel name and message');
+    if (!userChannel || !message.trim()) {
+      toast.error('Please enter a message');
       return;
     }
 
-    if (!kickUser?.authenticated) {
-      toast.error('You need to link your Kick account first');
+    if (!user) {
+      toast.error('You must be logged in to post messages');
       return;
     }
 
     setIsPosting(true);
 
     try {
-      console.log('🚀 Posting message to Kick chat...');
+      console.log('🚀 Posting message to your Kick channel...');
       
-      // Get the stored Kick access token from user metadata
-      const { data: { user } } = await supabase.auth.getUser();
-      const kickAccessToken = user?.user_metadata?.kick_access_token;
-
-      if (!kickAccessToken) {
-        throw new Error('No Kick access token found. Please re-link your Kick account.');
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found. Please log in again.');
       }
-
-      console.log('🔑 Using access token:', kickAccessToken ? 'PRESENT' : 'MISSING');
 
       const { data, error } = await supabase.functions.invoke('kick-chat-post', {
         body: {
-          channelName: channelName.trim(),
           message: message.trim(),
-          kickAccessToken: kickAccessToken
+          authToken: session.access_token
         }
       });
 
@@ -66,16 +90,16 @@ const KickChatPoster = () => {
 
       const newPost: PostHistory = {
         id: Date.now().toString(),
-        channel: channelName.trim(),
+        channel: userChannel,
         message: message.trim(),
         timestamp: new Date(),
         success: true
       };
 
       setPostHistory(prev => [newPost, ...prev.slice(0, 9)]); // Keep last 10 posts
-      toast.success(`Message posted successfully to ${channelName}!`);
+      toast.success(`Message posted successfully to your channel!`);
       
-      // Clear the message but keep the channel name for convenience
+      // Clear the message
       setMessage('');
 
     } catch (error: any) {
@@ -83,7 +107,7 @@ const KickChatPoster = () => {
       
       const newPost: PostHistory = {
         id: Date.now().toString(),
-        channel: channelName.trim(),
+        channel: userChannel || 'unknown',
         message: message.trim(),
         timestamp: new Date(),
         success: false,
@@ -119,7 +143,7 @@ const KickChatPoster = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!kickUser?.authenticated && (
+          {!userChannel && (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-yellow-800">
                 ⚠️ You need to link your Kick account first to post messages.
@@ -127,16 +151,17 @@ const KickChatPoster = () => {
             </div>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="channel">Channel Name</Label>
-            <Input
-              id="channel"
-              placeholder="Enter channel name (e.g., 'trainwreckstv')"
-              value={channelName}
-              onChange={(e) => setChannelName(e.target.value)}
-              disabled={isPosting || !kickUser?.authenticated}
-            />
-          </div>
+          {userChannel && (
+            <div className="space-y-2">
+              <Label>Your Kick Channel</Label>
+              <div className="p-3 bg-muted rounded-lg">
+                <span className="font-medium">#{userChannel}</span>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Messages will be posted to your linked channel using the admin's account.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="message">Message</Label>
@@ -145,14 +170,14 @@ const KickChatPoster = () => {
               placeholder="Enter your message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              disabled={isPosting || !kickUser?.authenticated}
+              disabled={isPosting || !userChannel}
               rows={3}
             />
           </div>
 
           <Button 
             onClick={handlePostMessage} 
-            disabled={isPosting || !kickUser?.authenticated || !channelName.trim() || !message.trim()}
+            disabled={isPosting || !userChannel || !message.trim()}
             className="w-full"
           >
             {isPosting ? 'Posting...' : 'Post Message'}

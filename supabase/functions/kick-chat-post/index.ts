@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -11,20 +13,97 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     const body = await req.json()
     console.log('📝 Request body:', JSON.stringify(body))
     
-    const { channelName, message, kickAccessToken } = body
+    const { message, authToken } = body
 
-    if (!channelName || !message || !kickAccessToken) {
+    if (!message || !authToken) {
       console.error('❌ Missing required parameters')
       return new Response(JSON.stringify({ 
-        error: 'Missing required parameters: channelName, message, kickAccessToken' 
+        error: 'Missing required parameters: message, authToken' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    // Get the authenticated user from the token
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authToken)
+    
+    if (authError || !user) {
+      console.error('❌ Authentication failed:', authError)
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log('👤 Authenticated user:', user.email)
+
+    // Get the user's linked Kick channel from their profile
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('kick_username, kick_channel_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !profile?.kick_username) {
+      console.error('❌ User profile or Kick account not found:', profileError)
+      return new Response(JSON.stringify({ 
+        error: 'You must have a linked Kick account to post messages' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log(`📺 User's Kick channel: ${profile.kick_username}`)
+
+    // Get the admin's Kick access token
+    const { data: adminRoles, error: adminRoleError } = await supabaseClient
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin')
+      .limit(1)
+
+    if (adminRoleError || !adminRoles || adminRoles.length === 0) {
+      console.error('❌ Admin role not found:', adminRoleError)
+      return new Response(JSON.stringify({ 
+        error: 'Admin account not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const adminUserId = adminRoles[0].user_id
+
+    // Get admin's auth data to access their Kick token
+    const { data: adminUser, error: adminUserError } = await supabaseClient.auth.admin.getUserById(adminUserId)
+    
+    if (adminUserError || !adminUser.user?.user_metadata?.kick_access_token) {
+      console.error('❌ Admin Kick token not found:', adminUserError)
+      return new Response(JSON.stringify({ 
+        error: 'Admin Kick account not properly configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const adminKickToken = adminUser.user.user_metadata.kick_access_token
+    console.log('🔑 Using admin Kick token for posting')
+
+    const channelName = profile.kick_username
 
     console.log(`📨 Attempting to post message to channel: ${channelName}`)
     console.log(`📝 Message: ${message}`)
@@ -66,11 +145,11 @@ Deno.serve(async (req) => {
 
     console.log(`🎯 Found channel ID: ${channelId}`)
 
-    // Now post the message to the chat
+    // Now post the message to the chat using admin's token
     const postResponse = await fetch(`https://kick.com/api/v2/messages/send/${channelId}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${kickAccessToken}`,
+        'Authorization': `Bearer ${adminKickToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'User-Agent': 'KickBot/1.0'
