@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Dices, Trophy, Clock } from "lucide-react";
+import { Dices, Trophy, Clock, TrendingUp, Users, Target } from "lucide-react";
 
 interface SlotsCall {
   id: string;
@@ -272,37 +270,41 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   if (!userId) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/95 backdrop-blur-sm border rounded-lg p-6 text-center">
-        <Dices className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground">Invalid overlay URL</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 rounded-lg" style={getOverlayStyle()}>
+          <Dices className="h-12 w-12 mx-auto mb-4" style={{color: overlaySettings.accent_color}} />
+          <p style={{color: overlaySettings.text_color}}>Invalid overlay URL</p>
+        </div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="w-full max-w-md mx-auto rounded-lg p-6 text-center" style={getOverlayStyle()}>
-        <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full mx-auto" />
-        <p className="mt-2" style={{color: overlaySettings.text_color}}>Loading...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8" style={getOverlayStyle()}>
+          <div className="animate-spin h-8 w-8 border-2 border-current border-t-transparent rounded-full mx-auto mb-4" style={{borderColor: overlaySettings.accent_color, borderTopColor: 'transparent'}} />
+          <p style={{color: overlaySettings.text_color}}>Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (!event) {
     return (
-      <div className="w-full max-w-md mx-auto rounded-lg p-6 text-center" style={getOverlayStyle()}>
-        <Dices className="h-8 w-8 mx-auto mb-2" style={{color: overlaySettings.accent_color}} />
-        <p style={{color: overlaySettings.text_color}}>No active events</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 rounded-lg" style={getOverlayStyle()}>
+          <Dices className="h-12 w-12 mx-auto mb-4" style={{color: overlaySettings.accent_color}} />
+          <p style={{color: overlaySettings.text_color}}>No active slots events</p>
+        </div>
       </div>
     );
   }
 
   const topCall = getTopCall();
-  console.log('🏆 Top call calculated:', topCall);
-  console.log('📝 All calls for top call calculation:', calls);
-  console.log('📊 Completed calls with win data:', calls.filter(call => 
-    call.status === 'completed' && call.multiplier && call.win_amount
-  ));
+  const totalCalls = calls.length;
+  const completedCalls = calls.filter(call => call.status === 'completed').length;
+  const pendingCalls = calls.filter(call => call.status === 'pending').length;
 
   // Create duplicated calls for infinite scroll effect when needed
   const infiniteScrollCalls = calls.length > (overlaySettings.max_visible_calls || maxCalls) 
@@ -310,103 +312,152 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     : calls;
 
   return (
-    <div className={`w-full max-w-md mx-auto space-y-4 font-sans ${getFontSizeClass(overlaySettings.font_size)}`}>
-      {/* Event Header */}
-      <Card 
-        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
-        style={getOverlayStyle()}
-      >
-        <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Dices className="h-6 w-6" style={{color: overlaySettings.accent_color}} />
-              <div className="flex-1">
-                <h2 className="font-bold text-lg" style={{color: overlaySettings.text_color}}>{event.title}</h2>
-                <div className="flex items-center gap-2 text-sm opacity-80">
-                  <span style={{color: overlaySettings.text_color}}>
-                    {event.status === 'closed' ? 'Entry Closed - Drawing Soon!' : 'Event Active'}
-                  </span>
-                  <Badge
-                    className={
-                      event.status === 'active' ? 'bg-green-500/20 text-green-300' :
-                      event.status === 'closed' ? 'bg-orange-500/20 text-orange-300' :
-                      'bg-blue-500/20 text-blue-300'
-                    }
-                  >
-                    {event.status === 'closed' ? 'Entry Closed' : event.status}
-                  </Badge>
+    <div 
+      className={`min-h-screen p-6 ${getFontSizeClass(overlaySettings.font_size)}`} 
+      style={getOverlayStyle()}
+    >
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2" style={{color: overlaySettings.text_color}}>
+            {event.title}
+          </h1>
+          <div className="flex items-center justify-center gap-2">
+            <div 
+              className="px-4 py-2 rounded-full text-sm font-medium"
+              style={{
+                backgroundColor: event.status === 'active' ? '#22c55e' : event.status === 'closed' ? '#f59e0b' : '#8b5cf6',
+                color: '#000000'
+              }}
+            >
+              {event.status === 'active' ? 'Accepting Entries' : event.status === 'closed' ? 'Entry Closed - Drawing Soon!' : event.status}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Dashboard */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          {/* Total Calls */}
+          <div 
+            className="p-6 rounded-xl border"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Users className="h-5 w-5" style={{color: '#22c55e'}} />
+              <span className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>Total Calls</span>
+            </div>
+            <div className="text-2xl font-bold" style={{color: '#22c55e'}}>
+              {totalCalls}
+            </div>
+          </div>
+
+          {/* Completed Calls */}
+          <div 
+            className="p-6 rounded-xl border"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Trophy className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
+              <span className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>Completed</span>
+            </div>
+            <div className="text-2xl font-bold" style={{color: overlaySettings.text_color}}>
+              {completedCalls}
+            </div>
+          </div>
+
+          {/* Pending Calls */}
+          <div 
+            className="p-6 rounded-xl border"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5" style={{color: '#f59e0b'}} />
+              <span className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>Pending</span>
+            </div>
+            <div className="text-2xl font-bold" style={{color: overlaySettings.text_color}}>
+              {pendingCalls}
+            </div>
+          </div>
+
+          {/* Top Multiplier */}
+          <div 
+            className="p-6 rounded-xl border"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="h-5 w-5" style={{color: topCall ? '#22c55e' : '#6b7280'}} />
+              <span className="text-sm opacity-70" style={{color: overlaySettings.text_color}}>Top Multi</span>
+            </div>
+            <div className="text-2xl font-bold" style={{color: topCall ? '#22c55e' : overlaySettings.text_color}}>
+              {topCall ? `${topCall.multiplier?.toFixed(1)}x` : '-'}
+            </div>
+          </div>
+        </div>
+
+        {/* Top Call Highlight */}
+        {topCall && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+              🏆 Top Call
+            </h2>
+            <div 
+              className="p-6 rounded-xl border-2 border-dashed"
+              style={{
+                backgroundColor: overlaySettings.show_background ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                borderColor: '#22c55e'
+              }}
+            >
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2" style={{color: '#22c55e'}}>
+                  {topCall.viewer_username}
+                </div>
+                <div className="text-lg mb-2" style={{color: overlaySettings.text_color}}>
+                  {topCall.slot_name}
+                </div>
+                <div className="flex items-center justify-center gap-4 text-sm" style={{color: overlaySettings.text_color, opacity: 0.8}}>
+                  <span>Win: ${topCall.win_amount?.toFixed(0)}</span>
+                  <span>•</span>
+                  <span>Multiplier: {topCall.multiplier?.toFixed(1)}x</span>
                 </div>
               </div>
             </div>
-        </CardContent>
-      </Card>
-
-      {/* Top Call Display */}
-      {topCall ? (
-        <Card 
-          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
-          style={getOverlayStyle()}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
-              <div className="flex-1">
-                <span className="font-semibold" style={{color: overlaySettings.text_color}}>
-                  Top Call: 
-                </span>
-                <span className="text-green-400 ml-2">
-                  {topCall.viewer_username}
-                </span>
-                <span style={{color: overlaySettings.text_color}} className="ml-1">
-                  ${topCall.win_amount?.toFixed(0)} ({topCall.multiplier?.toFixed(0)}x)
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card 
-          className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
-          style={getOverlayStyle()}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-5 w-5" style={{color: overlaySettings.accent_color}} />
-              <div className="flex-1">
-                <span className="font-semibold" style={{color: overlaySettings.text_color}}>
-                  Top Call: No completed calls yet
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Winner Display - Disabled for security as we don't have access to win data */}
-      {/* Winner section removed to protect sensitive gambling data */}
-
-      {/* Calls Queue */}
-      <Card 
-        className={`backdrop-blur-sm ${overlaySettings.show_borders ? 'border' : 'border-transparent'}`}
-        style={getOverlayStyle()}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4" style={{color: overlaySettings.accent_color}} />
-            <h3 className="font-semibold" style={{color: overlaySettings.text_color}}>Calls Queue ({calls.length})</h3>
           </div>
+        )}
+
+        {/* Calls Grid */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4" style={{color: overlaySettings.text_color}}>
+            Calls Queue ({calls.length})
+          </h2>
           
           {calls.length === 0 ? (
-            <p className="text-center py-4 text-sm opacity-70" style={{color: overlaySettings.text_color}}>
-              No calls yet
-            </p>
+            <div className="text-center py-12" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+              No calls submitted yet
+            </div>
           ) : (
             <div 
-              className="relative overflow-hidden"
-              style={{ height: `${(overlaySettings.max_visible_calls || maxCalls) * 60}px` }}
+              className="relative overflow-hidden rounded-xl"
+              style={{ 
+                height: `${Math.min(calls.length, overlaySettings.max_visible_calls || maxCalls) * 80}px`,
+                backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                border: overlaySettings.show_borders ? `1px solid ${overlaySettings.border_color}` : 'none'
+              }}
             >
               <div 
                 ref={scrollContainerRef}
-                className="space-y-2 transition-transform duration-75 ease-linear"
+                className="space-y-2 p-4 transition-transform duration-75 ease-linear"
                 style={{
                   transform: `translateY(-${scrollPosition}px)`,
                   willChange: 'transform'
@@ -415,68 +466,82 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                 {infiniteScrollCalls.map((call, index) => (
                   <div
                     key={`${call.id}-${Math.floor(index / calls.length)}`}
-                    className={`flex items-center justify-between p-3 rounded-lg ${overlaySettings.show_borders ? 'border border-opacity-50' : ''} transition-all duration-500`}
+                    className={`flex items-center justify-between p-4 rounded-lg transition-all duration-500 ${
+                      overlaySettings.show_borders ? 'border border-opacity-30' : ''
+                    }`}
                     style={{
                       backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                       borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent',
-                      minHeight: '56px' // Consistent height for smooth scrolling
+                      minHeight: '72px'
                     }}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span 
-                          className="text-xs font-mono px-2 py-1 rounded whitespace-nowrap"
-                          style={{
-                            backgroundColor: overlaySettings.accent_color + '40',
-                            color: overlaySettings.accent_color
-                          }}
-                        >
-                          #{(index % calls.length) + 1}
-                        </span>
-                         <span className="font-semibold text-sm truncate max-w-[80px]" style={{color: overlaySettings.text_color}}>{call.viewer_username}</span>
-                         <span style={{color: overlaySettings.text_color}}>→</span>
-                         <span className="font-medium text-sm break-words flex-1 min-w-0" style={{color: overlaySettings.accent_color}}>{call.slot_name}</span>
-                       </div>
-                       <div className="text-xs mt-1 flex items-center gap-2 flex-wrap" style={{color: overlaySettings.text_color, opacity: 0.8}}>
-                         {call.status === 'completed' ? (
-                           <div className="flex items-center gap-2">
-                             <Badge className="bg-green-500/20 text-green-300 text-xs px-1 py-0">
-                               Completed
-                             </Badge>
-                             {call.win_amount && call.multiplier && (
-                               <span className="text-green-400 font-semibold">
-                                 ${call.win_amount.toFixed(0)} ({call.multiplier.toFixed(0)}x)
-                               </span>
-                             )}
-                           </div>
-                         ) : (
-                           <Badge className={`${getStatusColor(call.status)} text-xs px-1 py-0`}>
-                             {call.status}
-                           </Badge>
-                         )}
+                    <div className="flex items-center gap-4 flex-1">
+                      <span 
+                        className="text-sm font-mono px-3 py-1 rounded-full font-bold min-w-[50px] text-center"
+                        style={{
+                          backgroundColor: overlaySettings.accent_color,
+                          color: '#000000'
+                        }}
+                      >
+                        #{(index % calls.length) + 1}
+                      </span>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="font-bold text-lg" style={{color: overlaySettings.accent_color}}>
+                            {call.viewer_username}
+                          </span>
+                          <Target className="h-4 w-4" style={{color: overlaySettings.text_color, opacity: 0.6}} />
+                          <span className="font-medium" style={{color: overlaySettings.text_color}}>
+                            {call.slot_name}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div 
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              call.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+                              call.status === 'pending' ? 'bg-orange-500/20 text-orange-300' :
+                              'bg-gray-500/20 text-gray-300'
+                            }`}
+                          >
+                            {call.status === 'completed' ? 'Completed' : call.status === 'pending' ? 'Pending' : call.status}
+                          </div>
+                          
+                          {call.status === 'completed' && call.win_amount && call.multiplier && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-400 font-bold">
+                                ${call.win_amount.toFixed(0)}
+                              </span>
+                              <span className="text-green-300">
+                                ({call.multiplier.toFixed(1)}x)
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               
-              {/* Gradient overlay for smooth fade effect */}
+              {/* Gradient overlays for smooth fade effect */}
               <div 
-                className="absolute top-0 left-0 right-0 h-4 pointer-events-none"
+                className="absolute top-0 left-0 right-0 h-6 pointer-events-none"
                 style={{
-                  background: `linear-gradient(to bottom, ${overlaySettings.background_color}, transparent)`
+                  background: `linear-gradient(to bottom, ${overlaySettings.background_color || 'rgba(0,0,0,0.95)'}, transparent)`
                 }}
               />
               <div 
-                className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none"
+                className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none"
                 style={{
-                  background: `linear-gradient(to top, ${overlaySettings.background_color}, transparent)`
+                  background: `linear-gradient(to top, ${overlaySettings.background_color || 'rgba(0,0,0,0.95)'}, transparent)`
                 }}
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
