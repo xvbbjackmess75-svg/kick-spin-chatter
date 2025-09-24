@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,35 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Check if user is already logged in but missing profile data
+  const checkAndFixIncompleteAccount = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // Check if profile exists
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        console.log('⚠️ User authenticated but missing profile, signing out...');
+        toast({
+          title: "Account Data Missing",
+          description: "Please create a new account to continue.",
+          variant: "default"
+        });
+        await supabase.auth.signOut();
+        window.location.reload();
+      }
+    }
+  };
+
+  // Run check on component mount
+  React.useEffect(() => {
+    checkAndFixIncompleteAccount();
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
