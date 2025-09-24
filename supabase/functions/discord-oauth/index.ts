@@ -17,7 +17,7 @@ serve(async (req) => {
 
     const DISCORD_CLIENT_ID = Deno.env.get('DISCORD_CLIENT_ID')!
     const DISCORD_CLIENT_SECRET = Deno.env.get('DISCORD_CLIENT_SECRET')!
-    const DISCORD_REDIRECT_URI = `${req.headers.get('origin') || 'https://kick-spin-chatter.lovable.app'}/discord/callback`
+    const DISCORD_REDIRECT_URI = `${req.headers.get('origin') || 'https://kickhelper.app'}/discord/callback`
 
     console.log('🎮 Discord OAuth action:', action)
 

@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       
       const clientId = Deno.env.get('KICK_CLIENT_ID')
       console.log('🔧 Using KICK_CLIENT_ID:', clientId ? `${clientId.substring(0, 8)}...` : 'MISSING')
-      const frontendUrl = 'https://kick-spin-chatter.lovable.app'
+      const frontendUrl = 'https://kickhelper.app'
       const redirectUri = `${frontendUrl}/auth/callback`
       
       const state = crypto.randomUUID()
