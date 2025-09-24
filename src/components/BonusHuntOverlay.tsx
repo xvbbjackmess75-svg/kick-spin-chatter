@@ -504,7 +504,13 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
             <div 
               className="relative overflow-hidden rounded-xl"
               style={{ 
-                height: `${Math.min(bonuses.length, overlaySettings.max_visible_bonuses || maxBonuses) * 80}px`,
+                height: `${(() => {
+                  const visibleBonuses = Math.min(bonuses.length, overlaySettings.max_visible_bonuses || maxBonuses);
+                  const itemHeight = 72; // minHeight of each bonus
+                  const spacing = Math.max(0, visibleBonuses - 1) * 8; // space-y-2 between items
+                  const containerPadding = 32; // p-4 top and bottom
+                  return visibleBonuses * itemHeight + spacing + containerPadding;
+                })()}px`,
                 backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.02)' : 'transparent'
               }}
             >
