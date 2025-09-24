@@ -42,9 +42,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
-  const { isAdmin } = useUserRole();
-  const { profile } = useProfile();
-  const isStreamer = profile?.is_streamer;
+  const { isAdmin, hasStreamerAccess } = useUserRole();
 
   const isActive = (path: string) => currentPath === path;
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
@@ -94,7 +92,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Streamer Features */}
-        {isStreamer && (
+        {hasStreamerAccess() && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-kick-green font-semibold">
               {!collapsed && "Streaming"}

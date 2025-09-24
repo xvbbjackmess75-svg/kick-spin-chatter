@@ -10,7 +10,7 @@ export const isViewerRole = (role: UserRole): boolean => {
 };
 
 export const canAccessStreamerPanel = (role: UserRole): boolean => {
-  return ['user', 'premium', 'vip_plus', 'admin'].includes(role);
+  return ['streamer', 'user', 'premium', 'vip_plus', 'admin'].includes(role);
 };
 
 export const canAccessAdminPanel = (role: UserRole): boolean => {
@@ -49,7 +49,7 @@ export function useUserRole() {
   };
 
   const hasRole = (requiredRole: UserRole): boolean => {
-    const roleHierarchy = { viewer: 0, verified_viewer: 1, user: 2, premium: 3, vip_plus: 4, admin: 5 };
+    const roleHierarchy = { viewer: 0, verified_viewer: 1, streamer: 2, user: 3, premium: 4, vip_plus: 5, admin: 6 };
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   };
 

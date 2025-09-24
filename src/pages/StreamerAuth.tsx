@@ -41,8 +41,8 @@ export default function StreamerAuth() {
           
         const userRole = userRoleData || 'user';
         
-        // Allow access for users, premium, vip_plus, and admin roles
-        if (!['user', 'premium', 'vip_plus', 'admin'].includes(userRole)) {
+        // Allow access for streamers, users, premium, vip_plus, and admin roles
+        if (!['streamer', 'user', 'premium', 'vip_plus', 'admin'].includes(userRole)) {
           toast({
             title: "Access Denied", 
             description: "This portal is for streamers. Please use the viewer portal.",
@@ -84,7 +84,7 @@ export default function StreamerAuth() {
             is_streamer: true
           });
 
-        // Assign user role for streamer panel access (remove default viewer role first)
+        // Assign streamer role for streamer panel access (remove default viewer role first)
         const { error: deleteViewerRoleError } = await supabase
           .from('user_roles')
           .delete()
@@ -95,7 +95,7 @@ export default function StreamerAuth() {
           .from('user_roles')
           .upsert({
             user_id: user.id,
-            role: 'user'
+            role: 'streamer'
           });
 
         if (profileError || roleError || deleteViewerRoleError) {
