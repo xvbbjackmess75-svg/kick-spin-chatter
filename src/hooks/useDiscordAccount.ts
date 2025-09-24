@@ -12,12 +12,20 @@ interface DiscordUser {
 }
 
 export function useDiscordAccount() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [discordUser, setDiscordUser] = useState<DiscordUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkDiscordAccount = async () => {
+      console.log('🔧 useDiscordAccount: checkDiscordAccount called, user:', user?.email || 'null', 'authLoading:', authLoading);
+      
+      // Wait for auth to finish loading
+      if (authLoading) {
+        console.log('⏳ Auth still loading, waiting...');
+        return;
+      }
+      
       if (!user) {
         console.log('❌ No user, setting discordUser to null');
         setDiscordUser(null);
@@ -64,18 +72,20 @@ export function useDiscordAccount() {
     };
 
     checkDiscordAccount();
-  }, [user]);
+  }, [user, authLoading]);
 
   const isDiscordLinked = !!discordUser?.authenticated;
   const hasSupabaseAccount = !!user;
 
   // Debug logging
   console.log('🔧 useDiscordAccount debug:', {
-    discordUser: discordUser?.username,
-    discordUserAvatar: discordUser?.avatar,
-    supabaseUser: user?.email,
+    user: user?.email || 'null',
+    discordUser: discordUser?.username || 'null',
+    discordUserAvatar: discordUser?.avatar?.substring(0, 50) + '...' || 'null',
+    supabaseUser: user?.email || 'null',
     isDiscordLinked,
-    hasSupabaseAccount
+    hasSupabaseAccount,
+    loading
   });
 
   const linkDiscordAccount = async (discordData: {
