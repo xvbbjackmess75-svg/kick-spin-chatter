@@ -69,33 +69,43 @@ Deno.serve(async (req) => {
     console.log(`📺 User's Kick channel: ${profile.kick_username}`)
 
     // Get the admin's Kick access token - prioritize admin with Kick account
-    const { data: adminRoles, error: adminRoleError } = await supabaseClient
-      .from('user_roles')
-      .select(`
-        user_id,
-        profiles!inner(
-          linked_kick_username,
-          linked_kick_user_id
-        )
-      `)
-      .eq('role', 'admin')
-      .not('profiles.linked_kick_username', 'is', null)
-      .limit(1)
+    let adminUserId: string
+    try {
+      const { data: adminRoles, error: adminRoleError } = await supabaseClient
+        .from('user_roles')
+        .select(`
+          user_id,
+          profiles!inner(
+            linked_kick_username,
+            linked_kick_user_id
+          )
+        `)
+        .eq('role', 'admin')
+        .not('profiles.linked_kick_username', 'is', null)
 
-    console.log('🔍 Admin query result:', JSON.stringify(adminRoles, null, 2))
+      console.log('🔍 Admin query result:', JSON.stringify(adminRoles, null, 2))
+      console.log('🔍 Admin query error:', adminRoleError)
 
-    if (adminRoleError || !adminRoles || adminRoles.length === 0) {
-      console.error('❌ No admin with linked Kick account found:', adminRoleError)
-      return new Response(JSON.stringify({ 
-        error: 'No admin account with linked Kick account found. Admin must link their Kick account first.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      if (adminRoleError) {
+        throw new Error(`Admin query failed: ${adminRoleError.message}`)
+      }
+
+      if (!adminRoles || adminRoles.length === 0) {
+        console.error('❌ No admin with linked Kick account found')
+        return new Response(JSON.stringify({ 
+          error: 'No admin account with linked Kick account found. Admin must link their Kick account first.' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      adminUserId = adminRoles[0].user_id
+      console.log('👨‍💼 Using admin user ID:', adminUserId)
+    } catch (queryError) {
+      console.error('🚨 Error in admin query:', queryError)
+      throw queryError
     }
-
-    const adminUserId = adminRoles[0].user_id
-    console.log('👨‍💼 Using admin user ID:', adminUserId)
 
     // Get admin's auth data to access their Kick token
     const { data: adminUser, error: adminUserError } = await supabaseClient.auth.admin.getUserById(adminUserId)
