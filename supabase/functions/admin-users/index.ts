@@ -140,7 +140,19 @@ serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      const body = await req.json()
+      let body;
+      try {
+        body = await req.json()
+      } catch (error) {
+        console.log('Error parsing JSON body:', error)
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON body' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
       const { action, userId, role } = body
       
       if (action === 'update-role') {
