@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database, Gift, ExternalLink } from 'lucide-react';
+import { Search, Plus, Play, Pause, RotateCcw, Target, TrendingUp, TrendingDown, Trophy, Download, Database, Gift, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BonusHuntSession {
@@ -279,7 +279,7 @@ export default function BonusHunt() {
           )
         `)
         .eq('session_id', activeSession.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       setSessionBets((data || []) as BonusHuntBet[]);
@@ -633,6 +633,29 @@ export default function BonusHunt() {
     } catch (error) {
       console.error('Error editing payout:', error);
       toast({ title: 'Error editing payout', variant: 'destructive' });
+    }
+  };
+
+  const deleteBet = async (betId: string) => {
+    if (!activeSession) return;
+
+    try {
+      const { error } = await supabase
+        .from('bonus_hunt_bets')
+        .delete()
+        .eq('id', betId);
+
+      if (error) throw error;
+
+      // Update local state
+      setSessionBets(prev => prev.filter(bet => bet.id !== betId));
+      toast({ title: 'Bet deleted successfully!' });
+      
+      // Recalculate session balance
+      loadSessionBets();
+    } catch (error) {
+      console.error('Error deleting bet:', error);
+      toast({ title: 'Error deleting bet', variant: 'destructive' });
     }
   };
 
@@ -1252,11 +1275,13 @@ export default function BonusHunt() {
                            ? 'cursor-pointer hover:bg-primary/10 border-primary/30' 
                            : ''
                        } ${bet.payout_recorded_at ? 'bg-kick-green/20 border-kick-green/40' : 'border-border'}`}
-                       onClick={() => {
-                         if (!bet.payout_recorded_at) {
-                           setSelectedBetForPayout(bet);
-                         }
-                       }}
+                        onClick={() => {
+                          if (!bet.payout_recorded_at && !activeSession?.bonus_opening_phase) {
+                            setSelectedBetForPayout(bet);
+                          } else if (activeSession?.bonus_opening_phase && !bet.payout_recorded_at) {
+                            setSelectedBetForPayout(bet);
+                          }
+                        }}
                      >
                       <div className="flex-1">
                         <div className="font-medium flex items-center gap-2">
@@ -1286,28 +1311,50 @@ export default function BonusHunt() {
                               {(bet.payout_amount / bet.bet_size).toFixed(1)}x
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingPayout(bet);
-                              setNewPayoutAmount(bet.payout_amount?.toString() || '');
-                            }}
-                          >
-                            Edit
-                          </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setEditingPayout(bet);
+                               setNewPayoutAmount(bet.payout_amount?.toString() || '');
+                             }}
+                           >
+                             Edit
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               deleteBet(bet.id);
+                             }}
+                           >
+                             <Trash2 className="h-3 w-3" />
+                           </Button>
                         </div>
-                      ) : (
-                        <div className="text-right ml-4">
-                          <div className={`font-medium ${bet.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(bet.created_at).toLocaleTimeString()}
-                          </div>
-                        </div>
-                      )}
+                       ) : (
+                         <div className="flex items-center gap-2">
+                           <div className="text-right">
+                             <div className={`font-medium ${bet.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                               {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(2)}
+                             </div>
+                             <div className="text-xs text-muted-foreground">
+                               {new Date(bet.created_at).toLocaleTimeString()}
+                             </div>
+                           </div>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               deleteBet(bet.id);
+                             }}
+                           >
+                             <Trash2 className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
                     </div>
                   ))}
                 </div>
