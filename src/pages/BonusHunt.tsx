@@ -200,11 +200,11 @@ export default function BonusHunt() {
       console.log('📋 Sessions loaded:', data);
       setSessions((data || []) as BonusHuntSession[]);
       
-      // Set active session if exists, clear if no active session
-      const active = (data || []).find(s => s.status === 'active');
-      console.log('🎯 Active session found:', active);
+      // Set active session if exists (active OR paused), clear if no active/paused session
+      const activeOrPaused = (data || []).find(s => s.status === 'active' || s.status === 'paused');
+      console.log('🎯 Active/paused session found:', activeOrPaused);
       
-      setActiveSession(active ? active as BonusHuntSession : null);
+      setActiveSession(activeOrPaused ? activeOrPaused as BonusHuntSession : null);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast({ title: 'Error loading sessions', variant: 'destructive' });
@@ -506,12 +506,13 @@ export default function BonusHunt() {
 
       console.log('✅ Session status updated successfully in database');
 
-      // Clear active session immediately if completed
+      // Clear active session immediately if completed, keep for paused
       if (status === 'completed') {
         console.log('🧹 Clearing active session and bets');
         setActiveSession(null);
         setSessionBets([]); // Clear the bets as well
       } else {
+        // Update session status but keep it as active session for paused
         setActiveSession(prev => prev ? { ...prev, status } : null);
       }
       
@@ -1398,28 +1399,28 @@ export default function BonusHunt() {
             </CardHeader>
             <CardContent>
               {sessions.length > 0 ? (
-                <div className="space-y-3">
-                  {sessions.filter(s => s.status !== 'active').map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="font-medium">
-                          {session.session_name || 'Bonus Hunt Session'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(session.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">${session.starting_balance.toFixed(2)} → ${session.current_balance.toFixed(2)}</div>
-                        <div className={`text-sm ${(session.current_balance - session.starting_balance) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(session.current_balance - session.starting_balance) >= 0 ? '+' : ''}${(session.current_balance - session.starting_balance).toFixed(2)}
-                        </div>
-                      </div>
-                      <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
-                        {session.status}
-                      </Badge>
-                    </div>
-                  ))}
+                 <div className="space-y-3">
+                   {sessions.filter(s => s.status !== 'active' && s.status !== 'paused').map((session) => (
+                     <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
+                       <div>
+                         <div className="font-medium">
+                           {session.session_name || 'Bonus Hunt Session'}
+                         </div>
+                         <div className="text-sm text-muted-foreground">
+                           {new Date(session.created_at).toLocaleDateString()}
+                         </div>
+                       </div>
+                       <div className="text-right">
+                         <div className="font-medium">${session.starting_balance.toFixed(2)} → ${session.current_balance.toFixed(2)}</div>
+                         <div className={`text-sm ${(session.current_balance - session.starting_balance) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                           {(session.current_balance - session.starting_balance) >= 0 ? '+' : ''}${(session.current_balance - session.starting_balance).toFixed(2)}
+                         </div>
+                       </div>
+                       <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                         {session.status}
+                       </Badge>
+                     </div>
+                   ))}
                 </div>
               ) : (
                 <p className="text-center text-muted-foreground py-8">No previous sessions found.</p>
