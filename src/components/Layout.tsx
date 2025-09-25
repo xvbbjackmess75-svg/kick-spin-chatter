@@ -110,12 +110,12 @@ export function Layout({ children }: LayoutProps) {
     if (role === 'viewer' || role === 'verified_viewer') {
       // Viewer role gets limited access - only dashboard and account settings
       return [
-        { path: "/", label: "Dashboard", icon: Home },
+        { path: "/dashboard", label: "Dashboard", icon: Home },
       ];
     } else {
       // Streamer roles (user, premium, vip_plus, admin) get full access
       return [
-        { path: "/", label: "Dashboard", icon: Home },
+        { path: "/dashboard", label: "Dashboard", icon: Home },
         { path: "/giveaways", label: "Giveaways", icon: Gift },
         { path: "/bonus-hunt", label: "Bonus Hunt", icon: Zap },
         { path: "/slots-calls", label: "Slots Calls", icon: Phone },
