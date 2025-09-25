@@ -123,7 +123,7 @@ export default function Account() {
         <div className="flex items-center gap-4 pb-4">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
