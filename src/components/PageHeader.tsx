@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { Zap, LogIn, UserPlus } from 'lucide-react';
 
 interface PageHeaderProps {
@@ -8,6 +9,20 @@ interface PageHeaderProps {
 
 export function PageHeader({ showAuthButtons = true }: PageHeaderProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Smart navigation function that routes authenticated users to dashboard
+  const handleHomeNavigation = () => {
+    // Check for Kick authentication as well
+    const kickUser = localStorage.getItem('kick_user');
+    const isKickAuthenticated = kickUser ? JSON.parse(kickUser).authenticated : false;
+    
+    if (user || isKickAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -16,7 +31,7 @@ export function PageHeader({ showAuthButtons = true }: PageHeaderProps) {
           {/* Logo */}
           <div 
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => navigate('/')}
+            onClick={handleHomeNavigation}
           >
             <div className="relative">
               <Zap className="h-8 w-8 text-kick-green" />
@@ -32,7 +47,7 @@ export function PageHeader({ showAuthButtons = true }: PageHeaderProps) {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <button
-              onClick={() => navigate('/')}
+              onClick={handleHomeNavigation}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Home

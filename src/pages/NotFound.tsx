@@ -1,8 +1,24 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleReturnHome = () => {
+    // Check for Kick authentication as well
+    const kickUser = localStorage.getItem('kick_user');
+    const isKickAuthenticated = kickUser ? JSON.parse(kickUser).authenticated : false;
+    
+    if (user || isKickAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
 
   useEffect(() => {
     console.error(
@@ -12,13 +28,16 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-6">
+        <h1 className="text-6xl font-bold text-foreground">404</h1>
+        <p className="text-xl text-muted-foreground">Oops! Page not found</p>
+        <Button 
+          onClick={handleReturnHome}
+          className="gaming-button"
+        >
           Return to Home
-        </a>
+        </Button>
       </div>
     </div>
   );

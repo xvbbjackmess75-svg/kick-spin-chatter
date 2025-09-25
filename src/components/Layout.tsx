@@ -99,8 +99,8 @@ export function Layout({ children }: LayoutProps) {
       await signOut();
     }
     
-    // Redirect to auth page
-    window.location.href = '/auth';
+    // Redirect to auth page using navigate to prevent full page reload
+    navigate('/auth');
   };
 
   const isActive = (path: string) => location.pathname === path;

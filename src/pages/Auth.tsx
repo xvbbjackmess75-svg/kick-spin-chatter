@@ -104,9 +104,9 @@ export default function Auth() {
 
         console.log('✅ Viewer login - roles cleaned up, only viewer role remains');
         
-        // Force a page reload to ensure role state is fresh
+        // Navigate to dashboard without full page reload
         setTimeout(() => {
-          window.location.href = '/dashboard';
+          navigate('/dashboard');
         }, 500);
       } else {
         navigate('/dashboard');
