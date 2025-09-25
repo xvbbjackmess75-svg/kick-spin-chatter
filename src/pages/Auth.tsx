@@ -82,7 +82,7 @@ export default function Auth() {
           return;
         }
         
-        // CRITICAL: Since this is viewer login, reset roles to ONLY viewer
+        // CRITICAL: Since this is viewer login, ensure ONLY viewer role
         // Remove any higher-level roles that might grant streamer access
         await supabase
           .from('user_roles')
@@ -101,6 +101,8 @@ export default function Auth() {
         if (roleError) {
           console.error('Error ensuring viewer role:', roleError);
         }
+
+        console.log('✅ Viewer login - roles cleaned up, only viewer role remains');
         
         // Force a page reload to ensure role state is fresh
         setTimeout(() => {
@@ -131,7 +133,13 @@ export default function Auth() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // First, create the profile
+        // Remove any existing roles that might have been auto-assigned by triggers
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Create the profile WITHOUT triggering the user role assignment
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -144,16 +152,17 @@ export default function Auth() {
           console.error('Error creating profile:', profileError);
         }
 
-        // Remove any existing roles that might have been auto-assigned
+        // Remove any roles that may have been added by the profile trigger
         await supabase
           .from('user_roles')
           .delete()
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .neq('role', 'viewer'); // Keep viewer role if it exists
 
         // Then, assign ONLY the viewer role (not user role)
         const { error: roleError } = await supabase
           .from('user_roles')
-          .insert({
+          .upsert({
             user_id: user.id,
             role: 'viewer'
           });
@@ -161,6 +170,8 @@ export default function Auth() {
         if (roleError) {
           console.error('Error assigning viewer role:', roleError);
         }
+
+        console.log('✅ Viewer account created with viewer role only');
       }
 
       toast({
