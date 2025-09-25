@@ -55,7 +55,11 @@ export function Layout({ children }: LayoutProps) {
         avatar: kickUser.avatar
       } : null,
       user: user ? { email: user.email } : null,
-      profile: profile ? { display_name: profile.display_name, avatar_url: profile.avatar_url } : null
+      profile: profile ? { 
+        display_name: profile.display_name, 
+        avatar_url: profile.avatar_url,
+        updated_at: profile.updated_at 
+      } : null
     });
     
     if (kickUser?.authenticated) {
@@ -88,6 +92,9 @@ export function Layout({ children }: LayoutProps) {
   const userInfo = getCurrentUserInfo();
   
   console.log('🎯 Layout final userInfo:', userInfo);
+  
+  // Force re-render when profile changes by using profile as dependency
+  const profileKey = profile ? `${profile.display_name}-${profile.updated_at}` : 'no-profile';
 
   const handleSignOut = async () => {
     // Clear Kick auth data

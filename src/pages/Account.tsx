@@ -32,9 +32,13 @@ export default function Account() {
 
     setSaving(true);
     try {
-      await updateProfile({
+      console.log('🔄 Updating profile with display name:', displayName);
+      
+      const result = await updateProfile({
         display_name: displayName
       });
+      
+      console.log('✅ Profile update result:', result);
       
       toast({
         title: "Profile Updated",
