@@ -319,8 +319,14 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const avgMultiplier = openedBetAmount > 0 ? openedPayouts / openedBetAmount : 0;
   
   // Calculate required average multiplier to break even from starting balance
-  const requiredAvgMulti = totalBetAmount > 0 && session ? session.starting_balance / totalBetAmount : 0;
+  // We need to earn back: starting_balance + totalBetAmount to break even
+  // So required multiplier = (starting_balance + totalBetAmount) / totalBetAmount
+  const amountNeededToBreakEven = session ? session.starting_balance + totalBetAmount : 0;
+  const requiredAvgMulti = totalBetAmount > 0 ? amountNeededToBreakEven / totalBetAmount : 0;
   const isProfit = totalPnL > 0;
+  
+  // Calculate profit percentage if in profit
+  const profitPercentage = session && isProfit ? (totalPnL / session.starting_balance) * 100 : 0;
 
   return (
     <div 
@@ -447,10 +453,10 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
                 <span className="text-xs font-medium opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</span>
               </div>
               <div className="text-sm font-bold" style={{color: isProfit ? '#22c55e' : '#f59e0b'}}>
-                {isProfit ? 'PROFIT!' : `${requiredAvgMulti.toFixed(2)}x`}
+                {isProfit ? `Profit: ${profitPercentage.toFixed(1)}%` : `${requiredAvgMulti.toFixed(2)}x`}
               </div>
               <div className="text-xs mt-0.5" style={{color: overlaySettings.text_color, opacity: 0.7}}>
-                {isProfit ? 'In profit' : 'To break even'}
+                {isProfit ? 'Above break even' : 'To break even'}
               </div>
             </div>
           </div>
