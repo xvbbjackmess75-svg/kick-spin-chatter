@@ -41,6 +41,8 @@ export default function StreamerAuth() {
           
         const userRole = userRoleData || 'user';
         
+        console.log('🎯 Streamer login - user role:', userRole);
+        
         // Allow access for streamers, users, premium, vip_plus, and admin roles
         if (!['streamer', 'user', 'premium', 'vip_plus', 'admin'].includes(userRole)) {
           toast({
@@ -51,6 +53,8 @@ export default function StreamerAuth() {
           await supabase.auth.signOut();
           return;
         }
+        
+        console.log('✅ Streamer login successful - redirecting to dashboard');
       }
       navigate('/dashboard');
     }
@@ -75,17 +79,19 @@ export default function StreamerAuth() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Create/update profile
+        // Create/update profile (handle case where profile already exists)
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             user_id: user.id,
             display_name: email.split('@')[0],
             is_streamer: true
+          }, {
+            onConflict: 'user_id'
           });
 
-        // Assign streamer role for streamer panel access (remove default viewer role first)
-        const { error: deleteViewerRoleError } = await supabase
+        // Remove default viewer role and assign streamer role
+        await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', user.id)
@@ -96,11 +102,15 @@ export default function StreamerAuth() {
           .upsert({
             user_id: user.id,
             role: 'streamer'
+          }, {
+            onConflict: 'user_id,role'
           });
 
-        if (profileError || roleError || deleteViewerRoleError) {
-          console.error('Error creating profile or role:', { profileError, roleError, deleteViewerRoleError });
+        if (profileError || roleError) {
+          console.error('Error creating profile or role:', { profileError, roleError });
         }
+
+        console.log('✅ Streamer account created with streamer role');
       }
 
       toast({
