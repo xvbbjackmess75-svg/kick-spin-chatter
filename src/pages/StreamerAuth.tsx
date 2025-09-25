@@ -52,7 +52,7 @@ export default function StreamerAuth() {
           return;
         }
       }
-      navigate('/');
+      navigate('/dashboard');
     }
     
     setLoading(false);
@@ -108,7 +108,7 @@ export default function StreamerAuth() {
         description: "Welcome! You now have access to all streaming features."
       });
       
-      navigate('/');
+      navigate('/dashboard');
     }
     
     setLoading(false);
