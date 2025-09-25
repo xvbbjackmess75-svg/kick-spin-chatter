@@ -308,7 +308,7 @@ export default function ViewerVerification() {
         <div className="flex justify-center gap-4">
           <Button 
             variant="outline"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
           >
             Go to Dashboard
           </Button>
