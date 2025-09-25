@@ -550,7 +550,7 @@ export default function BonusHunt() {
     }
   };
 
-  const recordPayout = async () => {
+  const recordPayout = async (moveToNext: boolean = false) => {
     if (!selectedBetForPayout || !payoutAmount) return;
 
     try {
@@ -578,14 +578,29 @@ export default function BonusHunt() {
       console.log('Payout recorded successfully');
       
       // Update the local state immediately to reflect changes
-      setSessionBets(prev => prev.map(bet => 
+      const updatedBets = sessionBets.map(bet => 
         bet.id === selectedBetForPayout.id 
           ? { ...bet, payout_amount: payout, payout_recorded_at: new Date().toISOString() }
           : bet
-      ));
+      );
+      setSessionBets(updatedBets);
 
-      setSelectedBetForPayout(null);
-      setPayoutAmount('');
+      if (moveToNext) {
+        // Find the next pending slot from the updated bets
+        const nextPendingBet = updatedBets.find(bet => !bet.payout_recorded_at);
+        if (nextPendingBet) {
+          setSelectedBetForPayout(nextPendingBet);
+          setPayoutAmount('');
+        } else {
+          setSelectedBetForPayout(null);
+          setPayoutAmount('');
+          toast({ title: 'All payouts recorded!', description: 'No more pending slots found.' });
+        }
+      } else {
+        setSelectedBetForPayout(null);
+        setPayoutAmount('');
+      }
+      
       toast({ title: 'Payout recorded successfully!' });
     } catch (error) {
       console.error('Error recording payout:', error);
@@ -593,9 +608,12 @@ export default function BonusHunt() {
     }
   };
 
-  const moveToNextSlot = () => {
+  const moveToNextSlot = (updatedBets?: BonusHuntBet[]) => {
+    // Use the provided updated bets or current sessionBets
+    const betsToCheck = updatedBets || sessionBets;
+    
     // Find the next pending slot (without payout recorded)
-    const nextPendingBet = sessionBets.find(bet => !bet.payout_recorded_at);
+    const nextPendingBet = betsToCheck.find(bet => !bet.payout_recorded_at);
     if (nextPendingBet) {
       setSelectedBetForPayout(nextPendingBet);
       setPayoutAmount('');
@@ -1187,31 +1205,27 @@ export default function BonusHunt() {
                         />
                       </div>
                        <div className="flex items-end gap-2">
-                         <Button onClick={recordPayout} disabled={!payoutAmount} className="bg-kick-green hover:bg-kick-green/80">
+                         <Button onClick={() => recordPayout(false)} disabled={!payoutAmount} className="bg-kick-green hover:bg-kick-green/80">
                            <Trophy className="h-4 w-4 mr-1" />
                            Record
                          </Button>
-                         {(() => {
-                           // Check if there are more pending slots after the current one
-                           const pendingSlots = sessionBets.filter(bet => !bet.payout_recorded_at && bet.id !== selectedBetForPayout?.id);
-                           return pendingSlots.length > 0 && (
-                             <Button 
-                               onClick={() => {
-                                 recordPayout();
-                                 // Small delay to ensure state updates, then move to next
-                                 setTimeout(() => moveToNextSlot(), 100);
-                               }} 
-                               disabled={!payoutAmount} 
-                               className="bg-blue-600 hover:bg-blue-700"
-                             >
-                               <Trophy className="h-4 w-4 mr-1" />
-                               Record & Next
-                             </Button>
-                           );
-                         })()}
-                         <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
-                           Cancel
-                         </Button>
+                          {(() => {
+                            // Check if there are more pending slots after the current one
+                            const pendingSlots = sessionBets.filter(bet => !bet.payout_recorded_at && bet.id !== selectedBetForPayout?.id);
+                            return pendingSlots.length > 0 && (
+                              <Button 
+                                onClick={() => recordPayout(true)} 
+                                disabled={!payoutAmount} 
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Trophy className="h-4 w-4 mr-1" />
+                                Record & Next
+                              </Button>
+                            );
+                          })()}
+                          <Button variant="outline" onClick={() => setSelectedBetForPayout(null)}>
+                            Cancel
+                          </Button>
                        </div>
                     </div>
                   </div>
