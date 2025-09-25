@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,47 +14,11 @@ import { useNavigate } from 'react-router-dom';
 export default function Account() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { toast } = useToast();
-  const [displayName, setDisplayName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name || '');
-    }
-  }, [profile]);
-
-  const handleUpdateProfile = async () => {
-    if (!profile) return;
-
-    setSaving(true);
-    try {
-      console.log('🔄 Updating profile with display name:', displayName);
-      
-      const result = await updateProfile({
-        display_name: displayName
-      });
-      
-      console.log('✅ Profile update result:', result);
-      
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
-      });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -164,24 +128,14 @@ export default function Account() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="username">User</Label>
                 <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your display name"
+                  id="username"
+                  value={profile?.kick_username ? `Kick account: ${profile.kick_username}` : 'No Kick account linked'}
+                  disabled
                   className="bg-secondary/30"
                 />
               </div>
-
-              <Button
-                onClick={handleUpdateProfile}
-                disabled={saving}
-                className="gaming-button w-full"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Profile'}
-              </Button>
             </CardContent>
           </Card>
 
