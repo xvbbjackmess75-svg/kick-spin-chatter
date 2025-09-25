@@ -39,7 +39,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/landing" element={<Landing />} />
+            <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/streamer-auth" element={<StreamerAuth />} />
             <Route path="/viewer-benefits" element={<ViewerBenefits />} />
@@ -53,7 +53,7 @@ const App = () => (
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
             <Route path="/bonus-hunt-overlay" element={<BonusHuntOverlayPage />} />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Layout>
