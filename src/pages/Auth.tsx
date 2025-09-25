@@ -104,10 +104,10 @@ export default function Auth() {
         
         // Force a page reload to ensure role state is fresh
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/dashboard';
         }, 500);
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }
     
