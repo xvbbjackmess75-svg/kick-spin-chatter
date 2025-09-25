@@ -159,22 +159,14 @@ export default function AuthCallback() {
               }
             }
 
-            // If no user is logged in but we have Kick data, store it and guide to registration
-            console.log('❌ No user logged in - storing Kick data for post-registration linking');
-            
-            // Store Kick user data for post-registration linking
-            sessionStorage.setItem('pending_kick_link', JSON.stringify({
-              id: user.id,
-              username: user.username,
-              display_name: user.display_name,
-              avatar: user.avatar
-            }));
-            
+            // If no user is logged in, cannot link Kick account - redirect to login
+            console.log('❌ No user logged in - cannot link Kick account for verification');
             toast({
-              title: "Account Creation Required",
-              description: `Great! We'll link your Kick account (@${user.username}) after you create your account.`,
+              title: "Login Required",
+              description: "Please log in first before linking your Kick account for verification.",
+              variant: "destructive"
             });
-            navigate('/auth?mode=register&kick_pending=true');
+            navigate('/auth');
           } else {
             throw new Error('OAuth exchange failed - no user data received');
           }

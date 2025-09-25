@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,30 +14,9 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams();
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Check for pending Kick link message
-  useEffect(() => {
-    const kickPending = searchParams.get('kick_pending');
-    if (kickPending === 'true') {
-      const pendingData = sessionStorage.getItem('pending_kick_link');
-      if (pendingData) {
-        try {
-          const kickUser = JSON.parse(pendingData);
-          toast({
-            title: "Kick Account Ready to Link!",
-            description: `Your Kick account (@${kickUser.username}) will be linked after you create your account.`,
-            duration: 5000
-          });
-        } catch (error) {
-          console.error('Error parsing pending Kick data:', error);
-        }
-      }
-    }
-  }, [searchParams, toast]);
 
   // Check if user is already logged in but missing profile data
   const checkAndFixIncompleteAccount = async () => {
@@ -182,65 +161,17 @@ export default function Auth() {
         if (roleError) {
           console.error('Error assigning viewer role:', roleError);
         }
-
-        // Check for pending Kick account link
-        const pendingKickData = sessionStorage.getItem('pending_kick_link');
-        if (pendingKickData) {
-          try {
-            const kickUser = JSON.parse(pendingKickData);
-            console.log('🔗 Auto-linking pending Kick account:', kickUser.username);
-            
-            // Link Kick account to the newly created profile
-            const { error: linkError } = await supabase.rpc('link_kick_account_to_profile', {
-              profile_user_id: user.id,
-              kick_user_id: kickUser.id.toString(),
-              kick_username: kickUser.username,
-              kick_avatar: kickUser.avatar
-            });
-
-            if (linkError) {
-              console.error('❌ Failed to auto-link Kick account:', linkError);
-            } else {
-              console.log('✅ Kick account auto-linked successfully');
-              
-              // Store Kick user info in localStorage for immediate use
-              localStorage.setItem('kick_user', JSON.stringify({
-                id: kickUser.id,
-                username: kickUser.username,
-                display_name: kickUser.display_name,
-                avatar: kickUser.avatar,
-                authenticated: true,
-                provider: 'kick'
-              }));
-              
-              toast({
-                title: "Account Created & Kick Linked!",
-                description: `Your Kick account (@${kickUser.username}) has been successfully linked!`
-              });
-            }
-            
-            // Clean up pending data
-            sessionStorage.removeItem('pending_kick_link');
-          } catch (error) {
-            console.error('Error auto-linking Kick account:', error);
-            sessionStorage.removeItem('pending_kick_link');
-          }
-        } else {
-          toast({
-            title: "Viewer account created!",
-            description: "You can now sign in and access viewer features."
-          });
-        }
       }
 
-      // Auto-switch to sign in tab after successful signup (unless Kick was linked)
-      const wasKickLinked = sessionStorage.getItem('pending_kick_link');
-      if (!wasKickLinked) {
-        setTimeout(() => {
-          const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
-          signInTab?.click();
-        }, 1000);
-      }
+      toast({
+        title: "Viewer account created!",
+        description: "You can now sign in and access viewer features."
+      });
+      // Auto-switch to sign in tab after successful signup
+      setTimeout(() => {
+        const signInTab = document.querySelector('[value="signin"]') as HTMLElement;
+        signInTab?.click();
+      }, 1000);
     }
     
     setLoading(false);
