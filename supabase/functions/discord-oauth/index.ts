@@ -108,62 +108,96 @@ serve(async (req) => {
     if (action === 'link') {
       console.log('🔗 Linking Discord account to profile for user:', user_id)
       
-      // Initialize Supabase client
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      
-      // Check if this Discord account is already linked to another profile
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('linked_discord_user_id', discord_user_id)
-        .neq('user_id', user_id)
-        .single()
-      
-      if (existingProfile) {
-        console.log('⚠️ Discord account already linked to another profile')
+      try {
+        // Initialize Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        
+        // Check if this Discord account is already linked to another profile
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('linked_discord_user_id', discord_user_id)
+          .neq('user_id', user_id)
+          .maybeSingle()
+        
+        if (checkError) {
+          console.error('❌ Database error checking existing profile:', checkError)
+          return new Response(
+            JSON.stringify({ 
+              error: 'Database error while checking Discord account' 
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500,
+            },
+          )
+        }
+        
+        if (existingProfile) {
+          console.log('⚠️ Discord account already linked to another profile')
+          return new Response(
+            JSON.stringify({ 
+              error: 'This Discord account is already linked to another account. Please unlink it first or contact support.' 
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            },
+          )
+        }
+        
+        // Get Discord avatar URL
+        const avatarUrl = discord_avatar 
+          ? `https://cdn.discordapp.com/avatars/${discord_user_id}/${discord_avatar}.png`
+          : `https://ui-avatars.com/api/?name=${discord_username}&background=5865F2&color=fff&size=200&bold=true`
+        
+        // Update the profile with Discord account info
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            linked_discord_user_id: discord_user_id,
+            linked_discord_username: discord_username,
+            linked_discord_avatar: avatarUrl,
+            linked_discord_discriminator: discord_discriminator
+          })
+          .eq('user_id', user_id)
+        
+        if (updateError) {
+          console.error('❌ Failed to link Discord account:', updateError)
+          return new Response(
+            JSON.stringify({ 
+              error: 'Failed to update profile with Discord information' 
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500,
+            },
+          )
+        }
+        
+        console.log('✅ Discord account linked successfully')
+        
+        return new Response(
+          JSON.stringify({ success: true }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          },
+        )
+      } catch (linkError) {
+        console.error('❌ Error in Discord link process:', linkError)
         return new Response(
           JSON.stringify({ 
-            error: 'Discord account is already linked to another account' 
+            error: 'An error occurred while linking Discord account' 
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
+            status: 500,
           },
         )
       }
-      
-      // Get Discord avatar URL
-      const avatarUrl = discord_avatar 
-        ? `https://cdn.discordapp.com/avatars/${discord_user_id}/${discord_avatar}.png`
-        : `https://ui-avatars.com/api/?name=${discord_username}&background=5865F2&color=fff&size=200&bold=true`
-      
-      // Update the profile with Discord account info
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          linked_discord_user_id: discord_user_id,
-          linked_discord_username: discord_username,
-          linked_discord_avatar: avatarUrl,
-          linked_discord_discriminator: discord_discriminator
-        })
-        .eq('user_id', user_id)
-      
-      if (updateError) {
-        console.error('❌ Failed to link Discord account:', updateError)
-        throw new Error('Failed to link Discord account to profile')
-      }
-      
-      console.log('✅ Discord account linked successfully')
-      
-      return new Response(
-        JSON.stringify({ success: true }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      )
     }
 
     return new Response(
