@@ -1290,23 +1290,20 @@ export default function SlotsCalls() {
                         <div className="flex items-center gap-2 text-sm">
                           <div className={`w-2 h-2 rounded-full ${
                             monitorStatus?.is_active && monitorStatus?.is_connected ? 'bg-green-500 animate-pulse' : 
-                            monitorStatus?.is_active ? 'bg-yellow-500 animate-pulse' : 
                             'bg-red-500'
                           }`}></div>
                           <span className="text-muted-foreground">
-                            {monitorStatus?.is_active && monitorStatus?.is_connected ? 'Monitor Active' : 
-                             monitorStatus?.is_active ? 'Monitor Starting...' : 
-                             'Monitor Stopped'}
+                            {monitorStatus?.is_active && monitorStatus?.is_connected ? 'Monitor Active' : 'Monitor Offline'}
                           </span>
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={monitorStatus?.is_active ? () => stopMonitoring() : initializeMonitoring}
-                            variant={monitorStatus?.is_active ? "destructive" : "default"}
+                            onClick={monitorStatus?.is_active && monitorStatus?.is_connected ? () => stopMonitoring() : initializeMonitoring}
+                            variant={monitorStatus?.is_active && monitorStatus?.is_connected ? "destructive" : "default"}
                             size="sm"
                             className="gaming-button"
                           >
-                            {monitorStatus?.is_active ? (
+                            {monitorStatus?.is_active && monitorStatus?.is_connected ? (
                               <>
                                 <Square className="h-3 w-3 mr-1" />
                                 Stop Auto-Monitor
@@ -1314,7 +1311,7 @@ export default function SlotsCalls() {
                             ) : (
                               <>
                                 <Play className="h-3 w-3 mr-1" />
-                                Start Auto-Monitor
+                                Restart Monitor
                               </>
                             )}
                           </Button>
