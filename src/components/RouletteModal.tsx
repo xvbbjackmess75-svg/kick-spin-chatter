@@ -134,11 +134,8 @@ export function RouletteModal({
     
     console.log("🎯 Adding another winner - available participants:", currentParticipants.length);
     setShowStartButton(false);
-    setIsRolling(true);
-    setCurrentPendingWinner(null); // Clear any current selection
-    
-    // Force trigger a new roulette by updating a dependency
-    setTimeout(() => setIsRolling(false), 100);
+    setCurrentPendingWinner(null);
+    // Don't set isRolling here - let the GiveawayRoulette component handle it
   };
 
   // Handle reroll
