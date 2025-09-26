@@ -266,23 +266,33 @@ export function GiveawayRoulette({
     const securityInfo: UserSecurityInfo = { isAltAccount: false, isVpnProxyTorUser: false };
 
     try {
+      console.log('🔍 Checking security info for user:', username);
+      
       // Check alt account status using the database function
       const { data: altData, error: altError } = await supabase
         .rpc('check_alt_account_by_username', { target_username: username });
 
-      if (!altError && altData) {
-        securityInfo.isAltAccount = altData;
+      if (altError) {
+        console.error('❌ Error checking alt account:', altError);
+      } else {
+        console.log('✅ Alt account check result:', altData);
+        securityInfo.isAltAccount = Boolean(altData);
       }
 
       // Check VPN/Proxy/Tor status using the database function
       const { data: vpnData, error: vpnError } = await supabase
         .rpc('check_vpn_proxy_tor_by_username', { target_username: username });
 
-      if (!vpnError && vpnData) {
-        securityInfo.isVpnProxyTorUser = vpnData;
+      if (vpnError) {
+        console.error('❌ Error checking VPN/Proxy/Tor:', vpnError);
+      } else {
+        console.log('✅ VPN/Proxy/Tor check result:', vpnData);
+        securityInfo.isVpnProxyTorUser = Boolean(vpnData);
       }
+
+      console.log('🛡️ Final security info:', securityInfo);
     } catch (error) {
-      console.error('Error checking user security info:', error);
+      console.error('❌ Error checking user security info:', error);
     }
 
     // Cache the result
