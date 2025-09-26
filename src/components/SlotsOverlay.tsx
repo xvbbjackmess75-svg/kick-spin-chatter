@@ -61,12 +61,13 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   useEffect(() => {
     if (userId) {
+      console.log(`🔄 Setting up overlay for userId: ${userId}`);
       fetchOverlaySettings();
       fetchActiveEventAndCalls();
       
-      // Set up real-time subscription for events and calls
+      // Set up real-time subscription for events and calls with better refresh logic
       const eventsSubscription = supabase
-        .channel('slots_events_changes')
+        .channel(`slots_events_${userId}`)
         .on(
           'postgres_changes',
           {
@@ -75,14 +76,16 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             table: 'slots_events',
             filter: `user_id=eq.${userId}`
           },
-          () => {
-            fetchActiveEventAndCalls();
+          (payload) => {
+            console.log('🔔 Event change detected:', payload);
+            // Always refresh when events change for this user
+            setTimeout(() => fetchActiveEventAndCalls(), 100);
           }
         )
         .subscribe();
 
       const callsSubscription = supabase
-        .channel('slots_calls_changes')
+        .channel(`slots_calls_${userId}`)
         .on(
           'postgres_changes',
           {
@@ -91,20 +94,27 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             table: 'slots_calls'
           },
           (payload: any) => {
-            // Only update if it's for the current active event
-            if (event && payload.new && (payload.new as any).event_id === event.id) {
-              fetchActiveEventAndCalls();
-            }
+            console.log('🔔 Call change detected:', payload);
+            // Refresh on any call change since we filter by user in the function
+            setTimeout(() => fetchActiveEventAndCalls(), 100);
           }
         )
         .subscribe();
 
+      // Also set up a periodic refresh every 5 seconds to ensure OBS stays synced
+      const intervalId = setInterval(() => {
+        console.log('🔄 Periodic overlay refresh');
+        fetchActiveEventAndCalls();
+      }, 5000);
+
       return () => {
+        console.log('🧹 Cleaning up overlay subscriptions');
         supabase.removeChannel(eventsSubscription);
         supabase.removeChannel(callsSubscription);
+        clearInterval(intervalId);
       };
     }
-  }, [userId, event?.id]);
+  }, [userId]); // Remove event?.id dependency to avoid recreation
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
@@ -152,13 +162,14 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     if (!userId) return;
 
     try {
-      console.log(`🔍 Fetching secure overlay data for userId: ${userId}`);
+      const timestamp = new Date().toISOString();
+      console.log(`🔍 [${timestamp}] Fetching secure overlay data for userId: ${userId}`);
       
       // Use secure function that only returns essential overlay data
       const { data: eventData, error: eventError } = await supabase
         .rpc('get_secure_overlay_event', { target_user_id: userId });
 
-      console.log(`📊 Secure event query result:`, { eventData, eventError });
+      console.log(`📊 [${timestamp}] Secure event query result:`, { eventData, eventError });
 
       if (eventError) {
         console.error("Error fetching secure overlay event:", eventError);
@@ -169,6 +180,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       }
 
       if (!eventData || eventData.length === 0) {
+        console.log(`ℹ️ [${timestamp}] No active events found for user`);
         setEvent(null);
         setCalls([]);
         setLoading(false);
@@ -188,7 +200,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       const { data: callsData, error: callsError } = await supabase
         .rpc('get_overlay_slots_calls', { target_user_id: userId });
 
-      console.log('🔍 Raw calls data from function:', callsData);
+      console.log(`🔍 [${timestamp}] Raw calls data from function:`, callsData);
 
       if (callsError) {
         console.error("Error fetching calls:", callsError);
@@ -196,7 +208,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       } else {
         // Filter calls for the current event since the function returns all active calls
         const eventCalls = callsData?.filter((call: any) => call.event_id === secureEvent.event_id) || [];
-        console.log('📊 Filtered event calls:', eventCalls);
+        console.log(`📊 [${timestamp}] Filtered event calls:`, eventCalls.length, 'calls for event', secureEvent.event_id);
         
         // Map the secure data to the expected format (now including usernames and financial data)
         const mappedCalls = eventCalls.map((call: any) => ({
@@ -211,7 +223,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
           submitted_at: call.submitted_at,
           call_order: call.call_order,
         }));
-        console.log('🎯 Mapped calls for overlay:', mappedCalls);
+        console.log(`🎯 [${timestamp}] Mapped calls for overlay:`, mappedCalls.length, 'calls');
         setCalls(mappedCalls);
       }
       
