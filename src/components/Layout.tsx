@@ -216,7 +216,7 @@ export function Layout({ children }: LayoutProps) {
             </Sheet>
 
             <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
-              Kick Bot Dashboard
+              Kick Helper Dashboard
             </h1>
             
             {/* Desktop Navigation Links */}
