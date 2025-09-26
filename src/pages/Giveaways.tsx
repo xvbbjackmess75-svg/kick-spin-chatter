@@ -390,6 +390,11 @@ export default function Giveaways() {
               
               // Load existing participants for active giveaways into live chat activity
               loadExistingParticipants(data.channelName);
+              
+              // Also refresh verification status to show updated badges
+              if (currentGiveaway?.id) {
+                refreshVerificationStatus(currentGiveaway.id);
+              }
             }
             saveGiveawayMonitoringState(true, data.channelName); // Save persistent state
             toast({
