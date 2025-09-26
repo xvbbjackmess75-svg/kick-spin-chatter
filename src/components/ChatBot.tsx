@@ -125,7 +125,7 @@ export function ChatBot() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-kick-green" />
-            Auto ChatBot Monitor
+            Chat Monitor
             <div className="flex items-center gap-2">
               <Badge 
                 className={
@@ -214,10 +214,10 @@ export function ChatBot() {
           {/* Info */}
           <div className="mt-6 space-y-2">
             <div className="text-sm text-muted-foreground">
-              🤖 <strong>Always-On Mode:</strong> The chatbot automatically monitors your chat and responds to commands 24/7. No manual intervention required!
+              🤖 <strong>Always-On Mode:</strong> The chat monitor automatically processes commands 24/7. No manual intervention required!
             </div>
             <div className="text-sm text-muted-foreground">
-              🎰 <strong>Slot Calls:</strong> Any viewer (registered or not) can use !kgs [slot_name] to join your active slots events.
+              🎰 <strong>Slot Calls:</strong> Any viewer can use !kgs [slot_name] to join active slots events on this channel.
             </div>
           </div>
         </CardContent>
@@ -229,10 +229,10 @@ export function ChatBot() {
           <div className="flex items-start gap-3">
             <Bot className="h-5 w-5 text-kick-green mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-foreground">Automatic ChatBot Features</p>
+              <p className="text-sm font-medium text-foreground">Chat Monitor Features</p>
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
                 <li>• <strong>24/7 Monitoring:</strong> Automatically started when you link your Kick account</li>
-                <li>• <strong>Instant Responses:</strong> Commands are processed immediately without delays</li>
+                <li>• <strong>Instant Processing:</strong> Commands are processed immediately without delays</li>
                 <li>• <strong>Slot Calls (!kgs):</strong> Anyone can join slots events - no registration required</li>
                 <li>• <strong>Permission System:</strong> Respects viewer, subscriber, moderator, and owner levels</li>
                 <li>• <strong>Background Processing:</strong> Runs continuously without affecting your stream</li>

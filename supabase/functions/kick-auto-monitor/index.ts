@@ -462,7 +462,7 @@ async function processSlotsCall(messageData: any, chatroomId: string, userId: st
     const channelUsername = profile.linked_kick_username || profile.kick_username;
     console.log(`🎯 Looking for slots event - Channel: ${channelUsername}, Status: active`);
 
-    // Find active slots event for this streamer's channel (any user can create events for this channel)
+    // Find active slots event for this channel (ANY user can create events for ANY channel)
     const { data: activeEvent, error: eventError } = await supabase
       .from('slots_events')
       .select('*')
