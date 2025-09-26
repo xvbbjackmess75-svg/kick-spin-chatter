@@ -83,8 +83,8 @@ serve(async (req) => {
       throw new Error(`Failed to fetch channel info: ${channelResponse.status}`);
     }
 
-    const channelData = await channelResponse.json();
-    const chatroomId = channelData.chatroom?.id;
+    const kickChannelData = await channelResponse.json();
+    const chatroomId = kickChannelData.chatroom?.id;
 
     if (!chatroomId) {
       throw new Error('Could not find chatroom ID for channel');
@@ -92,16 +92,37 @@ serve(async (req) => {
 
     console.log(`Found chatroom ID: ${chatroomId} for channel: ${channelName}`);
 
-    // Fetch messages from our database (primary source)
-    console.log(`Fetching stored messages for user ${username} in chatroom ${chatroomId}`);
+    // Get the corresponding UUID channel_id from kick_channels table
+    console.log(`Looking up channel UUID for chatroom ID: ${chatroomId}`);
     
-    // Since channel_id is UUID and chatroomId is number, we need to be more flexible
-    const { data: storedMessages, error: dbError } = await supabase
+    const { data: channelData, error: channelError } = await supabase
+      .from('kick_channels')
+      .select('id')
+      .eq('channel_id', chatroomId.toString())
+      .single();
+
+    if (channelError || !channelData) {
+      console.log(`No kick_channels record found for chatroom ${chatroomId}. Error:`, channelError);
+      // Try to get all messages for this user regardless of channel as fallback
+    }
+
+    // Fetch messages from our database (primary source)
+    console.log(`Fetching stored messages for user ${username}`);
+    
+    let query = supabase
       .from('chat_messages')
       .select('*')
       .eq('kick_username', username)
       .order('timestamp', { ascending: false })
       .limit(limit);
+
+    // If we found a matching channel UUID, filter by it
+    if (channelData?.id) {
+      console.log(`Filtering by channel UUID: ${channelData.id}`);
+      query = query.eq('channel_id', channelData.id);
+    }
+
+    const { data: storedMessages, error: dbError } = await query;
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -110,15 +131,7 @@ serve(async (req) => {
     let messages: KickChatMessage[] = [];
 
     if (!dbError && storedMessages && storedMessages.length > 0) {
-      // Filter messages for this specific chatroom (since channel_id might be stored differently)
-      const filteredMessages = storedMessages.filter(msg => {
-        // Try to match either as string or if channel_id contains the chatroom ID
-        return msg.channel_id === chatroomId.toString() || 
-               msg.channel_id === chatroomId ||
-               msg.channel_id.includes(chatroomId.toString());
-      });
-
-      messages = filteredMessages.map((msg: StoredChatMessage) => ({
+      messages = storedMessages.map((msg: StoredChatMessage) => ({
         id: msg.id,
         content: msg.message,
         created_at: msg.timestamp,
@@ -135,8 +148,8 @@ serve(async (req) => {
       
       console.log(`Found ${messages.length} stored messages for user ${username} in chatroom ${chatroomId}`);
     } else {
-      console.log(`No stored messages found in database. DB Error: ${dbError?.message || 'none'}, Messages count: ${storedMessages?.length || 0}`);
-      // For now, we'll return empty results since Kick's public API doesn't provide chat history
+      console.log(`No stored messages found. DB Error: ${dbError?.message || 'none'}, Messages count: ${storedMessages?.length || 0}`);
+      // Return empty results since Kick's public API doesn't provide chat history
       messages = [];
     }
 

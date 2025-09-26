@@ -125,7 +125,10 @@ export default function Giveaways() {
       averageMessagesPerDay?: number;
     };
   } | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Management states
   const [editingGiveaway, setEditingGiveaway] = useState<Giveaway | null>(null);
@@ -167,6 +170,23 @@ export default function Giveaways() {
       setLoading(false);
     }
   }, [authLoading, user?.id, isSupabaseUser]);
+
+  // Cleanup WebSocket on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Cleaning up WebSocket connection...');
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (socketRef.current) {
+        socketRef.current.close(1000, 'Component unmounting');
+        socketRef.current = null;
+      }
+      setIsConnected(false);
+      setChatConnected(false);
+    };
+  }, []);
 
   // Restore giveaway monitoring state on component mount
   const restoreGiveawayMonitoringState = () => {
@@ -228,10 +248,19 @@ export default function Giveaways() {
   const initializeWebSocket = () => {
     try {
       console.log('🔗 Initializing WebSocket connection to chat monitor...');
+      
+      // Close existing connection if any
+      if (socketRef.current) {
+        console.log('🔄 Closing existing WebSocket connection');
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+      
       socketRef.current = new WebSocket('wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor');
       
       socketRef.current.onopen = () => {
         console.log('✅ Connected to chat monitor WebSocket');
+        setIsConnected(true);
       };
 
       socketRef.current.onmessage = (event) => {
@@ -296,21 +325,41 @@ export default function Giveaways() {
       };
 
       socketRef.current.onclose = (event) => {
-        console.log('WebSocket disconnected', event);
-        if (event.code === 1000) {
-          setChatConnected(false);
-          setConnectedChannel("");
-        } else {
-          console.log('Unexpected disconnect, attempting to reconnect...');
-          setTimeout(() => {
+        console.log(`🔌 WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason || 'Unknown'}`);
+        setIsConnected(false);
+        setChatConnected(false);
+        setConnectedChannel("");
+        
+        // Only attempt reconnect on unexpected disconnections
+        if (event.code !== 1000 && event.code !== 1001) {
+          console.log(`🔄 Unexpected disconnect (code: ${event.code}), attempting to reconnect in 3 seconds...`);
+          
+          // Clear any existing reconnect timeout
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
             if (socketRef.current?.readyState !== WebSocket.OPEN) {
-              initializeWebSocket();
+              console.log('🔄 Attempting WebSocket reconnection...');
+              setReconnectAttempts(prev => prev + 1);
+              if (reconnectAttempts < 5) {
+                initializeWebSocket();
+              } else {
+                console.error('❌ Max reconnection attempts reached');
+                toast({
+                  title: "Connection Failed",
+                  description: "Unable to maintain connection to chat monitor. Please refresh the page.",
+                  variant: "destructive"
+                });
+              }
             }
           }, 3000);
         }
       };
     } catch (error) {
-      console.error('Error initializing WebSocket:', error);
+      console.error('❌ Error initializing WebSocket:', error);
+      setIsConnected(false);
     }
   };
 
