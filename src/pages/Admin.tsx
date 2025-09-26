@@ -16,6 +16,7 @@ import KickChatPoster from '@/components/KickChatPoster';
 import { SlotManagement } from '@/components/SlotManagement';
 import { AdminTicketManagement } from '@/components/AdminTicketManagement';
 import AltAccountDetector from '@/components/AltAccountDetector';
+import { VpnProxyDetector } from '@/components/VpnProxyDetector';
 
 interface FeaturePermission {
   id: string;
@@ -319,11 +320,12 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="roles">Role Manager</TabsTrigger>
           <TabsTrigger value="slots">Slot Management</TabsTrigger>
           <TabsTrigger value="alt-accounts">Alt Accounts</TabsTrigger>
+          <TabsTrigger value="vpn-proxy">VPN/Proxy Users</TabsTrigger>
           <TabsTrigger value="chat">Chat Poster</TabsTrigger>
           <TabsTrigger value="support">Support Tickets</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
@@ -638,6 +640,10 @@ export default function Admin() {
 
         <TabsContent value="alt-accounts" className="space-y-4">
           <AltAccountDetector />
+        </TabsContent>
+
+        <TabsContent value="vpn-proxy" className="space-y-4">
+          <VpnProxyDetector />
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-4">

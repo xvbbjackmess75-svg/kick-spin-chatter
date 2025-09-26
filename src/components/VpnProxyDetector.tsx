@@ -41,7 +41,7 @@ export function VpnProxyDetector() {
         return;
       }
 
-      setVpnUsers(data || []);
+      setVpnUsers((data as VpnProxyUser[]) || []);
     } catch (error) {
       console.error('Error:', error);
       toast({

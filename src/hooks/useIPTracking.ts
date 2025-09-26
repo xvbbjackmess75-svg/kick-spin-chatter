@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useIPTracking() {
@@ -9,6 +9,22 @@ export function useIPTracking() {
     if (user) {
       trackUserIP();
     }
+  }, [user]);
+
+  // Also track on page navigation
+  useEffect(() => {
+    const handleNavigation = () => {
+      if (user) {
+        trackUserIP();
+      }
+    };
+
+    // Track on page focus (user returns to tab)
+    window.addEventListener('focus', handleNavigation);
+    
+    return () => {
+      window.removeEventListener('focus', handleNavigation);
+    };
   }, [user]);
 
   const trackUserIP = async () => {

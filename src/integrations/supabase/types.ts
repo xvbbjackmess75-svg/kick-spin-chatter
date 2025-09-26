@@ -990,34 +990,61 @@ export type Database = {
       }
       user_ip_tracking: {
         Row: {
+          country_code: string | null
+          country_name: string | null
           created_at: string
+          detection_count: number | null
           first_seen_at: string
           id: string
           ip_address: unknown
+          is_proxy: boolean | null
+          is_tor: boolean | null
+          is_vpn: boolean | null
           last_seen_at: string
           occurrence_count: number
+          provider: string | null
+          proxy_type: string | null
+          risk_score: number | null
           updated_at: string
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
+          country_code?: string | null
+          country_name?: string | null
           created_at?: string
+          detection_count?: number | null
           first_seen_at?: string
           id?: string
           ip_address: unknown
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
           last_seen_at?: string
           occurrence_count?: number
+          provider?: string | null
+          proxy_type?: string | null
+          risk_score?: number | null
           updated_at?: string
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
+          country_code?: string | null
+          country_name?: string | null
           created_at?: string
+          detection_count?: number | null
           first_seen_at?: string
           id?: string
           ip_address?: unknown
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
           last_seen_at?: string
           occurrence_count?: number
+          provider?: string | null
+          proxy_type?: string | null
+          risk_score?: number | null
           updated_at?: string
           user_agent?: string | null
           user_id?: string | null
@@ -1110,6 +1137,22 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_vpn_proxy_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          country: string
+          detection_count: number
+          display_name: string
+          first_detected: string
+          ip_address: string
+          kick_username: string
+          last_detected: string
+          provider: string
+          proxy_type: string
+          risk_score: number
+          user_id: string
+        }[]
+      }
       has_feature_access: {
         Args: { _feature_name: string; _user_id: string }
         Returns: boolean
@@ -1131,11 +1174,21 @@ export type Database = {
         Returns: boolean
       }
       track_user_ip: {
-        Args: {
-          p_ip_address: unknown
-          p_user_agent?: string
-          p_user_id: string
-        }
+        Args:
+          | {
+              p_country_code?: string
+              p_country_name?: string
+              p_ip_address: unknown
+              p_is_proxy?: boolean
+              p_is_tor?: boolean
+              p_is_vpn?: boolean
+              p_provider?: string
+              p_proxy_type?: string
+              p_risk_score?: number
+              p_user_agent?: string
+              p_user_id: string
+            }
+          | { p_ip_address: unknown; p_user_agent?: string; p_user_id: string }
         Returns: undefined
       }
       verify_viewer: {

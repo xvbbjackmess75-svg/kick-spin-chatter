@@ -38,8 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         
         // Track IP when user signs in or session is established
-        if (session?.user && event === 'SIGNED_IN') {
-          trackUserIP(session.user.id);
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          // Use setTimeout to defer the IP tracking call
+          setTimeout(() => {
+            trackUserIP(session.user.id);
+          }, 0);
         }
       }
     );
@@ -52,7 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Track IP for existing session
       if (session?.user) {
-        trackUserIP(session.user.id);
+        setTimeout(() => {
+          trackUserIP(session.user.id);
+        }, 0);
       }
     });
 
