@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Minimize2 } from 'lucide-react';
+import { MessageCircle, X, Send, Minimize2, Paperclip, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,7 @@ interface Message {
   message: string;
   is_admin_reply: boolean;
   created_at: string;
+  image_url?: string;
 }
 
 interface Ticket {
@@ -35,6 +36,9 @@ export function SupportChat() {
   const [newTicketSubject, setNewTicketSubject] = useState('');
   const [newTicketMessage, setNewTicketMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -143,23 +147,57 @@ export function SupportChat() {
     }
   };
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from('support-images')
+      .upload(fileName, file);
+
+    if (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+
+    const { data } = supabase.storage
+      .from('support-images')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  };
+
   const sendMessage = async () => {
-    if (!selectedTicket || !newMessage.trim() || !user) return;
+    if (!selectedTicket || (!newMessage.trim() && !selectedImage) || !user) return;
 
     setLoading(true);
     try {
+      let imageUrl = null;
+      
+      if (selectedImage) {
+        setUploadingImage(true);
+        imageUrl = await uploadImage(selectedImage);
+      }
+
       const { error } = await supabase
         .from('support_messages')
         .insert({
           ticket_id: selectedTicket.id,
           user_id: user.id,
-          message: newMessage.trim(),
-          is_admin_reply: false
+          message: newMessage.trim() || (imageUrl ? 'Image attachment' : ''),
+          is_admin_reply: false,
+          image_url: imageUrl
         });
 
       if (error) throw error;
 
       setNewMessage('');
+      setSelectedImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -170,6 +208,23 @@ export function SupportChat() {
       });
     } finally {
       setLoading(false);
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check if it's an image
+      if (file.type.startsWith('image/')) {
+        setSelectedImage(file);
+      } else {
+        toast({
+          title: "Invalid File",
+          description: "Please select an image file only.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -363,7 +418,17 @@ export function SupportChat() {
                               : 'bg-primary text-primary-foreground'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap">{message.message}</p>
+                          {message.image_url && (
+                            <img 
+                              src={message.image_url} 
+                              alt="Uploaded image" 
+                              className="max-w-full h-auto rounded mb-2 cursor-pointer"
+                              onClick={() => window.open(message.image_url, '_blank')}
+                            />
+                          )}
+                          {message.message && (
+                            <p className="whitespace-pre-wrap">{message.message}</p>
+                          )}
                           <p className={`text-xs mt-1 ${
                             message.is_admin_reply ? 'text-muted-foreground' : 'text-primary-foreground/70'
                           }`}>
@@ -377,23 +442,63 @@ export function SupportChat() {
 
                   {/* Message Input */}
                   <div className="p-4 border-t">
+                    {selectedImage && (
+                      <div className="mb-2 p-2 bg-muted rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Image className="h-4 w-4" />
+                          <span className="text-sm">{selectedImage.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedImage(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = '';
+                            }
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                     <div className="flex gap-2">
-                      <Textarea
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                        placeholder="Type your message..."
-                        className="resize-none"
-                        rows={2}
-                      />
-                      <Button
-                        onClick={sendMessage}
-                        disabled={loading || !newMessage.trim()}
-                        size="icon"
-                        className="self-end"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
+                      <div className="flex-1">
+                        <Textarea
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={handleKeyPress}
+                          placeholder="Type your message..."
+                          className="resize-none"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="self-end"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={sendMessage}
+                          disabled={loading || uploadingImage || (!newMessage.trim() && !selectedImage)}
+                          size="icon"
+                          className="self-end"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </>

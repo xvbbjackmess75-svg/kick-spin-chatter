@@ -26,6 +26,7 @@ interface Message {
   is_admin_reply: boolean;
   created_at: string;
   user_id: string;
+  image_url?: string;
 }
 
 interface Ticket {
@@ -448,7 +449,17 @@ export function AdminTicketManagement() {
                           : 'bg-muted text-foreground'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap text-sm">{message.message}</p>
+                      {message.image_url && (
+                        <img 
+                          src={message.image_url} 
+                          alt="Uploaded image" 
+                          className="max-w-full h-auto rounded mb-2 cursor-pointer"
+                          onClick={() => window.open(message.image_url, '_blank')}
+                        />
+                      )}
+                      {message.message && (
+                        <p className="whitespace-pre-wrap text-sm">{message.message}</p>
+                      )}
                       <p className={`text-xs mt-1 ${
                         message.is_admin_reply ? 'text-primary-foreground/70' : 'text-muted-foreground'
                       }`}>
