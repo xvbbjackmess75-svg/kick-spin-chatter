@@ -227,10 +227,11 @@ export default function Giveaways() {
 
   const initializeWebSocket = () => {
     try {
+      console.log('🔗 Initializing WebSocket connection to chat monitor...');
       socketRef.current = new WebSocket('wss://xdjtgkgwtsdpfftrrouz.functions.supabase.co/kick-chat-monitor');
       
       socketRef.current.onopen = () => {
-        console.log('Connected to chat monitor');
+        console.log('✅ Connected to chat monitor WebSocket');
       };
 
       socketRef.current.onmessage = (event) => {
@@ -314,28 +315,39 @@ export default function Giveaways() {
   };
 
   const handleChatMessage = async (message: any) => {
-    console.log('Processing chat message:', message);
+    console.log('🔍 Processing chat message:', {
+      username: message.username,
+      content: message.content,
+      timestamp: new Date().toISOString(),
+      userId: message.userId,
+      badges: message.badges
+    });
     
-    if (!isSupabaseUser) return;
+    if (!isSupabaseUser) {
+      console.log('❌ Not a Supabase user, skipping message processing');
+      return;
+    }
     
     // Check for commands first
     if (message.content && message.content.startsWith('!')) {
+      console.log('🤖 Command detected, processing...');
       await processCommand(message);
     }
     
     // Then check for giveaway keywords
+    console.log('🎯 Checking for giveaway keywords...');
     const { data: currentGiveaways, error } = await supabase
       .from('giveaways')
       .select('*')
       .eq('status', 'active');
 
     if (error) {
-      console.error('Error fetching current giveaways:', error);
+      console.error('❌ Error fetching current giveaways:', error);
       return;
     }
 
     const activeGiveaways = currentGiveaways || [];
-    console.log('Active giveaways for keyword matching:', activeGiveaways);
+    console.log(`📋 Found ${activeGiveaways.length} active giveaways for keyword matching:`, activeGiveaways.map(g => ({ id: g.id, title: g.title, description: g.description })));
     
     for (const giveaway of activeGiveaways) {
       const keywordMatch = giveaway.description?.match(/Keyword: (.+)/);
@@ -345,10 +357,10 @@ export default function Giveaways() {
       }
       
       const keyword = keywordMatch[1].trim();
-      console.log(`Checking keyword "${keyword}" against message: "${message.content}"`);
+      console.log(`🔍 Checking keyword "${keyword}" against message: "${message.content}" from user: ${message.username}`);
       
       if (message.content && message.content.toLowerCase().includes(keyword.toLowerCase())) {
-        console.log(`✅ Keyword "${keyword}" detected from user: ${message.username}`);
+        console.log(`✅ KEYWORD MATCH! "${keyword}" detected from user: ${message.username}`);
         
         // Check if giveaway requires verification
         if (giveaway.verified_only) {
@@ -486,7 +498,15 @@ export default function Giveaways() {
     const channelInfo = getChannelInfo();
     const targetChannel = channelName || channelInfo?.channelName;
     
+    console.log('🚀 Attempting to join chat channel:', {
+      requestedChannel: channelName,
+      channelInfo,
+      targetChannel,
+      socketStatus: socketRef.current?.readyState
+    });
+    
     if (!targetChannel) {
+      console.log('❌ No target channel available');
       toast({
         title: "Error",
         description: "No channel information available",
@@ -496,10 +516,18 @@ export default function Giveaways() {
     }
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      console.log(`📡 Sending join_channel request for: ${targetChannel}`);
       socketRef.current.send(JSON.stringify({
         type: 'join_channel',
         channelName: targetChannel
       }));
+    } else {
+      console.log('❌ WebSocket not connected, current state:', socketRef.current?.readyState);
+      toast({
+        title: "Connection Error",
+        description: "WebSocket not connected. Try refreshing the page.",
+        variant: "destructive"
+      });
     }
   };
 
