@@ -52,11 +52,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     text_color: 'hsl(var(--foreground))',
     accent_color: 'hsl(var(--primary))',
     font_size: 'medium',
-    max_visible_calls: 10,
+    max_visible_calls: 5, // Reduce to test scrolling easier
     scrolling_speed: 50,
     show_background: true,
     show_borders: true,
-    animation_enabled: true
+    animation_enabled: true // Force enable for testing
   });
   
   // Force component remount when cache-buster changes by including it in key
@@ -134,11 +134,12 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       maxCallsProp: maxCalls,
       animationEnabled: overlaySettings.animation_enabled,
       scrollingSpeed: overlaySettings.scrolling_speed,
+      eventStatus: event?.status,
       shouldScroll: calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled
     });
 
     if (calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled) {
-      console.log('🎬 Starting scroll animation');
+      console.log('🎬 Starting scroll animation - calls exceed visible limit');
       const interval = setInterval(() => {
         setScrollPosition(prev => {
           // Calculate actual item height including spacing (40px + 4px spacing)
@@ -159,10 +160,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         clearInterval(interval);
       };
     } else {
-      console.log('🎬 No scroll needed - resetting position');
+      console.log('🎬 No scroll needed - not enough calls or animation disabled');
       setScrollPosition(0);
     }
-  }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled, overlaySettings.scrolling_speed]);
+  }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled, overlaySettings.scrolling_speed, event?.status]);
 
   const fetchOverlaySettings = async () => {
     if (!userId) {
@@ -370,7 +371,13 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   // Create duplicated calls for infinite scroll effect when needed
   const shouldEnableInfiniteScroll = calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled;
-  console.log('🎬 Infinite scroll check:', { shouldEnableInfiniteScroll, callsLength: calls.length, maxVisible: overlaySettings.max_visible_calls, animationEnabled: overlaySettings.animation_enabled });
+  console.log('🎬 Infinite scroll check:', { 
+    shouldEnableInfiniteScroll, 
+    callsLength: calls.length, 
+    maxVisible: overlaySettings.max_visible_calls, 
+    animationEnabled: overlaySettings.animation_enabled,
+    eventStatus: event?.status
+  });
   const infiniteScrollCalls = shouldEnableInfiniteScroll 
     ? [...calls, ...calls, ...calls] // Triple the calls array for seamless infinite loop
     : calls;
