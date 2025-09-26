@@ -89,10 +89,7 @@ export function RouletteModal({
 
     setPendingWinners(prev => {
       const updatedWinners = [...prev, newWinner];
-      // Save immediately when winner is added (but don't await to avoid blocking UI)
-      console.log("💾 Immediately saving winner to database:", newWinner.username);
-      onSavePendingWinners(updatedWinners, currentParticipants.filter(p => p.username !== winner.username))
-        .catch(error => console.error("❌ Failed to save winner immediately:", error));
+      console.log("🎯 Added winner to pending list:", newWinner.username);
       return updatedWinners;
     });
     
