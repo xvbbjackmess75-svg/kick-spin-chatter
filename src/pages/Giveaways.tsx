@@ -129,6 +129,7 @@ export default function Giveaways() {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Management states
   const [editingGiveaway, setEditingGiveaway] = useState<Giveaway | null>(null);
@@ -178,6 +179,10 @@ export default function Giveaways() {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null;
       }
       if (socketRef.current) {
         socketRef.current.close(1000, 'Component unmounting');
@@ -261,11 +266,32 @@ export default function Giveaways() {
       socketRef.current.onopen = () => {
         console.log('✅ Connected to chat monitor WebSocket');
         setIsConnected(true);
+        setReconnectAttempts(0); // Reset reconnection attempts on successful connection
+        
+        // Start heartbeat to keep connection alive
+        const startHeartbeat = () => {
+          if (heartbeatTimeoutRef.current) {
+            clearTimeout(heartbeatTimeoutRef.current);
+          }
+          heartbeatTimeoutRef.current = setTimeout(() => {
+            if (socketRef.current?.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: 'ping' }));
+              startHeartbeat(); // Schedule next heartbeat
+            }
+          }, 30000); // Send ping every 30 seconds
+        };
+        startHeartbeat();
       };
 
       socketRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log('Received:', data);
+
+        // Handle heartbeat response
+        if (data.type === 'pong') {
+          console.log('🟢 Heartbeat received');
+          return;
+        }
 
         switch (data.type) {
           case 'connected':
@@ -340,10 +366,11 @@ export default function Giveaways() {
           }
           
           reconnectTimeoutRef.current = setTimeout(() => {
-            if (socketRef.current?.readyState !== WebSocket.OPEN) {
-              console.log('🔄 Attempting WebSocket reconnection...');
-              setReconnectAttempts(prev => prev + 1);
-              if (reconnectAttempts < 5) {
+            setReconnectAttempts(prev => {
+              const newAttempts = prev + 1;
+              console.log(`🔄 Attempting WebSocket reconnection... (attempt ${newAttempts}/5)`);
+              
+              if (newAttempts < 5) {
                 initializeWebSocket();
               } else {
                 console.error('❌ Max reconnection attempts reached');
@@ -353,8 +380,10 @@ export default function Giveaways() {
                   variant: "destructive"
                 });
               }
-            }
-          }, 3000);
+              
+              return newAttempts;
+            });
+          }, Math.min(3000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff with max 30s
         }
       };
     } catch (error) {
