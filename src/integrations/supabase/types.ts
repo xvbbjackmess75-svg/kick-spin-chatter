@@ -988,6 +988,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ip_tracking: {
+        Row: {
+          created_at: string
+          first_seen_at: string
+          id: string
+          ip_address: unknown
+          last_seen_at: string
+          occurrence_count: number
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_seen_at?: string
+          id?: string
+          ip_address: unknown
+          last_seen_at?: string
+          occurrence_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_seen_at?: string
+          id?: string
+          ip_address?: unknown
+          last_seen_at?: string
+          occurrence_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
@@ -1052,6 +1088,14 @@ export type Database = {
           win_amount: number
         }[]
       }
+      get_potential_alt_accounts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          ip_address: unknown
+          user_count: number
+          users: Json
+        }[]
+      }
       get_secure_overlay_event: {
         Args: Record<PropertyKey, never> | { target_user_id?: string }
         Returns: {
@@ -1085,6 +1129,14 @@ export type Database = {
           profile_user_id: string
         }
         Returns: boolean
+      }
+      track_user_ip: {
+        Args: {
+          p_ip_address: unknown
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       verify_viewer: {
         Args: { _user_id: string }

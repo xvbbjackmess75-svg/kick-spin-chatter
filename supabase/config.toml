@@ -70,3 +70,6 @@ verify_jwt = true
 
 [functions.kick-chat-post]
 verify_jwt = true
+
+[functions.track-user-ip]
+verify_jwt = false

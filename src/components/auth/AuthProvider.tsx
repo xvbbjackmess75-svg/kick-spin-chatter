@@ -18,6 +18,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to track user IP
+  const trackUserIP = async (userId: string) => {
+    try {
+      await supabase.functions.invoke('track-user-ip', {
+        body: { user_id: userId }
+      });
+    } catch (error) {
+      console.error('Error tracking IP:', error);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -25,6 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Track IP when user signs in or session is established
+        if (session?.user && event === 'SIGNED_IN') {
+          trackUserIP(session.user.id);
+        }
       }
     );
 
@@ -33,6 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Track IP for existing session
+      if (session?.user) {
+        trackUserIP(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();

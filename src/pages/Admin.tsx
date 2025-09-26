@@ -15,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import KickChatPoster from '@/components/KickChatPoster';
 import { SlotManagement } from '@/components/SlotManagement';
 import { AdminTicketManagement } from '@/components/AdminTicketManagement';
+import AltAccountDetector from '@/components/AltAccountDetector';
 
 interface FeaturePermission {
   id: string;
@@ -318,10 +319,11 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="roles">Role Manager</TabsTrigger>
           <TabsTrigger value="slots">Slot Management</TabsTrigger>
+          <TabsTrigger value="alt-accounts">Alt Accounts</TabsTrigger>
           <TabsTrigger value="chat">Chat Poster</TabsTrigger>
           <TabsTrigger value="support">Support Tickets</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
@@ -632,6 +634,10 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="alt-accounts" className="space-y-4">
+          <AltAccountDetector />
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-4">
