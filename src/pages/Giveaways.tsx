@@ -49,7 +49,9 @@ import {
   LogIn,
   MessageSquare,
   Clock,
-  User
+  User,
+  UserMinus,
+  Shield
 } from "lucide-react";
 
 interface RouletteParticipant {
@@ -77,6 +79,11 @@ interface PendingWinner {
   totalTickets: number;
   ticketsPerParticipant: number;
   isVerified?: boolean;
+}
+
+interface UserSecurityInfo {
+  isAltAccount: boolean;
+  isVpnProxyTorUser: boolean;
 }
 
 export default function Giveaways() {
@@ -130,6 +137,7 @@ export default function Giveaways() {
   const [newKeyword, setNewKeyword] = useState("");
   const [deleteGiveawayId, setDeleteGiveawayId] = useState<string | null>(null);
   const [clearParticipantsId, setClearParticipantsId] = useState<string | null>(null);
+  const [userSecurityCache, setUserSecurityCache] = useState<Record<string, UserSecurityInfo>>({});
 
   // Form states
   const [title, setTitle] = useState("");
@@ -146,6 +154,74 @@ export default function Giveaways() {
       setChannelName(channelInfo.channelName);
     }
   }, [getChannelInfo, channelName]);
+
+  // Function to check if user is an alt account
+  const checkAltAccount = async (username: string): Promise<boolean> => {
+    if (!user?.id) return false;
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('check_alt_account_by_username', { 
+          target_username: username 
+        });
+      
+      if (error) {
+        console.error('Error checking alt account:', error);
+        return false;
+      }
+      
+      return data || false;
+    } catch (error) {
+      console.error('Error checking alt account:', error);
+      return false;
+    }
+  };
+
+  // Function to check if user is using VPN/Proxy/Tor
+  const checkVpnProxyTor = async (username: string): Promise<boolean> => {
+    if (!user?.id) return false;
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('check_vpn_proxy_tor_by_username', { 
+          target_username: username 
+        });
+      
+      if (error) {
+        console.error('Error checking VPN/Proxy/Tor:', error);
+        return false;
+      }
+      
+      return data || false;
+    } catch (error) {
+      console.error('Error checking VPN/Proxy/Tor:', error);
+      return false;
+    }
+  };
+
+  // Function to get user security info with caching
+  const getUserSecurityInfo = async (username: string): Promise<UserSecurityInfo> => {
+    // Check cache first
+    if (userSecurityCache[username]) {
+      return userSecurityCache[username];
+    }
+
+    // Fetch security info
+    const [isAltAccount, isVpnProxyTorUser] = await Promise.all([
+      checkAltAccount(username),
+      checkVpnProxyTor(username)
+    ]);
+
+    const securityInfo = { isAltAccount, isVpnProxyTorUser };
+    
+    // Cache the result
+    setUserSecurityCache(prev => ({
+      ...prev,
+      [username]: securityInfo
+    }));
+
+    return securityInfo;
+  };
 
   useEffect(() => {
     console.log('🔄 Giveaways useEffect triggered:', {
@@ -2177,6 +2253,51 @@ export default function Giveaways() {
           </DialogContent>
         </Dialog>
 
+        {/* User Security Badges Component */}
+        <UserSecurityBadges username="" />
+
+        {/* User Security Badges Component */}
+        {(() => {
+          const UserSecurityBadges = ({ username }: { username: string }) => {
+            const [securityInfo, setSecurityInfo] = useState<UserSecurityInfo>({ isAltAccount: false, isVpnProxyTorUser: false });
+            const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+              if (!username) return;
+              
+              const loadSecurityInfo = async () => {
+                setLoading(true);
+                const info = await getUserSecurityInfo(username);
+                setSecurityInfo(info);
+                setLoading(false);
+              };
+
+              loadSecurityInfo();
+            }, [username]);
+
+            if (!username || loading) return null;
+
+            return (
+              <>
+                {securityInfo.isAltAccount && (
+                  <Badge variant="outline" className="text-red-500 border-red-500/30 bg-red-500/10">
+                    <UserMinus className="h-3 w-3 mr-1" />
+                    Alt Accounter
+                  </Badge>
+                )}
+                {securityInfo.isVpnProxyTorUser && (
+                  <Badge variant="outline" className="text-orange-500 border-orange-500/30 bg-orange-500/10">
+                    <Shield className="h-3 w-3 mr-1" />
+                    VPN/Proxy/Tor User
+                  </Badge>
+                )}
+              </>
+            );
+          };
+
+          return null;
+        })()}
+
         {/* User Profile Modal */}
         <Dialog open={!!selectedUserProfile} onOpenChange={(open) => !open && setSelectedUserProfile(null)}>
           <DialogContent className="gaming-card border-border/50 max-w-2xl">
@@ -2196,7 +2317,7 @@ export default function Giveaways() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-xl font-semibold">{selectedUserProfile.username}</h3>
                       {selectedUserProfile.isVerified ? (
                         <Badge variant="secondary" className="text-green-400 border-green-400/30">
@@ -2209,6 +2330,7 @@ export default function Giveaways() {
                           Unverified
                         </Badge>
                       )}
+                      <UserSecurityBadges username={selectedUserProfile.username} />
                     </div>
                     <p className="text-muted-foreground">
                       Total giveaway entries: {selectedUserProfile.totalGiveawayEntries}
