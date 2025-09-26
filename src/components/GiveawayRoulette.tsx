@@ -237,17 +237,14 @@ export function GiveawayRoulette({
 
   // Auto-start roulette when participants change and showStartButton is false
   useEffect(() => {
-    if (participants.length > 0 && !showStartButton && !isSpinning && !selectedWinner && !isResultLocked) {
+    if (participants.length > 0 && !showStartButton && !isSpinning && !selectedWinner) {
       console.log("🎰 Auto-starting roulette with", participants.length, "participants");
-      // Reset any locked state first
-      setIsResultLocked(false);
-      setLockedIndicatorPosition(null);
       const timer = setTimeout(() => {
         startRoulette();
-      }, 500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [participants, showStartButton, isSpinning, selectedWinner, isResultLocked]);
+  }, [participants, showStartButton, isSpinning, selectedWinner]);
 
   return (
     <Card className="gaming-card w-full">

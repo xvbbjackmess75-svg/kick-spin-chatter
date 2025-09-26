@@ -136,9 +136,6 @@ export function RouletteModal({
     setShowStartButton(false);
     setIsRolling(true);
     setCurrentPendingWinner(null); // Clear any current selection
-    
-    // Force trigger a new roulette by updating a dependency
-    setTimeout(() => setIsRolling(false), 100);
   };
 
   // Handle reroll
