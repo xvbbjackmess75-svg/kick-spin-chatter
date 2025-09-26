@@ -61,6 +61,8 @@ export default function SlotsOverlayPage() {
 
     try {
       console.log('🔍 Fetching overlay settings for userId:', userId);
+      console.log('🔍 Current URL:', window.location.href);
+      console.log('🔍 Opened via window.open?', window.opener !== null);
       
       const { data, error } = await supabase
         .from('overlay_settings')
@@ -87,6 +89,8 @@ export default function SlotsOverlayPage() {
           show_borders: data.show_borders ?? true,
           animation_enabled: data.animation_enabled ?? true
         });
+      } else {
+        console.log('🚫 No overlay settings found for user:', userId);
       }
     } catch (error) {
       console.error("Error fetching overlay settings:", error);
