@@ -796,39 +796,105 @@ export default function SlotsCalls() {
       return;
     }
 
-    // Start the animation
+    // STEP 1: PREDETERMINE WINNERS IMMEDIATELY (never changes after this)
     const allNames = pendingCalls.map(call => call.viewer_username);
-    const shuffled = [...pendingCalls].sort(() => 0.5 - Math.random());
+    
+    // Use crypto.getRandomValues for better randomness
+    const randomBytes = new Uint32Array(pendingCalls.length);
+    crypto.getRandomValues(randomBytes);
+    
+    // Sort using predetermined random values (immutable)
+    const shuffled = [...pendingCalls].map((call, index) => ({
+      ...call,
+      randomValue: randomBytes[index]
+    })).sort((a, b) => a.randomValue - b.randomValue);
+    
     const selectedCalls = shuffled.slice(0, randomSelectionCount);
+    const callsToDelete = shuffled.slice(randomSelectionCount);
     const winnersNames = selectedCalls.map(call => call.viewer_username);
 
-    setAnimationNames(allNames);
+    console.log("🎲 PREDETERMINED WINNERS (FINAL):", {
+      totalCalls: pendingCalls.length,
+      selectedCount: randomSelectionCount,
+      winners: winnersNames,
+      eliminated: callsToDelete.map(c => c.viewer_username),
+      timestamp: Date.now()
+    });
+
+    // STEP 2: Lock the results in state (cannot be changed by user actions)
+    setAnimationNames([...allNames]); // Freeze snapshot
     setEliminatedNames(new Set());
-    setFinalWinners(winnersNames);
+    setFinalWinners([...winnersNames]); // Freeze snapshot
     setIsRandomSelectionDialogOpen(false);
     setIsAnimationModalOpen(true);
 
-    // Start elimination animation
-    startEliminationAnimation(allNames, winnersNames, selectedCalls, shuffled.slice(randomSelectionCount));
+    // STEP 3: Start animation with predetermined results
+    await startEliminationAnimation(allNames, winnersNames, selectedCalls, callsToDelete);
   };
 
   const startEliminationAnimation = async (allNames: string[], winners: string[], selectedCalls: any[], callsToDelete: any[]) => {
+    console.log("🎬 STARTING ANIMATION with locked results:", {
+      winners,
+      eliminatedCount: callsToDelete.length
+    });
+
     const losers = allNames.filter(name => !winners.includes(name));
     
-    // Eliminate losers one by one with animation
-    for (let i = 0; i < losers.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 400)); // Delay between eliminations
-      setEliminatedNames(prev => new Set([...prev, losers[i]]));
+    // ANIMATION PHASE: Visual only, results already locked
+    // User interactions during this phase cannot affect the outcome
+    let animationCompleted = false;
+    let skipped = false;
+
+    // Set up skip mechanism
+    const skipHandler = () => {
+      if (!animationCompleted) {
+        skipped = true;
+        setEliminatedNames(new Set(losers)); // Show final state immediately
+        console.log("⏭️ Animation skipped by user");
+      }
+    };
+
+    // Add global skip listener (ESC key or click)
+    const handleEscapeOrClick = (e: KeyboardEvent | MouseEvent) => {
+      if (e.type === 'keydown' && (e as KeyboardEvent).key === 'Escape') {
+        skipHandler();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeOrClick);
+    
+    try {
+      if (!skipped) {
+        // Eliminate losers one by one with animation
+        for (let i = 0; i < losers.length && !skipped; i++) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          if (!skipped) {
+            setEliminatedNames(prev => new Set([...prev, losers[i]]));
+          }
+        }
+
+        // Wait to show final winners (skippable)
+        if (!skipped) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      animationCompleted = true;
+    } finally {
+      // Cleanup listeners
+      document.removeEventListener('keydown', handleEscapeOrClick);
     }
 
-    // Wait a moment to show final winners
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Close animation and perform actual deletion
+    // EXECUTION PHASE: Apply the predetermined results
     setIsAnimationModalOpen(false);
     
     try {
-      // Delete the non-selected calls
+      console.log("💾 APPLYING PREDETERMINED RESULTS:", {
+        deletingIds: callsToDelete.map(call => call.id),
+        keepingWinners: winners
+      });
+
+      // Delete the non-selected calls (using locked predetermined results)
       const { error } = await supabase
         .from('slots_calls')
         .delete()
@@ -1749,12 +1815,25 @@ export default function SlotsCalls() {
       </div>
 
       {/* Random Selection Animation Modal */}
-      <Dialog open={isAnimationModalOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <Dialog 
+        open={isAnimationModalOpen} 
+        onOpenChange={() => {
+          // Prevent closing during animation - winners are already predetermined
+          console.log("🔒 Animation modal close prevented - results are locked");
+        }}
+      >
+        <DialogContent 
+          className="max-w-4xl max-h-[80vh] overflow-hidden select-none"
+          onPointerDown={(e) => e.preventDefault()} // Prevent text selection
+          style={{ userSelect: 'none', touchAction: 'none' }} // Prevent scrolling interference
+        >
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold text-primary">
               🎲 Random Selection in Progress...
             </DialogTitle>
+            <div className="text-center text-sm text-muted-foreground mt-2">
+              Winners are predetermined • Press ESC or click here to skip animation
+            </div>
           </DialogHeader>
           
           <div className="p-6">
@@ -1762,7 +1841,7 @@ export default function SlotsCalls() {
               <p className="text-lg mb-2">
                 Selecting {finalWinners.length} winners from {animationNames.length} participants
               </p>
-              <div className="w-full bg-secondary rounded-full h-2">
+              <div className="w-full bg-secondary rounded-full h-2 mb-4">
                 <div 
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ 
@@ -1770,9 +1849,32 @@ export default function SlotsCalls() {
                   }}
                 />
               </div>
+              
+              {/* Skip Animation Button */}
+              <Button
+                onClick={() => {
+                  // Skip to final results
+                  const losers = animationNames.filter(name => !finalWinners.includes(name));
+                  setEliminatedNames(new Set(losers));
+                  console.log("⏭️ Animation skipped manually");
+                }}
+                variant="outline"
+                size="sm"
+                className="mb-4"
+                disabled={eliminatedNames.size === animationNames.length - finalWinners.length}
+              >
+                ⏭️ Skip Animation
+              </Button>
             </div>
 
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-4 border rounded-lg bg-secondary/10">
+            {/* Results Grid - Scroll locked during animation */}
+            <div 
+              className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-4 border rounded-lg bg-secondary/10 scrollbar-hide"
+              onScroll={(e) => {
+                // Log scroll attempts but don't prevent (for accessibility)
+                console.log("📜 User scrolled during animation - results remain locked");
+              }}
+            >
               {animationNames.map((name, index) => {
                 const isEliminated = eliminatedNames.has(name);
                 const isWinner = finalWinners.includes(name);
@@ -1781,12 +1883,12 @@ export default function SlotsCalls() {
                   <div
                     key={`${name}-${index}`}
                     className={`
-                      p-3 rounded-lg border text-center font-semibold transition-all duration-500 transform
+                      p-3 rounded-lg border text-center font-semibold transition-all duration-500 transform pointer-events-none
                       ${isEliminated 
                         ? 'bg-red-500/20 border-red-500/30 text-red-400 scale-75 opacity-30 line-through' 
                         : isWinner && eliminatedNames.size === animationNames.length - finalWinners.length
                         ? 'bg-green-500/20 border-green-500/30 text-green-400 scale-110 animate-pulse shadow-lg' 
-                        : 'bg-primary/10 border-primary/30 text-primary hover:scale-105'
+                        : 'bg-primary/10 border-primary/30 text-primary'
                       }
                     `}
                   >
@@ -1803,12 +1905,15 @@ export default function SlotsCalls() {
             </div>
 
             {eliminatedNames.size === animationNames.length - finalWinners.length && (
-              <div className="text-center mt-6">
+              <div className="text-center mt-6 animate-fade-in">
                 <div className="text-2xl font-bold text-green-500 mb-2">
                   🎉 Congratulations to the Winners! 🎉
                 </div>
-                <div className="text-lg text-muted-foreground">
+                <div className="text-lg text-muted-foreground mb-4">
                   {finalWinners.join(', ')}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Selection complete! Applying results to database...
                 </div>
               </div>
             )}

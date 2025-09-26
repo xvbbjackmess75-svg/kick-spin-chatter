@@ -223,4 +223,14 @@ All colors MUST be HSL.
   .border-kick-green {
     border-color: hsl(var(--kick-green));
   }
+
+  /* Scrollbar utilities */
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }

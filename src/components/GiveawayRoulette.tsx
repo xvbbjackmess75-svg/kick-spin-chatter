@@ -118,7 +118,34 @@ export function GiveawayRoulette({
     setShowResult(false);
     setScrollPosition(0);
     
-    // Step 4: Calculate landing position using CURRENT container width (for animation only)
+    // Step 4: Add escape key listener for skipping
+    const handleSkip = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSpinning) {
+        console.log("⏭️ Animation skipped with ESC key");
+        skipToFinalResult();
+      }
+    };
+
+    const skipToFinalResult = () => {
+      setIsSpinning(false);
+      setShowResult(true);
+      
+      // Calculate final position immediately
+      const participantWidth = 80;
+      const actualContainerWidth = containerRef.current?.offsetWidth || 800;
+      const centerPosition = actualContainerWidth / 2;
+      const winnerIndex = participants.findIndex(p => p.username === result.winner.username);
+      const cycles = 25;
+      const targetIndex = (cycles * participants.length) + winnerIndex;
+      const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
+      
+      setScrollPosition(targetPosition);
+      setLockedIndicatorPosition(centerPosition);
+    };
+
+    document.addEventListener('keydown', handleSkip);
+    
+    // Step 5: Calculate landing position using CURRENT container width (for animation only)
     const calculateAndAnimate = () => {
       const participantWidth = 80;
       
@@ -131,6 +158,7 @@ export function GiveawayRoulette({
       
       if (winnerIndex === -1) {
         console.error("❌ CRITICAL ERROR: Winner not found in participants array!");
+        document.removeEventListener('keydown', handleSkip);
         return;
       }
       
@@ -148,24 +176,28 @@ export function GiveawayRoulette({
       
       // Animate to winner
       setTimeout(() => {
-        setScrollPosition(targetPosition);
+        if (isSpinning) { // Only animate if not skipped
+          setScrollPosition(targetPosition);
+        }
       }, 100);
       
       // Show final result and LOCK positions
       setTimeout(() => {
-        setIsSpinning(false);
-        setShowResult(true);
-        
-        // LOCK the indicator position at the current center
-        const currentCenterPosition = actualContainerWidth / 2;
-        setLockedIndicatorPosition(currentCenterPosition);
-        
-        console.log("✅ FINAL RESULT LOCKED:", {
-          winner: result.winner.username,
-          scrollPosition: targetPosition,
-          lockedIndicatorPosition: currentCenterPosition,
-          containerWidth: actualContainerWidth
-        });
+        if (isSpinning) { // Only complete if not skipped
+          setIsSpinning(false);
+          setShowResult(true);
+          
+          // LOCK the indicator position at the current center
+          setLockedIndicatorPosition(centerPosition);
+          
+          console.log("✅ FINAL RESULT LOCKED:", {
+            winner: result.winner.username,
+            scrollPosition: targetPosition,
+            lockedIndicatorPosition: centerPosition,
+            containerWidth: actualContainerWidth
+          });
+        }
+        document.removeEventListener('keydown', handleSkip);
       }, 4000);
     };
     
@@ -257,13 +289,24 @@ export function GiveawayRoulette({
           />
           
           {/* Scrolling container */}
-          <div ref={containerRef} className="relative h-32">
+          <div 
+            ref={containerRef} 
+            className="relative h-32 overflow-hidden"
+            style={{ touchAction: 'none' }} // Prevent touch scrolling interference
+            onWheel={(e) => {
+              if (isSpinning || isResultLocked) {
+                e.preventDefault(); // Block scroll during animation
+                console.log("🚫 Scroll blocked during locked animation");
+              }
+            }}
+          >
             <div 
-              className="flex absolute top-0 h-full"
+              className="flex absolute top-0 h-full pointer-events-none"
               style={{ 
                 transform: `translateX(-${scrollPosition}px)`,
                 width: `${extendedParticipants.length * 80}px`,
-                transition: isSpinning ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none'
+                transition: isSpinning ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
+                userSelect: 'none'
               }}
             >
               {extendedParticipants.map((participant) => (
@@ -305,6 +348,38 @@ export function GiveawayRoulette({
           <div className="absolute top-0 left-0 w-16 h-full bg-gradient-to-r from-kick-dark to-transparent pointer-events-none z-10" />
           <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-kick-dark to-transparent pointer-events-none z-10" />
         </div>
+
+        {/* Animation Controls */}
+        {isSpinning && (
+          <div className="text-center py-4">
+            <Button
+              onClick={() => {
+                console.log("⏭️ Animation skipped manually");
+                setIsSpinning(false);
+                setShowResult(true);
+                
+                // Calculate and set final position
+                const participantWidth = 80;
+                const actualContainerWidth = containerRef.current?.offsetWidth || 800;
+                const centerPosition = actualContainerWidth / 2;
+                const winnerIndex = participants.findIndex(p => p.username === selectedWinner?.username);
+                const cycles = 25;
+                const targetIndex = (cycles * participants.length) + winnerIndex;
+                const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
+                
+                setScrollPosition(targetPosition);
+                setLockedIndicatorPosition(centerPosition);
+              }}
+              variant="outline"
+              size="sm"
+            >
+              ⏭️ Skip Animation (ESC)
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Winner is already predetermined • Press ESC or click to skip
+            </p>
+          </div>
+        )}
 
         {/* Winner Actions */}
         {showResult && selectedWinner && (
