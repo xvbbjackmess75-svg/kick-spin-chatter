@@ -40,7 +40,7 @@ export function PageHeader({ showAuthButtons = true }: PageHeaderProps) {
               </div>
             </div>
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              KickBot
+              KickHelper
             </span>
           </div>
 

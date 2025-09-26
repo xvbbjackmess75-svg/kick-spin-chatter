@@ -118,7 +118,7 @@ export default function Landing() {
               </div>
             </div>
             <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              KickBot
+              KickHelper
             </h1>
           </div>
           
@@ -275,7 +275,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold text-foreground mb-4">
-              Why Casino Streamers Choose KickBot
+              Why Casino Streamers Choose KickHelper
             </h3>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Built specifically for gambling streamers who want professional tools 
@@ -315,7 +315,7 @@ export default function Landing() {
                 Ready to Revolutionize Your Casino Streams?
               </h3>
               <p className="text-lg text-muted-foreground mb-8">
-                Join hundreds of casino streamers using KickBot to create engaging content and build their communities.
+                Join hundreds of casino streamers using KickHelper to create engaging content and build their communities.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 

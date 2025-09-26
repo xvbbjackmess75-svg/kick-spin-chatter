@@ -63,7 +63,7 @@ export function AppSidebar() {
             </div>
             {!collapsed && (
               <div>
-                <h2 className="text-lg font-bold text-foreground">KickBot</h2>
+                <h2 className="text-lg font-bold text-foreground">KickHelper</h2>
                 <p className="text-xs text-muted-foreground">Pro</p>
               </div>
             )}
