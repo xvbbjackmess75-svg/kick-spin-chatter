@@ -169,15 +169,40 @@ serve(async (req) => {
   
   let kickSocket: WebSocket | null = null;
   let isConnected = false;
+  let heartbeatInterval: number | null = null;
+
+  // Set up server-side heartbeat to keep connection alive
+  const startHeartbeat = () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
+    heartbeatInterval = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'server_ping' }));
+      } else {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
+      }
+    }, 25000); // Send ping every 25 seconds (within Supabase's 30s timeout)
+  };
 
   socket.onopen = () => {
     console.log("Client connected to Kick chat monitor");
+    startHeartbeat(); // Start heartbeat when client connects
   };
 
   socket.onmessage = async (event) => {
     try {
       const data = JSON.parse(event.data);
       console.log("Received from client:", data);
+
+      // Handle ping/pong for heartbeat
+      if (data.type === 'ping') {
+        socket.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
 
       if (data.type === 'join_channel') {
         const { channelName, token, source } = data;
@@ -319,6 +344,10 @@ serve(async (req) => {
 
   socket.onclose = () => {
     console.log("Client disconnected");
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
     if (kickSocket) {
       kickSocket.close();
     }
