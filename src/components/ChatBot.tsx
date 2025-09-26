@@ -35,12 +35,52 @@ export function ChatBot() {
   // True status: both active in DB AND connected
   const actualStatus = isActiveInDb && isConnected;
   
-  const handleRestart = async () => {
+  const handleStart = async () => {
     await startAutoMonitoring();
+    toast({
+      title: "Starting Chat Monitor",
+      description: "Initializing command processing and chat monitoring...",
+    });
     // Refresh status after a moment
     setTimeout(() => {
       checkMonitoringStatus();
-    }, 2000);
+    }, 3000);
+  };
+
+  const handleStop = async () => {
+    try {
+      // Import supabase
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Stop auto-monitor using the edge function
+      const response = await supabase.functions.invoke('kick-auto-monitor', {
+        body: {
+          action: 'stop_monitoring',
+          user_id: kickUser?.id || 'unknown'
+        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      toast({
+        title: "Chat Monitor Stopped",
+        description: "All monitoring has been disabled",
+      });
+      
+      // Refresh status
+      setTimeout(() => {
+        checkMonitoringStatus();
+      }, 1000);
+    } catch (error) {
+      console.error('Error stopping monitor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to stop chat monitor",
+        variant: "destructive"
+      });
+    }
   };
 
   const getUptime = () => {
@@ -123,32 +163,48 @@ export function ChatBot() {
       {/* Always-On Status Panel */}
       <Card className="gaming-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-kick-green" />
-            Chat Monitor
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-kick-green" />
+              Chat Monitor
+            </div>
             <div className="flex items-center gap-2">
               <Badge 
                 className={
                   actualStatus 
                     ? "bg-kick-green/20 text-kick-green border-kick-green/30"
                     : isActiveInDb
-                    ? "bg-red-500/20 text-red-500 border-red-500/30"
+                    ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
                     : "bg-red-500/20 text-red-500 border-red-500/30"
                 }
               >
                 <div className={`w-2 h-2 rounded-full mr-2 ${
-                  actualStatus ? 'bg-kick-green animate-pulse' : 'bg-red-500'
+                  actualStatus ? 'bg-kick-green animate-pulse' : 
+                  isActiveInDb ? 'bg-yellow-500 animate-pulse' : 
+                  'bg-red-500'
                 }`} />
-                {actualStatus ? "Connected" : "Disconnected"}
+                {actualStatus ? "Active" : isActiveInDb ? "Starting..." : "Stopped"}
               </Badge>
-              {isActiveInDb && !isConnected && (
+              
+              {actualStatus ? (
                 <Button 
-                  onClick={handleRestart}
+                  onClick={handleStop}
                   variant="outline" 
                   size="sm"
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-3 text-xs"
                 >
-                  Restart
+                  <Square className="h-3 w-3 mr-1" />
+                  Stop
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleStart}
+                  variant="outline" 
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                >
+                  <Play className="h-3 w-3 mr-1" />
+                  Start
                 </Button>
               )}
             </div>
@@ -214,10 +270,10 @@ export function ChatBot() {
           {/* Info */}
           <div className="mt-6 space-y-2">
             <div className="text-sm text-muted-foreground">
-              🤖 <strong>Always-On Mode:</strong> The chat monitor automatically processes commands 24/7. No manual intervention required!
+              🤖 <strong>Unified Monitor:</strong> One button controls all chat monitoring - command processing and real-time display.
             </div>
             <div className="text-sm text-muted-foreground">
-              🎰 <strong>Slot Calls:</strong> Any viewer can use !kgs [slot_name] to join active slots events on this channel.
+              🎰 <strong>Slot Calls:</strong> When active, viewers can use !kgs [slot_name] to join slots events on this channel.
             </div>
           </div>
         </CardContent>
@@ -229,13 +285,13 @@ export function ChatBot() {
           <div className="flex items-start gap-3">
             <Bot className="h-5 w-5 text-kick-green mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-foreground">Chat Monitor Features</p>
+              <p className="text-sm font-medium text-foreground">Unified Chat Monitor</p>
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                <li>• <strong>24/7 Monitoring:</strong> Automatically started when you link your Kick account</li>
-                <li>• <strong>Instant Processing:</strong> Commands are processed immediately without delays</li>
-                <li>• <strong>Slot Calls (!kgs):</strong> Anyone can join slots events - no registration required</li>
+                <li>• <strong>Single Control:</strong> Start/Stop button manages all monitoring aspects</li>
+                <li>• <strong>Command Processing:</strong> Automatically processes !kgs and other commands</li>
+                <li>• <strong>Real-time Display:</strong> Shows live chat activity and responses</li>
                 <li>• <strong>Permission System:</strong> Respects viewer, subscriber, moderator, and owner levels</li>
-                <li>• <strong>Background Processing:</strong> Runs continuously without affecting your stream</li>
+                <li>• <strong>Status Clarity:</strong> Clear indicators show exactly what's running</li>
               </ul>
             </div>
           </div>
