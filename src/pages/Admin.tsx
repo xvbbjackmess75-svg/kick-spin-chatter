@@ -132,15 +132,11 @@ export default function Admin() {
     try {
       // Use the admin edge function to update user role
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        body: { 
           action: 'update-role',
           userId: userId,
           role: newRole 
-        })
+        }
       });
 
       if (error) throw error;
