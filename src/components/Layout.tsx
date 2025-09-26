@@ -168,15 +168,16 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation Header */}
-      <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="h-full max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
+      <header className="h-16 border-b border-border/50 bg-card/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <div className="h-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between">
           {/* Logo and Mobile Menu */}
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden p-2">
+                <Button variant="ghost" size="sm" className="md:hidden p-2 hover:bg-muted/50">
                   <Menu className="h-5 w-5" />
+                  <span className="sr-only">Open navigation menu</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
@@ -226,12 +227,15 @@ export function Layout({ children }: LayoutProps) {
               </SheetContent>
             </Sheet>
 
-            <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
-              Kick Helper Dashboard
-            </h1>
+            <Link to="/dashboard" className="flex items-center">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-kick-green to-kick-purple bg-clip-text text-transparent">
+                <span className="hidden sm:inline">Kick Helper Dashboard</span>
+                <span className="sm:hidden">Kick Helper</span>
+              </h1>
+            </Link>
             
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1">
+            {/* Desktop Navigation Links - Show on medium and larger screens */}
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -245,7 +249,7 @@ export function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="hidden lg:inline">{item.label}</span>
                   </Link>
                 );
               })}
@@ -254,9 +258,10 @@ export function Layout({ children }: LayoutProps) {
           
           {/* Right Side - Status and User */}
           <div className="flex items-center gap-2 md:gap-4">
-            <Badge variant="outline" className="text-kick-green border-kick-green/30 hidden sm:flex">
+            <Badge variant="outline" className="text-kick-green border-kick-green/30 hidden sm:flex text-xs">
               <div className="w-2 h-2 bg-kick-green rounded-full mr-2 animate-pulse" />
-              Bot Online
+              <span className="hidden md:inline">Bot Online</span>
+              <span className="md:hidden">Online</span>
             </Badge>
             
             {/* Desktop User Menu */}
