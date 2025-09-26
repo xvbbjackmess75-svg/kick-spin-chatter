@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
   const [testUsername, setTestUsername] = useState("");
   const [bulkCount, setBulkCount] = useState(50);
   const [isAddingBulk, setIsAddingBulk] = useState(false);
+  const executionRef = useRef(false); // Track execution state
   const { toast } = useToast();
 
   const addTestCall = async () => {
@@ -71,32 +72,29 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
     }
   };
 
-  const addBulkTestCalls = async () => {
-    // Immediate check to prevent double execution
-    if (!selectedEvent || bulkCount < 1 || isAddingBulk) {
-      if (isAddingBulk) {
-        console.log("🚫 Bulk add already in progress - preventing duplicate execution");
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Please enter a valid number of test calls",
-        variant: "destructive"
+  const addBulkTestCalls = useCallback(async () => {
+    // TRIPLE PROTECTION: Check multiple conditions to prevent any possible double execution
+    if (!selectedEvent || bulkCount < 1 || isAddingBulk || executionRef.current) {
+      console.log("🚫 BLOCKED: Conditions check failed", {
+        hasEvent: !!selectedEvent,
+        validCount: bulkCount >= 1,
+        notAddingBulk: !isAddingBulk,
+        notExecuting: !executionRef.current,
+        timestamp: Date.now()
       });
       return;
     }
 
-    // Set loading state IMMEDIATELY to prevent race conditions
+    // Set ALL protection flags IMMEDIATELY
     setIsAddingBulk(true);
+    executionRef.current = true;
     
-    console.log(`🎯 STARTING bulk add: ${bulkCount} test calls at ${Date.now()}`);
+    console.log(`🎯 EXECUTION STARTED: ${bulkCount} test calls at ${Date.now()}`);
     
-    
-    // Generate a unique execution ID to prevent any duplicates
+    // Generate a unique execution ID for tracking
     const executionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🎯 EXECUTION ID: ${executionId}`);
+    console.log(`🆔 EXECUTION ID: ${executionId}`);
 
-    
     try {
       const slotNames = [
         "Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Reactoonz",
@@ -111,9 +109,9 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         "SlotLover", "FortuneFinder", "WinStreaker", "BetMaster", "ReelKing"
       ];
 
-      // Generate unique timestamp for this batch to prevent duplicates
+      // Create batch with execution ID for absolute uniqueness
       const batchTimestamp = Date.now();
-      console.log(`📦 Creating batch ${batchTimestamp} with ${bulkCount} calls`);
+      console.log(`📦 CREATING BATCH: ${executionId} with ${bulkCount} calls`);
 
       const calls = [];
       for (let i = 0; i < bulkCount; i++) {
@@ -123,14 +121,14 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         calls.push({
           event_id: selectedEvent.id,
           viewer_username: randomUser,
-          viewer_kick_id: `bulk_test_${batchTimestamp}_${i}`, // Use batch timestamp for uniqueness
+          viewer_kick_id: `${executionId}_${i}`, // Use execution ID for absolute uniqueness
           slot_name: randomSlot,
           bet_amount: selectedEvent.bet_size,
           status: 'pending'
         });
       }
 
-      console.log(`📋 Generated ${calls.length} calls for batch ${batchTimestamp}`);
+      console.log(`📋 GENERATED: ${calls.length} calls for execution ${executionId}`);
 
       // Get starting call order
       const { data: orderData } = await supabase
@@ -143,35 +141,38 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         call.call_order = startOrder + index;
       });
 
-      // Insert all calls at once
-      const { error } = await supabase
+      // Single database insert
+      const { error, data } = await supabase
         .from('slots_calls')
-        .insert(calls);
+        .insert(calls)
+        .select();
 
       if (error) throw error;
 
-      console.log(`✅ Successfully inserted ${calls.length} calls for batch ${batchTimestamp}`);
+      console.log(`✅ DATABASE INSERT SUCCESSFUL: ${data?.length || calls.length} calls inserted for execution ${executionId}`);
 
       toast({
         title: "✅ Bulk Test Calls Added",
-        description: `Added ${bulkCount} random test calls successfully! (Batch: ${batchTimestamp})`,
+        description: `Successfully added ${calls.length} test calls (ID: ${executionId.slice(-6)})`,
       });
 
       setIsOpen(false);
       onCallAdded();
 
     } catch (error) {
-      console.error("Error adding bulk test calls:", error);
+      console.error(`❌ EXECUTION FAILED: ${executionId}`, error);
       toast({
         title: "Error",
         description: `Failed to add bulk test calls: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
-      console.log(`🏁 COMPLETED bulk add operation at ${Date.now()}`);
+      console.log(`🏁 EXECUTION COMPLETED: ${executionId} at ${Date.now()}`);
+      // Reset ALL protection flags
       setIsAddingBulk(false);
+      executionRef.current = false;
     }
-  };
+  }, [selectedEvent, bulkCount, isAddingBulk, toast, onCallAdded]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
