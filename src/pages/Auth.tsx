@@ -104,10 +104,8 @@ export default function Auth() {
 
         console.log('✅ Viewer login - roles cleaned up, only viewer role remains');
         
-        // Navigate to dashboard without full page reload
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 500);
+        // Navigate to dashboard
+        navigate('/dashboard');
       } else {
         navigate('/dashboard');
       }
