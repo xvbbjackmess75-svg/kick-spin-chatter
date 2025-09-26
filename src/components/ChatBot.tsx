@@ -26,7 +26,7 @@ interface CommandProcessed {
 export function ChatBot() {
   const { toast } = useToast();
   const { kickUser, canUseChatbot } = useKickAccount();
-  const { monitorStatus, isLoading, isActive, checkMonitoringStatus } = useAutoMonitor();
+  const { monitorStatus, isLoading, isActive, checkMonitoringStatus, startAutoMonitoring } = useAutoMonitor();
   
   // Check if monitor is actually connected (not just database status)
   const isConnected = monitorStatus?.is_connected || false;
@@ -34,6 +34,14 @@ export function ChatBot() {
   
   // True status: both active in DB AND connected
   const actualStatus = isActiveInDb && isConnected;
+  
+  const handleRestart = async () => {
+    await startAutoMonitoring();
+    // Refresh status after a moment
+    setTimeout(() => {
+      checkMonitoringStatus();
+    }, 2000);
+  };
 
   const getUptime = () => {
     if (!monitorStatus?.started_at) return "0m";
@@ -118,22 +126,32 @@ export function ChatBot() {
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-kick-green" />
             Auto ChatBot Monitor
-            <Badge 
-              className={
-                actualStatus 
-                  ? "bg-kick-green/20 text-kick-green border-kick-green/30"
-                  : isActiveInDb
-                  ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                  : "bg-red-500/20 text-red-500 border-red-500/30"
-              }
-            >
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                actualStatus ? 'bg-kick-green animate-pulse' : 
-                isActiveInDb ? 'bg-yellow-500 animate-pulse' : 
-                'bg-red-500'
-              }`} />
-              {actualStatus ? "Connected" : isActiveInDb ? "Connecting..." : "Disconnected"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge 
+                className={
+                  actualStatus 
+                    ? "bg-kick-green/20 text-kick-green border-kick-green/30"
+                    : isActiveInDb
+                    ? "bg-red-500/20 text-red-500 border-red-500/30"
+                    : "bg-red-500/20 text-red-500 border-red-500/30"
+                }
+              >
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  actualStatus ? 'bg-kick-green animate-pulse' : 'bg-red-500'
+                }`} />
+                {actualStatus ? "Connected" : "Disconnected"}
+              </Badge>
+              {isActiveInDb && !isConnected && (
+                <Button 
+                  onClick={handleRestart}
+                  variant="outline" 
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Restart
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
