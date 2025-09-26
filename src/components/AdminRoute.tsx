@@ -9,7 +9,12 @@ interface AdminRouteProps {
 export function AdminRoute({ children }: AdminRouteProps) {
   const { isAdmin, loading, role } = useUserRole();
 
-  console.log('🔧 AdminRoute check:', { loading, role, isAdmin: isAdmin(), timestamp: Date.now() });
+  console.log('🔧 AdminRoute check:', {
+    loading,
+    role,
+    isAdmin: isAdmin(),
+    timestamp: Date.now()
+  });
 
   if (loading) {
     return (
