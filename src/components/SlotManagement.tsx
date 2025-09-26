@@ -101,32 +101,43 @@ export const SlotManagement = () => {
 
   const deleteAllSlots = async () => {
     try {
-      // First get all slot IDs to ensure we have permission to delete them
-      const { data: allSlots, error: fetchError } = await supabase
-        .from('slots')
-        .select('id');
+      // Use a more efficient approach - delete in batches of 1000
+      let deletedCount = 0;
+      let hasMore = true;
       
-      if (fetchError) throw fetchError;
-      
-      if (!allSlots || allSlots.length === 0) {
-        toast({
-          title: "No slots to delete",
-          description: "There are no slots in the database."
-        });
-        return;
+      while (hasMore) {
+        // Get a batch of slot IDs (limit to 1000 to avoid URL length issues)
+        const { data: batchSlots, error: fetchError } = await supabase
+          .from('slots')
+          .select('id')
+          .limit(1000);
+        
+        if (fetchError) throw fetchError;
+        
+        if (!batchSlots || batchSlots.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        // Delete this batch
+        const { error: deleteError } = await supabase
+          .from('slots')
+          .delete()
+          .in('id', batchSlots.map(slot => slot.id));
+
+        if (deleteError) throw deleteError;
+        
+        deletedCount += batchSlots.length;
+        
+        // If we got less than 1000, we're done
+        if (batchSlots.length < 1000) {
+          hasMore = false;
+        }
       }
-
-      // Delete all slots
-      const { error } = await supabase
-        .from('slots')
-        .delete()
-        .in('id', allSlots.map(slot => slot.id));
-
-      if (error) throw error;
 
       toast({
         title: "All slots deleted",
-        description: "All slots have been successfully removed from the database."
+        description: `Successfully deleted ${deletedCount} slots from the database.`
       });
 
       queryClient.invalidateQueries({ queryKey: ['admin-slots'] });
