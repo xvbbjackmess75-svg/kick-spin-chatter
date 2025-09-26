@@ -1288,9 +1288,15 @@ export default function SlotsCalls() {
                     {selectedEvent.status === 'active' && (
                       <>
                         <div className="flex items-center gap-2 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${monitorStatus?.is_active ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-2 h-2 rounded-full ${
+                            monitorStatus?.is_active && chatConnected ? 'bg-green-500 animate-pulse' : 
+                            monitorStatus?.is_active ? 'bg-yellow-500 animate-pulse' : 
+                            'bg-red-500'
+                          }`}></div>
                           <span className="text-muted-foreground">
-                            {monitorStatus?.is_active ? `Auto-Monitor Active (${chatConnected ? 'Chat Connected' : 'Chat Disconnected'})` : 'Auto-Monitor Stopped'}
+                            {monitorStatus?.is_active && chatConnected ? 'Monitor Active' : 
+                             monitorStatus?.is_active ? 'Monitor Starting...' : 
+                             'Monitor Stopped'}
                           </span>
                         </div>
                         <div className="flex gap-2">
