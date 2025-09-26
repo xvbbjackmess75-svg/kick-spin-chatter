@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { LinkKickAccount } from '@/components/LinkKickAccount';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Mail, Save, LogOut, ArrowLeft, Crown, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -107,6 +108,18 @@ export default function Account() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Profile Picture */}
+          <Card className="gaming-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Profile Picture
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AvatarUpload currentAvatar={profile?.custom_avatar_url} />
+            </CardContent>
+          </Card>
           {/* Profile Information */}
           <Card className="gaming-card">
             <CardHeader>

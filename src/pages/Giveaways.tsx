@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
+import { getBestAvatar } from "@/lib/avatarUtils";
 import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { 
   Plus, 
@@ -563,19 +564,25 @@ export default function Giveaways() {
       // Fetch verification status for each participant
       const participantsWithVerification = await Promise.all(
         (data || []).map(async (p, index) => {
-          // Check if the participant has both Kick and Discord linked
+          // Check if the participant has both Kick and Discord linked + get custom avatar
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id')
+            .select('linked_kick_user_id, linked_discord_user_id, custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
             .single();
           
           const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
           
+          // Use avatar utility to get best available avatar
+          const avatar = getBestAvatar({
+            customAvatar: profileData?.custom_avatar_url,
+            kickUsername: p.kick_username
+          });
+          
           return {
             id: index,
             username: p.kick_username,
-            avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`,
+            avatar,
             isVerified
           };
         })
@@ -822,19 +829,25 @@ export default function Giveaways() {
 
       const mappedParticipants: RouletteParticipant[] = await Promise.all(
         availableParticipants.map(async (p, index) => {
-          // Check if the participant has both Kick and Discord linked
+          // Check if the participant has both Kick and Discord linked + get custom avatar
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id')
+            .select('linked_kick_user_id, linked_discord_user_id, custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
             .single();
           
           const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
           
+          // Use avatar utility to get best available avatar
+          const avatar = getBestAvatar({
+            customAvatar: profileData?.custom_avatar_url,
+            kickUsername: p.kick_username
+          });
+          
           return {
             id: index + 1,
             username: p.kick_username,
-            avatar: `https://files.kick.com/images/user/${p.kick_username}/profile_image/conversion/300x300-medium.webp`,
+            avatar,
             isVerified
           };
         })

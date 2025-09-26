@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getBestAvatar, getUserInitials } from "@/lib/avatarUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -64,21 +65,41 @@ export function Layout({ children }: LayoutProps) {
     
     if (kickUser?.authenticated) {
       console.log('📱 Layout using Kick user:', kickUser);
+      const avatarInfo = getBestAvatar({
+        customAvatar: profile?.custom_avatar_url,
+        kickAvatar: kickUser.avatar,
+        kickUsername: kickUser.username
+      });
+      const initials = getUserInitials({
+        displayName: kickUser.display_name,
+        username: kickUser.username
+      });
+      
       return {
         username: kickUser.username,
         displayName: kickUser.display_name || kickUser.username,
-        avatar: kickUser.avatar,
-        initials: kickUser.username?.slice(0, 2).toUpperCase() || 'KU'
+        avatar: avatarInfo,
+        initials
       };
     } else if (user) {
       // Use profile display_name if available, otherwise fall back to email
       const displayName = profile?.display_name || user.email?.split('@')[0] || 'User';
-      console.log('👤 Layout using Supabase user:', { displayName, avatar: profile?.avatar_url });
+      const avatarInfo = getBestAvatar({
+        customAvatar: profile?.custom_avatar_url,
+        kickAvatar: profile?.avatar_url
+      });
+      const initials = getUserInitials({
+        displayName,
+        username: user.email?.split('@')[0],
+        email: user.email
+      });
+      
+      console.log('👤 Layout using Supabase user:', { displayName, avatar: avatarInfo });
       return {
         username: user.email?.split('@')[0] || 'User',
         displayName: displayName,
-        avatar: profile?.avatar_url || null,
-        initials: displayName.slice(0, 2).toUpperCase() || 'U'
+        avatar: avatarInfo,
+        initials
       };
     }
     return {

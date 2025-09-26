@@ -658,6 +658,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          custom_avatar_url: string | null
           display_name: string | null
           id: string
           is_kick_hybrid: boolean | null
@@ -678,6 +679,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          custom_avatar_url?: string | null
           display_name?: string | null
           id?: string
           is_kick_hybrid?: boolean | null
@@ -698,6 +700,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          custom_avatar_url?: string | null
           display_name?: string | null
           id?: string
           is_kick_hybrid?: boolean | null

@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHybridAuth } from "@/hooks/useHybridAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
+import { getBestAvatar } from "@/lib/avatarUtils";
+import { WinnerAvatar } from "@/components/WinnerAvatar";
 import { KickAccountGuard } from "@/components/KickAccountGuard";
 import { 
   Trophy, 
@@ -374,18 +376,10 @@ export default function History() {
                                     <div className="w-8 h-8 bg-kick-green/20 rounded-full flex items-center justify-center text-kick-green font-bold text-sm">
                                       #{index + 1}
                                     </div>
-                                    <Avatar className="w-12 h-12 border-2 border-kick-green/30">
-                                      <AvatarImage 
-                                        src={`https://files.kick.com/images/user/${winner.winner_username}/profile_image/conversion/300x300-medium.webp`}
-                                        alt={winner.winner_username}
-                                        onError={(e) => {
-                                          e.currentTarget.src = '/placeholder-avatar.jpg';
-                                        }}
-                                      />
-                                      <AvatarFallback className="bg-kick-green text-kick-dark font-bold">
-                                        {winner.winner_username.slice(0, 2).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
+                                    <WinnerAvatar 
+                                      username={winner.winner_username}
+                                      size="md"
+                                    />
                                   </div>
                                   <div>
                                     <h6 className="font-semibold text-foreground">

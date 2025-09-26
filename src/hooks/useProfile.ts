@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
@@ -13,6 +13,7 @@ interface Profile {
   is_streamer: boolean;
   created_at: string;
   updated_at: string;
+  custom_avatar_url?: string;
 }
 
 export function useProfile() {

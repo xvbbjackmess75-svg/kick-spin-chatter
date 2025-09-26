@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getBestAvatar, getUserInitials } from '@/lib/avatarUtils';
 import { useKickAccount } from '@/hooks/useKickAccount';
 import { 
   ExternalLink, 
@@ -135,7 +136,10 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <img 
-                src={kickUser?.avatar || '/placeholder-avatar.jpg'} 
+                src={getBestAvatar({
+                  customAvatar: null, // KickAccountGuard doesn't have access to profile custom avatar
+                  kickUsername: kickUser?.username
+                }) || '/placeholder-avatar.jpg'} 
                 alt={kickUser?.username}
                 className="w-12 h-12 rounded-full border-2 border-kick-green/30"
                 onLoad={() => {
@@ -143,11 +147,7 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
                 }}
                 onError={(e) => {
                   console.error('❌ Avatar failed to load:', kickUser?.avatar);
-                  // Try fallback avatar URL
-                  const fallbackUrl = kickUser?.username 
-                    ? `https://files.kick.com/images/user/${kickUser.username}/profile_image/conversion/150x150-small.webp`
-                    : '/placeholder-avatar.jpg';
-                  e.currentTarget.src = fallbackUrl;
+                  e.currentTarget.src = '/placeholder-avatar.jpg';
                 }}
               />
               <div>
