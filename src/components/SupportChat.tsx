@@ -198,6 +198,8 @@ export function SupportChat() {
     return null;
   }
 
+  console.log('SupportChat: User detected:', user.id, 'Email:', user.email);
+
   return (
     <>
       {/* Floating Button */}
