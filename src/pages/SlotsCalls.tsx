@@ -1364,7 +1364,7 @@ export default function SlotsCalls() {
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3">
                     {selectedEvent.status === 'active' && (
                       <>
                         <div className="flex items-center gap-2 text-sm">
@@ -1381,7 +1381,8 @@ export default function SlotsCalls() {
                             </span>
                           )}
                         </div>
-                        <div className="flex gap-2">
+                        
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             onClick={monitorStatus?.is_active ? () => stopMonitoring() : initializeMonitoring}
                             variant={monitorStatus?.is_active ? "destructive" : "default"}
@@ -1473,8 +1474,8 @@ export default function SlotsCalls() {
                           </Button>
                         </div>
                         
-                        {/* Test Call Section - Positioned below action buttons */}
-                        <div className="mt-3">
+                        {/* Test Call Section - Positioned below on new line */}
+                        <div className="flex">
                           <TestCallDialog 
                             selectedEvent={selectedEvent}
                             onCallAdded={() => fetchCalls(selectedEvent.id)}
