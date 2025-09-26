@@ -76,6 +76,10 @@ export default function SlotsCalls() {
   // Persistent monitoring state
   const [monitoringTimer, setMonitoringTimer] = useState<NodeJS.Timeout | null>(null);
   
+  // Random selection states
+  const [randomSelectionCount, setRandomSelectionCount] = useState(10);
+  const [isRandomSelectionDialogOpen, setIsRandomSelectionDialogOpen] = useState(false);
+  
   // Overlay customization states
   const [overlaySettings, setOverlaySettings] = useState({
     background_color: 'rgba(0, 0, 0, 0.95)',
@@ -729,6 +733,75 @@ export default function SlotsCalls() {
     }
   };
 
+  const performRandomSelection = async () => {
+    if (!selectedEvent || !randomSelectionCount) {
+      toast({
+        title: "Error",
+        description: "Please specify the number of calls to randomly select",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pendingCalls = calls.filter(call => call.status === 'pending');
+    
+    if (pendingCalls.length === 0) {
+      toast({
+        title: "No Pending Calls",
+        description: "There are no pending calls to select from",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pendingCalls.length <= randomSelectionCount) {
+      toast({
+        title: "Selection Not Needed",
+        description: `You have ${pendingCalls.length} pending calls, which is already ${randomSelectionCount <= pendingCalls.length ? 'equal to or ' : ''}less than your selection of ${randomSelectionCount}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Randomly select calls
+      const shuffled = [...pendingCalls].sort(() => 0.5 - Math.random());
+      const selectedCalls = shuffled.slice(0, randomSelectionCount);
+      const callsToDelete = shuffled.slice(randomSelectionCount);
+
+      console.log(`🎲 Randomly selecting ${selectedCalls.length} calls from ${pendingCalls.length} total`);
+      console.log('Selected calls:', selectedCalls.map(c => c.viewer_username));
+      console.log('Calls to delete:', callsToDelete.map(c => c.viewer_username));
+
+      // Delete the non-selected calls
+      const { error } = await supabase
+        .from('slots_calls')
+        .delete()
+        .in('id', callsToDelete.map(call => call.id));
+
+      if (error) throw error;
+
+      toast({
+        title: "🎲 Random Selection Complete!",
+        description: `Selected ${selectedCalls.length} random calls out of ${pendingCalls.length}. Removed ${callsToDelete.length} calls.`,
+      });
+
+      setIsRandomSelectionDialogOpen(false);
+      
+      // Refresh the calls list
+      if (selectedEvent) {
+        fetchCalls(selectedEvent.id);
+      }
+    } catch (error) {
+      console.error("Error performing random selection:", error);
+      toast({
+        title: "Error",
+        description: "Failed to perform random selection",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getWinner = () => {
     const completedCalls = calls.filter(call => call.status === 'completed' && call.multiplier);
     if (completedCalls.length === 0) return null;
@@ -1062,10 +1135,11 @@ export default function SlotsCalls() {
                     id="maxCalls"
                     type="number"
                     min="1"
-                    max="10"
+                    max="5000"
                     value={maxCallsPerUser}
                     onChange={(e) => setMaxCallsPerUser(parseInt(e.target.value) || 1)}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum: 5000 calls per user</p>
                 </div>
                 <div>
                   <Label htmlFor="betSize">Bet Size ($)</Label>
@@ -1238,6 +1312,70 @@ export default function SlotsCalls() {
                               </>
                             )}
                           </Button>
+                          
+                          {/* Random Selection Button */}
+                          {calls.filter(call => call.status === 'pending').length > 1 && (
+                            <Dialog open={isRandomSelectionDialogOpen} onOpenChange={setIsRandomSelectionDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gaming-button"
+                                >
+                                  🎲 Random Select
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Random Selection</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="p-4 bg-secondary/20 rounded-lg">
+                                    <div className="text-sm text-muted-foreground mb-2">
+                                      <strong>Current Queue:</strong> {calls.filter(call => call.status === 'pending').length} pending calls
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      This will randomly select the specified number of calls and <strong className="text-destructive">permanently delete</strong> the rest.
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <Label htmlFor="randomCount">Number of calls to randomly select:</Label>
+                                    <Input
+                                      id="randomCount"
+                                      type="number"
+                                      min="1"
+                                      max={calls.filter(call => call.status === 'pending').length - 1}
+                                      value={randomSelectionCount}
+                                      onChange={(e) => setRandomSelectionCount(parseInt(e.target.value) || 10)}
+                                      className="mt-2"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Max: {calls.filter(call => call.status === 'pending').length - 1} (must be less than total pending calls)
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="flex gap-2">
+                                    <Button
+                                      onClick={performRandomSelection}
+                                      className="flex-1 gaming-button"
+                                      variant="destructive"
+                                    >
+                                      🎲 Perform Random Selection
+                                    </Button>
+                                    <Button
+                                      onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                      variant="outline"
+                                      className="flex-1"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                          
                           <Button 
                             onClick={() => updateEventStatus(selectedEvent.id, 'closed')}
                             variant="outline"
@@ -1284,10 +1422,20 @@ export default function SlotsCalls() {
 
                   {/* Calls Queue */}
                   <div>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Calls Queue ({calls.length})
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Calls Queue ({calls.length})
+                      </h3>
+                      <div className="text-sm text-muted-foreground">
+                        Capacity: {selectedEvent.max_calls_per_user * 1000} calls max
+                        {calls.filter(call => call.status === 'pending').length > 0 && (
+                          <span className="ml-2 text-primary">
+                            ({calls.filter(call => call.status === 'pending').length} pending)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     
                     {calls.length === 0 ? (
                       <p className="text-muted-foreground text-center py-6">
