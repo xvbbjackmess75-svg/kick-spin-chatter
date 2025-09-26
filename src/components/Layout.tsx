@@ -135,21 +135,33 @@ export function Layout({ children }: LayoutProps) {
 
   // Define navigation items based on user role
   const getNavItems = () => {
+    const baseItems = [];
+    
     if (role === 'viewer' || role === 'verified_viewer') {
       // Viewer role gets limited access - only dashboard and account settings
-      return [
-        { path: "/dashboard", label: "Dashboard", icon: Home },
-      ];
+      baseItems.push(
+        { path: "/dashboard", label: "Dashboard", icon: Home }
+      );
     } else {
       // Streamer roles (user, premium, vip_plus, admin) get full access
-      return [
+      baseItems.push(
         { path: "/dashboard", label: "Dashboard", icon: Home },
         { path: "/giveaways", label: "Giveaways", icon: Gift },
         { path: "/bonus-hunt", label: "Bonus Hunt", icon: Zap },
         { path: "/slots-calls", label: "Slots Calls", icon: Phone },
-        { path: "/history", label: "History", icon: Trophy },
-      ];
+        { path: "/history", label: "History", icon: Trophy }
+      );
     }
+    
+    // Add admin-specific items if user is admin
+    if (role === 'admin') {
+      baseItems.push(
+        { path: "/admin", label: "Admin Panel", icon: SettingsIcon },
+        { path: "/admin/overlay-builder", label: "Test Overlay Builder", icon: MonitorPlay }
+      );
+    }
+    
+    return baseItems;
   };
 
   const navItems = getNavItems();
