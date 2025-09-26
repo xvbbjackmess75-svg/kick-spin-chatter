@@ -164,7 +164,7 @@ export default function SlotsOverlayPage() {
       )}
       
       <div className="p-4">
-        <SlotsOverlay userId={userId || undefined} maxCalls={maxCalls} customSettings={overlaySettings} />
+        <SlotsOverlay userId={userId || undefined} maxCalls={maxCalls} />
       </div>
 
       {/* Overlay Customization Dialog */}
