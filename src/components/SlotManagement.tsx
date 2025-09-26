@@ -101,16 +101,15 @@ export const SlotManagement = () => {
 
   const deleteAllSlots = async () => {
     try {
-      // Use a more efficient approach - delete in batches of 1000
       let deletedCount = 0;
       let hasMore = true;
       
       while (hasMore) {
-        // Get a batch of slot IDs (limit to 1000 to avoid URL length issues)
+        // Get a smaller batch of slot IDs (limit to 100 to avoid URL length issues)
         const { data: batchSlots, error: fetchError } = await supabase
           .from('slots')
           .select('id')
-          .limit(1000);
+          .limit(100);
         
         if (fetchError) throw fetchError;
         
@@ -129,8 +128,8 @@ export const SlotManagement = () => {
         
         deletedCount += batchSlots.length;
         
-        // If we got less than 1000, we're done
-        if (batchSlots.length < 1000) {
+        // If we got less than 100, we're done
+        if (batchSlots.length < 100) {
           hasMore = false;
         }
       }
