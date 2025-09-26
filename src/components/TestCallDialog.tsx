@@ -72,7 +72,12 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
   };
 
   const addBulkTestCalls = async () => {
-    if (!selectedEvent || bulkCount < 1) {
+    // Immediate check to prevent double execution
+    if (!selectedEvent || bulkCount < 1 || isAddingBulk) {
+      if (isAddingBulk) {
+        console.log("🚫 Bulk add already in progress - preventing duplicate execution");
+        return;
+      }
       toast({
         title: "Error",
         description: "Please enter a valid number of test calls",
@@ -81,7 +86,18 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
       return;
     }
 
+    // Set loading state IMMEDIATELY to prevent race conditions
     setIsAddingBulk(true);
+    
+    console.log(`🎯 STARTING bulk add: ${bulkCount} test calls at ${Date.now()}`);
+    
+    // Additional safety check after state change
+    if (isAddingBulk) {
+      console.log("🚫 Double execution detected - aborting");
+      return;
+    }
+
+    
     try {
       const slotNames = [
         "Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Reactoonz",
@@ -96,6 +112,10 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         "SlotLover", "FortuneFinder", "WinStreaker", "BetMaster", "ReelKing"
       ];
 
+      // Generate unique timestamp for this batch to prevent duplicates
+      const batchTimestamp = Date.now();
+      console.log(`📦 Creating batch ${batchTimestamp} with ${bulkCount} calls`);
+
       const calls = [];
       for (let i = 0; i < bulkCount; i++) {
         const randomSlot = slotNames[Math.floor(Math.random() * slotNames.length)];
@@ -104,12 +124,14 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         calls.push({
           event_id: selectedEvent.id,
           viewer_username: randomUser,
-          viewer_kick_id: 'bulk_test_' + Date.now() + '_' + i,
+          viewer_kick_id: `bulk_test_${batchTimestamp}_${i}`, // Use batch timestamp for uniqueness
           slot_name: randomSlot,
           bet_amount: selectedEvent.bet_size,
           status: 'pending'
         });
       }
+
+      console.log(`📋 Generated ${calls.length} calls for batch ${batchTimestamp}`);
 
       // Get starting call order
       const { data: orderData } = await supabase
@@ -129,9 +151,11 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
 
       if (error) throw error;
 
+      console.log(`✅ Successfully inserted ${calls.length} calls for batch ${batchTimestamp}`);
+
       toast({
         title: "✅ Bulk Test Calls Added",
-        description: `Added ${bulkCount} random test calls successfully!`,
+        description: `Added ${bulkCount} random test calls successfully! (Batch: ${batchTimestamp})`,
       });
 
       setIsOpen(false);
@@ -141,10 +165,11 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
       console.error("Error adding bulk test calls:", error);
       toast({
         title: "Error",
-        description: "Failed to add bulk test calls",
+        description: `Failed to add bulk test calls: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
+      console.log(`🏁 COMPLETED bulk add operation at ${Date.now()}`);
       setIsAddingBulk(false);
     }
   };
@@ -198,14 +223,26 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
                 min="1"
                 max="200"
               />
-            </div>
-            <Button 
-              onClick={addBulkTestCalls} 
-              className="w-full gaming-button"
-              disabled={!selectedEvent || selectedEvent.status !== 'active' || isAddingBulk}
-            >
-              {isAddingBulk ? 'Adding...' : `Add ${bulkCount} Random Test Calls`}
-            </Button>
+             </div>
+             <Button 
+               onClick={addBulkTestCalls} 
+               className="w-full gaming-button"
+               disabled={!selectedEvent || selectedEvent.status !== 'active' || isAddingBulk}
+               onDoubleClick={(e) => e.preventDefault()} // Prevent double-click
+               style={{ pointerEvents: isAddingBulk ? 'none' : 'auto' }} // Additional protection
+             >
+               {isAddingBulk ? (
+                 <>
+                   <div className="animate-spin mr-2">⏳</div>
+                   Adding {bulkCount} calls...
+                 </>
+               ) : (
+                 `Add ${bulkCount} Random Test Calls`
+               )}
+             </Button>
+             <div className="text-xs text-muted-foreground text-center">
+               ⚠️ Click once and wait - don't double-click to prevent duplicates
+             </div>
           </div>
 
           <Button 
