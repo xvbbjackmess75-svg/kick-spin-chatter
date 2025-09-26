@@ -7,7 +7,9 @@ interface AdminRouteProps {
 }
 
 export function AdminRoute({ children }: AdminRouteProps) {
-  const { isAdmin, loading } = useUserRole();
+  const { isAdmin, loading, role } = useUserRole();
+
+  console.log('🔧 AdminRoute check:', { loading, role, isAdmin: isAdmin() });
 
   if (loading) {
     return (
@@ -21,8 +23,11 @@ export function AdminRoute({ children }: AdminRouteProps) {
   }
 
   if (!isAdmin()) {
+    console.log('🚫 AdminRoute: Access denied, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
+
+  console.log('✅ AdminRoute: Access granted');
 
   return (
     <ProtectedRoute>
