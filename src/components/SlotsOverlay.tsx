@@ -66,6 +66,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
 
   // Effect to handle custom settings and initial setup
   useEffect(() => {
+    console.log('🚀 SlotsOverlay mounted with props:', { userId, maxCalls, customSettings });
     if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
       
@@ -140,16 +141,15 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
     }
   }, [customSettings]);
 
-  // Infinite cascade scroll effect for OBS overlay
+  // Handle scrolling animation
   useEffect(() => {
-    console.log('🎬 Scroll effect check:', {
+    console.log('🎬 Scroll effect triggered with settings:', {
       callsLength: calls.length,
       maxVisibleCalls: overlaySettings.max_visible_calls,
-      maxCallsProp: maxCalls,
       animationEnabled: overlaySettings.animation_enabled,
       scrollingSpeed: overlaySettings.scrolling_speed,
-      eventStatus: event?.status,
-      shouldScroll: calls.length > overlaySettings.max_visible_calls && overlaySettings.animation_enabled
+      shouldScroll: calls.length > overlaySettings.max_visible_calls && overlaySettings.animation_enabled,
+      eventStatus: event?.status
     });
 
     if (calls.length > overlaySettings.max_visible_calls && overlaySettings.animation_enabled) {
@@ -200,8 +200,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
       }
 
       if (data) {
-        console.log('✅ Found overlay settings:', data);
-        console.log('🎨 Applying custom settings:', {
+        console.log('✅ Found overlay settings from database:', data);
+        console.log('🎨 Applying custom overlay settings:', {
           background_color: data.background_color,
           text_color: data.text_color,
           accent_color: data.accent_color,
@@ -211,10 +211,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
           animation_enabled: data.animation_enabled
         });
         // Apply the settings immediately
-        setOverlaySettings(prevSettings => ({
-          ...prevSettings,
-          ...data
-        }));
+        setOverlaySettings(prevSettings => {
+          const newSettings = { ...prevSettings, ...data };
+          console.log('🔄 Settings state updated:', newSettings);
+          return newSettings;
+        });
       } else {
         console.log('ℹ️ No custom overlay settings found, using defaults');
       }

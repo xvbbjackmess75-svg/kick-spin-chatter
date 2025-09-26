@@ -31,6 +31,8 @@ export default function SlotsOverlayPage() {
   const maxCalls = parseInt(searchParams.get('maxCalls') || '10');
   const { user } = useAuth();
   
+  console.log('🔍 SlotsOverlayPage loaded with:', { userId, maxCalls, user: user?.id });
+  
   // Overlay customization states
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
