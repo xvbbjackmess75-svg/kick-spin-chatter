@@ -68,14 +68,21 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
   useEffect(() => {
     if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
+      console.log('🎨 Initial settings passed:', initialSettings);
       
-      // Force reload settings on mount to bypass any caching issues
-      const loadSettings = async () => {
-        await fetchOverlaySettings();
+      // Load settings and data
+      const loadData = async () => {
+        // Only fetch settings if no initial settings were provided
+        if (!initialSettings || Object.keys(initialSettings).length === 0) {
+          console.log('🔍 No initial settings, fetching from database');
+          await fetchOverlaySettings();
+        } else {
+          console.log('✅ Using initial settings from parent');
+        }
         await fetchActiveEventAndCalls();
       };
       
-      loadSettings();
+      loadData();
       
       // Set up real-time subscription for events and calls with better refresh logic
       const eventsSubscription = supabase
@@ -126,7 +133,18 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
         clearInterval(intervalId);
       };
     }
-  }, [userId]); // Remove event?.id dependency to avoid recreation
+  }, [userId, initialSettings]); // Add initialSettings to dependencies
+
+  // Update settings when initialSettings changes
+  useEffect(() => {
+    if (initialSettings && Object.keys(initialSettings).length > 0) {
+      console.log('🎨 Updating overlay settings from props:', initialSettings);
+      setOverlaySettings(prev => ({
+        ...prev,
+        ...initialSettings
+      }));
+    }
+  }, [initialSettings]);
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
@@ -187,13 +205,13 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
       }
 
       if (data) {
-        console.log('✅ Found overlay settings:', data);
+        console.log('✅ Found overlay settings from database:', data);
         setOverlaySettings(prev => ({
           ...prev,
           ...data
         }));
       } else {
-        console.log('ℹ️ No custom overlay settings found, using defaults');
+        console.log('ℹ️ No custom overlay settings found in database, keeping current settings');
       }
     } catch (error) {
       console.error("❌ Exception fetching overlay settings:", error);

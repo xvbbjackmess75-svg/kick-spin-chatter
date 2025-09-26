@@ -165,7 +165,7 @@ export default function SlotsOverlayPage() {
         <SlotsOverlay 
           userId={userId || undefined} 
           maxCalls={overlaySettings.max_visible_calls || maxCalls}
-          initialSettings={overlaySettings}
+          initialSettings={userId ? overlaySettings : undefined}
         />
       </div>
 
