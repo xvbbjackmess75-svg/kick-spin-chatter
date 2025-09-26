@@ -786,12 +786,22 @@ export default function Giveaways() {
   // Start winner selection for a giveaway
   const startWinnerSelection = async (giveaway: Giveaway) => {
     try {
+      console.log('🎯 Starting winner selection for giveaway:', giveaway.id);
+      console.log('📊 Fetching fresh participants from database...');
+      
+      // Always fetch fresh participants data from the database
       const { data, error } = await supabase
         .from('giveaway_participants')
         .select('*')
-        .eq('giveaway_id', giveaway.id);
+        .eq('giveaway_id', giveaway.id)
+        .order('entered_at', { ascending: true }); // Order by entry time for consistency
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching participants:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Found ${data?.length || 0} participants in database for giveaway ${giveaway.id}`);
       
       // Fetch verification status for each participant
       const participantsWithVerification = await Promise.all(
@@ -825,9 +835,10 @@ export default function Giveaways() {
       console.log('🎯 Giveaway participants with avatars:', giveawayParticipants.slice(0, 3));
       
       if (giveawayParticipants.length === 0) {
+        console.log('❌ No participants found for giveaway:', giveaway.id);
         toast({
           title: "No Participants",
-          description: "This giveaway has no participants yet",
+          description: "This giveaway has no participants yet. Please wait for users to join.",
           variant: "destructive"
         });
         return;
