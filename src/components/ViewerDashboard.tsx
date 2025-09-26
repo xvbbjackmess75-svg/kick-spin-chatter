@@ -99,7 +99,7 @@ export default function ViewerDashboard() {
   const accountStatus = {
     kickLinked: isKickLinked,
     discordLinked: isDiscordLinked,
-    verified: isKickLinked && isDiscordLinked
+    verified: role === 'verified_viewer' // Check role instead of linked accounts
   };
 
   return (
