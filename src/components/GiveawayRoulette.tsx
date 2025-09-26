@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, RotateCcw, Play, Trophy, Users, CheckCircle2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Crown, RotateCcw, Play, Trophy, Users, CheckCircle2, User, Gift, CheckCircle, AlertCircle, UserMinus, Shield } from 'lucide-react';
 import { VerificationBadge } from '@/components/VerificationBadge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Participant {
   id: number;
@@ -18,6 +20,23 @@ interface WinnerResult {
   winningTicket: number;
   ticketsPerParticipant: number;
   totalTickets: number;
+}
+
+interface UserProfile {
+  username: string;
+  isVerified: boolean;
+  totalGiveawayEntries: number;
+  recentParticipations: Array<{
+    giveawayId: string;
+    giveawayTitle: string;
+    channelName: string;
+    joinedAt: Date;
+  }>;
+}
+
+interface UserSecurityInfo {
+  isAltAccount: boolean;
+  isVpnProxyTorUser: boolean;
 }
 
 interface GiveawayRouletteProps {
@@ -44,6 +63,8 @@ export function GiveawayRoulette({
   const [showResult, setShowResult] = useState(false);
   const [isResultLocked, setIsResultLocked] = useState(false);
   const [lockedIndicatorPosition, setLockedIndicatorPosition] = useState<number | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
+  const [userSecurityCache, setUserSecurityCache] = useState<Record<string, UserSecurityInfo>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
@@ -235,6 +256,134 @@ export function GiveawayRoulette({
     }, 500);
   };
 
+  // User Security Functions
+  const getUserSecurityInfo = async (username: string): Promise<UserSecurityInfo> => {
+    // Check cache first
+    if (userSecurityCache[username]) {
+      return userSecurityCache[username];
+    }
+
+    const securityInfo: UserSecurityInfo = { isAltAccount: false, isVpnProxyTorUser: false };
+
+    try {
+      // Check alt account status
+      const { data: altData } = await supabase
+        .from('chat_messages')
+        .select('kick_username')
+        .eq('kick_username', username)
+        .limit(1);
+
+      if (altData && altData.length > 0) {
+        // You could implement alt detection logic here
+        securityInfo.isAltAccount = false; // Placeholder
+      }
+
+      // Check VPN/Proxy status  
+      const { data: vpnData } = await supabase
+        .from('user_ip_tracking')
+        .select('is_vpn, is_proxy, is_tor')
+        .limit(1);
+
+      if (vpnData && vpnData.length > 0) {
+        const record = vpnData[0];
+        securityInfo.isVpnProxyTorUser = record.is_vpn || record.is_proxy || record.is_tor;
+      }
+    } catch (error) {
+      console.error('Error checking user security info:', error);
+    }
+
+    // Cache the result
+    setUserSecurityCache(prev => ({
+      ...prev,
+      [username]: securityInfo
+    }));
+
+    return securityInfo;
+  };
+
+  // UserSecurityBadges component
+  const UserSecurityBadges = ({ username }: { username: string }) => {
+    const [securityInfo, setSecurityInfo] = useState<UserSecurityInfo>({ isAltAccount: false, isVpnProxyTorUser: false });
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      if (!username) return;
+      
+      const loadSecurityInfo = async () => {
+        setLoading(true);
+        const info = await getUserSecurityInfo(username);
+        setSecurityInfo(info);
+        setLoading(false);
+      };
+
+      loadSecurityInfo();
+    }, [username]);
+
+    if (!username || loading) return null;
+
+    return (
+      <>
+        {securityInfo.isAltAccount && (
+          <Badge variant="outline" className="text-red-500 border-red-500/30 bg-red-500/10">
+            <UserMinus className="h-3 w-3 mr-1" />
+            Alt Account
+          </Badge>
+        )}
+        {securityInfo.isVpnProxyTorUser && (
+          <Badge variant="outline" className="text-orange-500 border-orange-500/30 bg-orange-500/10">
+            <Shield className="h-3 w-3 mr-1" />
+            VPN/Proxy/Tor
+          </Badge>
+        )}
+      </>
+    );
+  };
+
+  // Function to handle user profile click
+  const handleUserProfileClick = async (username: string) => {
+    try {
+      // Get basic verification status
+      const participant = participants.find(p => p.username === username);
+      const isVerified = participant?.isVerified || false;
+
+      // Get total giveaway entries
+      const { count } = await supabase
+        .from('giveaway_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('kick_username', username);
+
+      // Get recent participations
+      const { data: recentData } = await supabase
+        .from('giveaway_participants')
+        .select(`
+          giveaway_id,
+          entered_at,
+          giveaways!inner(title, id)
+        `)
+        .eq('kick_username', username)
+        .order('entered_at', { ascending: false })
+        .limit(5);
+
+      const recentParticipations = recentData?.map(entry => ({
+        giveawayId: entry.giveaway_id,
+        giveawayTitle: (entry.giveaways as any)?.title || 'Unknown Giveaway',
+        channelName: 'Channel', // You might want to get this from giveaways table
+        joinedAt: new Date(entry.entered_at)
+      })) || [];
+
+      const userProfile: UserProfile = {
+        username,
+        isVerified,
+        totalGiveawayEntries: count || 0,
+        recentParticipations
+      };
+
+      setSelectedUserProfile(userProfile);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
   // Reset component state when showStartButton becomes true
   useEffect(() => {
     if (showStartButton) {
@@ -383,7 +532,12 @@ export function GiveawayRoulette({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xl font-bold text-foreground">{selectedWinner.username}</p>
+                  <button 
+                    onClick={() => handleUserProfileClick(selectedWinner.username)}
+                    className="text-xl font-bold text-foreground hover:text-primary cursor-pointer transition-colors"
+                  >
+                    {selectedWinner.username}
+                  </button>
                   {winnerResult && (
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p>Winning Ticket: #{winnerResult.winningTicket}</p>
@@ -454,15 +608,95 @@ export function GiveawayRoulette({
                         {participant.username.slice(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-foreground">
+                    <button 
+                      onClick={() => handleUserProfileClick(participant.username)}
+                      className="text-xs text-foreground hover:text-primary cursor-pointer transition-colors"
+                    >
                       {participant.isVerified && '🛡️ '}{participant.username}
-                    </span>
+                    </button>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* User Profile Modal */}
+        <Dialog open={!!selectedUserProfile} onOpenChange={(open) => !open && setSelectedUserProfile(null)}>
+          <DialogContent className="gaming-card border-border/50 max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-400" />
+                User Profile - {selectedUserProfile?.username}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedUserProfile && (
+              <div className="space-y-6">
+                {/* User Info */}
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarFallback className="bg-primary/20 text-primary text-lg font-semibold">
+                      {selectedUserProfile.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xl font-semibold">{selectedUserProfile.username}</h3>
+                      {selectedUserProfile.isVerified ? (
+                        <Badge variant="secondary" className="text-green-400 border-green-400/30">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-400 border-yellow-400/30">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Unverified
+                        </Badge>
+                      )}
+                      <UserSecurityBadges username={selectedUserProfile.username} />
+                    </div>
+                    <p className="text-muted-foreground">
+                      Total giveaway entries: {selectedUserProfile.totalGiveawayEntries}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent Giveaway Participation */}
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Gift className="h-4 w-4" />
+                    Recent Giveaway Participation
+                  </h4>
+                  {selectedUserProfile.recentParticipations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Gift className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No recent giveaway participation</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedUserProfile.recentParticipations.map((participation, index) => (
+                        <div 
+                          key={`${participation.giveawayId}-${index}`}
+                          className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg"
+                        >
+                          <div>
+                            <div className="font-medium">{participation.giveawayTitle}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Channel: {participation.channelName}
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {participation.joinedAt.toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
