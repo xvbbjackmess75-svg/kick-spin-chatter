@@ -1469,13 +1469,13 @@ export default function SlotsCalls() {
                             variant="outline"
                             size="sm"
                           >
-                          Close Entry
-                        </Button>
-                        
-                        <TestCallDialog 
-                          selectedEvent={selectedEvent}
-                          onCallAdded={() => fetchCalls(selectedEvent.id)}
-                        />
+                            Close Entry
+                          </Button>
+                          
+                          <TestCallDialog 
+                            selectedEvent={selectedEvent}
+                            onCallAdded={() => fetchCalls(selectedEvent.id)}
+                          />
                         </div>
                       </>
                     )}
