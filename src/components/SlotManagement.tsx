@@ -101,10 +101,26 @@ export const SlotManagement = () => {
 
   const deleteAllSlots = async () => {
     try {
+      // First get all slot IDs to ensure we have permission to delete them
+      const { data: allSlots, error: fetchError } = await supabase
+        .from('slots')
+        .select('id');
+      
+      if (fetchError) throw fetchError;
+      
+      if (!allSlots || allSlots.length === 0) {
+        toast({
+          title: "No slots to delete",
+          description: "There are no slots in the database."
+        });
+        return;
+      }
+
+      // Delete all slots
       const { error } = await supabase
         .from('slots')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        .in('id', allSlots.map(slot => slot.id));
 
       if (error) throw error;
 
