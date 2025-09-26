@@ -22,12 +22,14 @@ interface KickChatMessage {
   metadata?: any;
 }
 
-interface KickChatHistoryResponse {
-  data: KickChatMessage[];
-  links?: {
-    next?: string;
-    prev?: string;
-  };
+interface StoredChatMessage {
+  id: string;
+  message: string;
+  timestamp: string;
+  kick_username: string;
+  kick_user_id: string;
+  user_type: string;
+  channel_id: string;
 }
 
 serve(async (req) => {
@@ -74,7 +76,7 @@ serve(async (req) => {
       throw new Error('User must have a linked Kick account');
     }
 
-    // First, get the channel info to find the chatroom ID
+    // Get the channel info to find the chatroom ID
     const channelResponse = await fetch(`https://kick.com/api/v1/channels/${channelName}`);
     
     if (!channelResponse.ok) {
@@ -90,68 +92,40 @@ serve(async (req) => {
 
     console.log(`Found chatroom ID: ${chatroomId} for channel: ${channelName}`);
 
-    // Get the Kick bot token for API access
-    const kickToken = Deno.env.get('KICK_BOT_TOKEN');
-    if (!kickToken) {
-      throw new Error('Kick bot token not configured');
-    }
-
-    // Fetch chat history from Kick API
-    // Note: This endpoint might require specific permissions or might not be publicly available
-    // We'll try the messages endpoint with user filtering
-    const chatHistoryUrl = `https://kick.com/api/v1/channels/${channelName}/messages?limit=${limit}`;
+    // Fetch messages from our database (primary source)
+    console.log(`Fetching stored messages for user ${username} in chatroom ${chatroomId}`);
     
-    console.log(`Fetching from: ${chatHistoryUrl}`);
-
-    const chatResponse = await fetch(chatHistoryUrl, {
-      headers: {
-        'Authorization': `Bearer ${kickToken}`,
-        'Accept': 'application/json',
-        'User-Agent': 'KickHelper/1.0'
-      }
-    });
+    const { data: storedMessages, error: dbError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('kick_username', username)
+      .eq('channel_id', chatroomId.toString())
+      .order('timestamp', { ascending: false })
+      .limit(limit);
 
     let messages: KickChatMessage[] = [];
 
-    if (chatResponse.ok) {
-      const chatData: KickChatHistoryResponse = await chatResponse.json();
+    if (!dbError && storedMessages && storedMessages.length > 0) {
+      messages = storedMessages.map((msg: StoredChatMessage) => ({
+        id: msg.id,
+        content: msg.message,
+        created_at: msg.timestamp,
+        sender: {
+          id: parseInt(msg.kick_user_id) || 0,
+          username: msg.kick_username,
+          slug: msg.kick_username.toLowerCase(),
+          identity: {
+            badges: msg.user_type === 'moderator' ? [{ type: 'moderator', text: 'Moderator' }] : []
+          }
+        },
+        metadata: {}
+      }));
       
-      // Filter messages by the specific user
-      messages = chatData.data?.filter(msg => 
-        msg.sender.username.toLowerCase() === username.toLowerCase()
-      ) || [];
-      
-      console.log(`Found ${messages.length} messages for user ${username}`);
+      console.log(`Found ${messages.length} stored messages for user ${username}`);
     } else {
-      console.error(`Failed to fetch chat history: ${chatResponse.status} ${chatResponse.statusText}`);
-      
-      // Fallback: Try to get messages from our own database if we've been storing them
-      const { data: storedMessages, error: dbError } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('kick_username', username)
-        .eq('channel_id', chatroomId)
-        .order('timestamp', { ascending: false })
-        .limit(limit);
-
-      if (!dbError && storedMessages) {
-        messages = storedMessages.map(msg => ({
-          id: msg.id,
-          content: msg.message,
-          created_at: msg.timestamp,
-          sender: {
-            id: parseInt(msg.kick_user_id) || 0,
-            username: msg.kick_username,
-            slug: msg.kick_username.toLowerCase(),
-            identity: {
-              badges: msg.user_type === 'moderator' ? [{ type: 'moderator', text: 'Moderator' }] : []
-            }
-          },
-          metadata: {}
-        }));
-        
-        console.log(`Using stored messages: ${messages.length} found`);
-      }
+      console.log('No stored messages found in database');
+      // For now, we'll return empty results since Kick's public API doesn't provide chat history
+      messages = [];
     }
 
     // Transform messages to a consistent format
