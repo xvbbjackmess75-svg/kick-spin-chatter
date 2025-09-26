@@ -244,6 +244,78 @@ export default function Giveaways() {
     }
   };
 
+  // Load existing participants for active giveaways when restoring monitoring
+  const loadExistingParticipants = async (channelName: string) => {
+    if (!user?.id || !isSupabaseUser) return;
+    
+    try {
+      console.log('🔄 Loading existing participants for channel:', channelName);
+      
+      // Find active giveaways for this channel
+      const { data: activeGiveaways, error: giveawaysError } = await supabase
+        .from('giveaways')
+        .select('id, title, description')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (giveawaysError) {
+        console.error('❌ Error fetching active giveaways:', giveawaysError);
+        return;
+      }
+
+      if (!activeGiveaways || activeGiveaways.length === 0) {
+        console.log('ℹ️ No active giveaways found');
+        return;
+      }
+
+      // Filter giveaways by channel name
+      const channelGiveaways = activeGiveaways.filter(giveaway => {
+        const giveawayChannel = extractChannel(giveaway.description);
+        return giveawayChannel === channelName;
+      });
+
+      if (channelGiveaways.length === 0) {
+        console.log('ℹ️ No active giveaways for this channel');
+        return;
+      }
+
+      // Load participants for all active giveaways in this channel
+      const allParticipants = [];
+      for (const giveaway of channelGiveaways) {
+        const { data: participants, error: participantsError } = await supabase
+          .from('giveaway_participants')
+          .select('kick_username, entered_at, is_verified')
+          .eq('giveaway_id', giveaway.id)
+          .order('entered_at', { ascending: false });
+
+        if (participantsError) {
+          console.error('❌ Error fetching participants for giveaway:', giveaway.id, participantsError);
+          continue;
+        }
+
+        if (participants && participants.length > 0) {
+          const keyword = extractKeyword(giveaway.description);
+          participants.forEach(p => {
+            allParticipants.push({
+              username: p.kick_username,
+              timestamp: new Date(p.entered_at),
+              keyword: keyword,
+              isVerified: p.is_verified || false
+            });
+          });
+        }
+      }
+
+      if (allParticipants.length > 0) {
+        console.log(`✅ Loaded ${allParticipants.length} existing participants into live chat activity`);
+        setLiveParticipants(allParticipants);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading existing participants:', error);
+    }
+  };
+
   const initializeWebSocket = () => {
     try {
       console.log('🔗 Initializing WebSocket connection to chat monitor...');
@@ -295,6 +367,9 @@ export default function Giveaways() {
             if (!chatConnected) {
               setLiveParticipants([]); // Reset participants list only for new sessions
               setIsLiveChatModalOpen(true); // Open live chat modal when monitoring starts
+              
+              // Load existing participants for active giveaways into live chat activity
+              loadExistingParticipants(data.channelName);
             }
             saveGiveawayMonitoringState(true, data.channelName); // Save persistent state
             toast({
