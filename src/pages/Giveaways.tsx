@@ -295,14 +295,26 @@ export default function Giveaways() {
 
         if (participants && participants.length > 0) {
           const keyword = extractKeyword(giveaway.description);
-          participants.forEach(p => {
+          
+          // Check real-time verification status for each participant
+          for (const p of participants) {
+            console.log(`🔍 Checking real-time verification for ${p.kick_username} in live chat...`);
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('linked_kick_user_id, linked_discord_user_id')
+              .eq('linked_kick_username', p.kick_username)
+              .maybeSingle();
+            
+            const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id})`);
+            
             allParticipants.push({
               username: p.kick_username,
               timestamp: new Date(p.entered_at),
               keyword: keyword,
-              isVerified: p.is_verified || false
+              isVerified: isVerified
             });
-          });
+          }
         }
       }
 
