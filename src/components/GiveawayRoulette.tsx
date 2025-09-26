@@ -95,17 +95,6 @@ export function GiveawayRoulette({
     
     const winner = participants[actualWinnerIndex];
     
-    console.log("🎲 ROULETTE SELECTION DEBUG:", {
-      participantsReceived: participants.map((p, i) => `${i}: ${p.username}`),
-      totalTickets,
-      ticketsPerParticipant,
-      winningTicket,
-      calculatedIndex: winnerIndex,
-      actualWinnerIndex,
-      selectedWinner: winner.username,
-      calculation: `Ticket ${winningTicket} → (${winningTicket}-1)/${ticketsPerParticipant} = ${(winningTicket-1)/ticketsPerParticipant} → Index ${actualWinnerIndex}`
-    });
-    
     return {
       winner,
       winningTicket,
@@ -118,7 +107,7 @@ export function GiveawayRoulette({
   const startRoulette = () => {
     if (participants.length === 0 || isResultLocked) return;
     
-    console.log("🎰 Starting roulette with participants:", participants.map(p => p.username));
+    if (participants.length === 0 || isResultLocked) return;
     
     // Step 1: Select winner using provably fair system (FINAL - never changes)
     const result = selectWinner();
@@ -127,12 +116,6 @@ export function GiveawayRoulette({
     
     // Step 2: Lock the result to prevent any changes
     setIsResultLocked(true);
-    
-    console.log("🔒 RESULT LOCKED:", {
-      finalWinner: result.winner.username,
-      winningTicket: result.winningTicket,
-      locked: true
-    });
     
     // Step 3: Start animation
     setIsSpinning(true);
@@ -208,13 +191,6 @@ export function GiveawayRoulette({
         // LOCK the indicator position at the current center
         setLockedIndicatorPosition(centerPosition);
         
-        console.log("✅ FINAL RESULT LOCKED:", {
-          winner: result.winner.username,
-          scrollPosition: targetPosition,
-          lockedIndicatorPosition: centerPosition,
-          containerWidth: actualContainerWidth
-        });
-        
         document.removeEventListener('keydown', handleSkip);
       }, 4000);
     };
@@ -225,7 +201,6 @@ export function GiveawayRoulette({
 
   // Reset roulette - UNLOCKS everything for new selection
   const resetRoulette = () => {
-    console.log("🔓 UNLOCKING ALL POSITIONS for new selection");
     setIsSpinning(false);
     setScrollPosition(0);
     setSelectedWinner(null);
@@ -266,16 +241,13 @@ export function GiveawayRoulette({
     const securityInfo: UserSecurityInfo = { isAltAccount: false, isVpnProxyTorUser: false };
 
     try {
-      console.log('🔍 Checking security info for user:', username);
-      
       // Check alt account status using the database function
       const { data: altData, error: altError } = await supabase
         .rpc('check_alt_account_by_username', { target_username: username });
 
       if (altError) {
-        console.error('❌ Error checking alt account:', altError);
+        console.error('Error checking alt account:', altError);
       } else {
-        console.log('✅ Alt account check result:', altData);
         securityInfo.isAltAccount = Boolean(altData);
       }
 
@@ -284,15 +256,12 @@ export function GiveawayRoulette({
         .rpc('check_vpn_proxy_tor_by_username', { target_username: username });
 
       if (vpnError) {
-        console.error('❌ Error checking VPN/Proxy/Tor:', vpnError);
+        console.error('Error checking VPN/Proxy/Tor:', vpnError);
       } else {
-        console.log('✅ VPN/Proxy/Tor check result:', vpnData);
         securityInfo.isVpnProxyTorUser = Boolean(vpnData);
       }
-
-      console.log('🛡️ Final security info:', securityInfo);
     } catch (error) {
-      console.error('❌ Error checking user security info:', error);
+      console.error('Error checking user security info:', error);
     }
 
     // Cache the result
@@ -390,24 +359,14 @@ export function GiveawayRoulette({
   // Reset component state when showStartButton becomes true
   useEffect(() => {
     if (showStartButton) {
-      console.log("🔄 Resetting GiveawayRoulette state for new selection");
       resetRoulette();
     }
   }, [showStartButton]);
 
   // Auto-start roulette when explicitly requested (showStartButton is false and no current state)
   useEffect(() => {
-    console.log("🔄 GiveawayRoulette useEffect triggered:", {
-      participantsCount: participants.length,
-      showStartButton,
-      isSpinning,
-      selectedWinner: selectedWinner?.username,
-      isResultLocked
-    });
-    
     // Only auto-start if showStartButton is false AND we don't have a current winner
     if (participants.length > 0 && !showStartButton && !isSpinning && !selectedWinner && !isResultLocked) {
-      console.log("🎰 Auto-starting roulette with", participants.length, "participants");
       const timer = setTimeout(() => {
         startRoulette();
       }, 500);

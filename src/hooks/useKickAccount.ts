@@ -93,15 +93,6 @@ export function useKickAccount() {
   const hasSupabaseAccount = !!user;
   const canUseChatbot = isKickLinked && hasSupabaseAccount;
 
-  // Debug logging
-  console.log('🔧 useKickAccount debug:', {
-    kickUser: kickUser?.username,
-    supabaseUser: user?.email,
-    isKickLinked,
-    hasSupabaseAccount,
-    canUseChatbot
-  });
-
   const getChannelInfo = () => {
     if (!kickUser) return null;
     
