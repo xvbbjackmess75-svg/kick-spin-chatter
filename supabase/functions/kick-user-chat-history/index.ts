@@ -95,18 +95,30 @@ serve(async (req) => {
     // Fetch messages from our database (primary source)
     console.log(`Fetching stored messages for user ${username} in chatroom ${chatroomId}`);
     
+    // Since channel_id is UUID and chatroomId is number, we need to be more flexible
     const { data: storedMessages, error: dbError } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('kick_username', username)
-      .eq('channel_id', chatroomId.toString())
       .order('timestamp', { ascending: false })
       .limit(limit);
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+    }
 
     let messages: KickChatMessage[] = [];
 
     if (!dbError && storedMessages && storedMessages.length > 0) {
-      messages = storedMessages.map((msg: StoredChatMessage) => ({
+      // Filter messages for this specific chatroom (since channel_id might be stored differently)
+      const filteredMessages = storedMessages.filter(msg => {
+        // Try to match either as string or if channel_id contains the chatroom ID
+        return msg.channel_id === chatroomId.toString() || 
+               msg.channel_id === chatroomId ||
+               msg.channel_id.includes(chatroomId.toString());
+      });
+
+      messages = filteredMessages.map((msg: StoredChatMessage) => ({
         id: msg.id,
         content: msg.message,
         created_at: msg.timestamp,
@@ -121,9 +133,9 @@ serve(async (req) => {
         metadata: {}
       }));
       
-      console.log(`Found ${messages.length} stored messages for user ${username}`);
+      console.log(`Found ${messages.length} stored messages for user ${username} in chatroom ${chatroomId}`);
     } else {
-      console.log('No stored messages found in database');
+      console.log(`No stored messages found in database. DB Error: ${dbError?.message || 'none'}, Messages count: ${storedMessages?.length || 0}`);
       // For now, we'll return empty results since Kick's public API doesn't provide chat history
       messages = [];
     }
