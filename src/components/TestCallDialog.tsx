@@ -16,6 +16,8 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
   const [isOpen, setIsOpen] = useState(false);
   const [testSlotName, setTestSlotName] = useState("");
   const [testUsername, setTestUsername] = useState("");
+  const [bulkCount, setBulkCount] = useState(50);
+  const [isAddingBulk, setIsAddingBulk] = useState(false);
   const { toast } = useToast();
 
   const addTestCall = async () => {
@@ -69,6 +71,84 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
     }
   };
 
+  const addBulkTestCalls = async () => {
+    if (!selectedEvent || bulkCount < 1) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid number of test calls",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAddingBulk(true);
+    try {
+      const slotNames = [
+        "Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Reactoonz",
+        "Legacy of Dead", "Moon Princess", "Fruit Party", "Big Bass Bonanza", "Dog House",
+        "Mental", "Tombstone", "Hand of Anubis", "Fire in the Hole", "Vampire vs Wolves",
+        "Money Train", "Dead or Alive", "Jammin Jars", "The Dog House Megaways", "Razor Shark"
+      ];
+      
+      const usernames = [
+        "TestUser", "GamerPro", "SlotFan", "LuckyPlayer", "BigWinner", "SpinMaster", 
+        "BonusHunter", "JackpotKing", "WildCatcher", "MegaWins", "CrazyGambler", 
+        "SlotLover", "FortuneFinder", "WinStreaker", "BetMaster", "ReelKing"
+      ];
+
+      const calls = [];
+      for (let i = 0; i < bulkCount; i++) {
+        const randomSlot = slotNames[Math.floor(Math.random() * slotNames.length)];
+        const randomUser = usernames[Math.floor(Math.random() * usernames.length)] + Math.floor(Math.random() * 1000);
+        
+        calls.push({
+          event_id: selectedEvent.id,
+          viewer_username: randomUser,
+          viewer_kick_id: 'bulk_test_' + Date.now() + '_' + i,
+          slot_name: randomSlot,
+          bet_amount: selectedEvent.bet_size,
+          status: 'pending'
+        });
+      }
+
+      // Get starting call order
+      const { data: orderData } = await supabase
+        .rpc('get_next_call_order', { event_uuid: selectedEvent.id });
+      
+      const startOrder = orderData || 1;
+      
+      // Add call_order to each call
+      calls.forEach((call, index) => {
+        call.call_order = startOrder + index;
+      });
+
+      // Insert all calls at once
+      const { error } = await supabase
+        .from('slots_calls')
+        .insert(calls);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Bulk Test Calls Added",
+        description: `Added ${bulkCount} random test calls successfully!`,
+      });
+
+      setIsOpen(false);
+      onCallAdded();
+
+    } catch (error) {
+      console.error("Error adding bulk test calls:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add bulk test calls",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingBulk(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -105,12 +185,35 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
               This will add a test call to see how the overlay looks. Perfect for testing OBS setup!
             </p>
           </div>
+          
+          <div className="space-y-3 border-t pt-4">
+            <div>
+              <Label htmlFor="bulkCount">Bulk Add Test Calls</Label>
+              <Input
+                id="bulkCount"
+                type="number"
+                value={bulkCount}
+                onChange={(e) => setBulkCount(Number(e.target.value))}
+                placeholder="50"
+                min="1"
+                max="200"
+              />
+            </div>
+            <Button 
+              onClick={addBulkTestCalls} 
+              className="w-full gaming-button"
+              disabled={!selectedEvent || selectedEvent.status !== 'active' || isAddingBulk}
+            >
+              {isAddingBulk ? 'Adding...' : `Add ${bulkCount} Random Test Calls`}
+            </Button>
+          </div>
+
           <Button 
             onClick={addTestCall} 
             className="w-full gaming-button"
             disabled={!selectedEvent || selectedEvent.status !== 'active'}
           >
-            Add Test Call
+            Add Single Test Call
           </Button>
         </div>
       </DialogContent>
