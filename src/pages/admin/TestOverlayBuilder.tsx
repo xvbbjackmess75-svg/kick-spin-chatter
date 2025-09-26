@@ -131,7 +131,13 @@ export default function TestOverlayBuilder() {
       width: 1920,
       height: 1080,
       backgroundColor: 'transparent',
+      selection: true, // Enable selection
+      preserveObjectStacking: true,
     });
+
+    // Enable interactive features
+    canvas.selection = true;
+    canvas.skipTargetFind = false;
 
     canvas.on('selection:created', (e) => {
       setSelectedElement(e.selected?.[0] || null);
@@ -226,10 +232,22 @@ export default function TestOverlayBuilder() {
     }
 
     if (fabricObject) {
+      // Enable interaction for all objects
       fabricObject.set({
         elementType: elementType.id,
         elementData: elementType.properties,
+        selectable: true,
+        moveable: true,
+        hasControls: true,
+        hasBorders: true,
+        lockMovementX: false,
+        lockMovementY: false,
+        lockRotation: false,
+        lockScalingX: false,
+        lockScalingY: false,
+        evented: true,
       });
+      
       fabricCanvas.add(fabricObject);
       fabricCanvas.setActiveObject(fabricObject);
       fabricCanvas.renderAll();
@@ -411,11 +429,13 @@ export default function TestOverlayBuilder() {
             <div className="border border-border rounded-lg overflow-hidden bg-gray-900">
               <canvas 
                 ref={canvasRef} 
-                className="max-w-full max-h-[600px] object-contain" 
+                className="max-w-full max-h-[600px] object-contain cursor-default" 
                 style={{ 
                   width: '100%', 
                   height: 'auto',
-                  aspectRatio: '16/9'
+                  aspectRatio: '16/9',
+                  pointerEvents: 'auto',
+                  userSelect: 'none'
                 }}
               />
             </div>
