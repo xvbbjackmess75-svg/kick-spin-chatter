@@ -79,6 +79,10 @@ export default function SlotsCalls() {
   // Random selection states
   const [randomSelectionCount, setRandomSelectionCount] = useState(10);
   const [isRandomSelectionDialogOpen, setIsRandomSelectionDialogOpen] = useState(false);
+  const [isAnimationModalOpen, setIsAnimationModalOpen] = useState(false);
+  const [animationNames, setAnimationNames] = useState<string[]>([]);
+  const [eliminatedNames, setEliminatedNames] = useState<Set<string>>(new Set());
+  const [finalWinners, setFinalWinners] = useState<string[]>([]);
   
   // Overlay customization states
   const [overlaySettings, setOverlaySettings] = useState({
@@ -768,16 +772,38 @@ export default function SlotsCalls() {
       return;
     }
 
+    // Start the animation
+    const allNames = pendingCalls.map(call => call.viewer_username);
+    const shuffled = [...pendingCalls].sort(() => 0.5 - Math.random());
+    const selectedCalls = shuffled.slice(0, randomSelectionCount);
+    const winnersNames = selectedCalls.map(call => call.viewer_username);
+
+    setAnimationNames(allNames);
+    setEliminatedNames(new Set());
+    setFinalWinners(winnersNames);
+    setIsRandomSelectionDialogOpen(false);
+    setIsAnimationModalOpen(true);
+
+    // Start elimination animation
+    startEliminationAnimation(allNames, winnersNames, selectedCalls, shuffled.slice(randomSelectionCount));
+  };
+
+  const startEliminationAnimation = async (allNames: string[], winners: string[], selectedCalls: any[], callsToDelete: any[]) => {
+    const losers = allNames.filter(name => !winners.includes(name));
+    
+    // Eliminate losers one by one with animation
+    for (let i = 0; i < losers.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 400)); // Delay between eliminations
+      setEliminatedNames(prev => new Set([...prev, losers[i]]));
+    }
+
+    // Wait a moment to show final winners
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Close animation and perform actual deletion
+    setIsAnimationModalOpen(false);
+    
     try {
-      // Randomly select calls
-      const shuffled = [...pendingCalls].sort(() => 0.5 - Math.random());
-      const selectedCalls = shuffled.slice(0, randomSelectionCount);
-      const callsToDelete = shuffled.slice(randomSelectionCount);
-
-      console.log(`🎲 Randomly selecting ${selectedCalls.length} calls from ${pendingCalls.length} total`);
-      console.log('Selected calls:', selectedCalls.map(c => c.viewer_username));
-      console.log('Calls to delete:', callsToDelete.map(c => c.viewer_username));
-
       // Delete the non-selected calls
       const { error } = await supabase
         .from('slots_calls')
@@ -788,10 +814,8 @@ export default function SlotsCalls() {
 
       toast({
         title: "🎲 Random Selection Complete!",
-        description: `Selected ${selectedCalls.length} random calls out of ${pendingCalls.length}. Removed ${callsToDelete.length} calls.`,
+        description: `Selected ${selectedCalls.length} random calls out of ${allNames.length}. Removed ${callsToDelete.length} calls.`,
       });
-
-      setIsRandomSelectionDialogOpen(false);
       
       // Refresh the calls list
       if (selectedEvent) {
@@ -1668,6 +1692,74 @@ export default function SlotsCalls() {
           )}
         </div>
       </div>
+
+      {/* Random Selection Animation Modal */}
+      <Dialog open={isAnimationModalOpen} onOpenChange={() => {}}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold text-primary">
+              🎲 Random Selection in Progress...
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <p className="text-lg mb-2">
+                Selecting {finalWinners.length} winners from {animationNames.length} participants
+              </p>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${(eliminatedNames.size / (animationNames.length - finalWinners.length)) * 100}%` 
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-4 border rounded-lg bg-secondary/10">
+              {animationNames.map((name, index) => {
+                const isEliminated = eliminatedNames.has(name);
+                const isWinner = finalWinners.includes(name);
+                
+                return (
+                  <div
+                    key={`${name}-${index}`}
+                    className={`
+                      p-3 rounded-lg border text-center font-semibold transition-all duration-500 transform
+                      ${isEliminated 
+                        ? 'bg-red-500/20 border-red-500/30 text-red-400 scale-75 opacity-30 line-through' 
+                        : isWinner && eliminatedNames.size === animationNames.length - finalWinners.length
+                        ? 'bg-green-500/20 border-green-500/30 text-green-400 scale-110 animate-pulse shadow-lg' 
+                        : 'bg-primary/10 border-primary/30 text-primary hover:scale-105'
+                      }
+                    `}
+                  >
+                    <div className="text-sm truncate">{name}</div>
+                    {isEliminated && (
+                      <div className="text-xs mt-1 text-red-400">Eliminated</div>
+                    )}
+                    {isWinner && eliminatedNames.size === animationNames.length - finalWinners.length && (
+                      <div className="text-xs mt-1 text-green-400 font-bold">WINNER! 🎉</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {eliminatedNames.size === animationNames.length - finalWinners.length && (
+              <div className="text-center mt-6">
+                <div className="text-2xl font-bold text-green-500 mb-2">
+                  🎉 Congratulations to the Winners! 🎉
+                </div>
+                <div className="text-lg text-muted-foreground">
+                  {finalWinners.join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
