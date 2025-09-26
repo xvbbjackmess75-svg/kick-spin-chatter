@@ -1121,9 +1121,10 @@ export default function SlotsCalls() {
     // Use the provided userId, or the logged-in user's ID, or the selected event's user_id
     const userIdParam = userId || user?.id;
     console.log('🔗 Creating overlay URL for userId:', userIdParam);
+    console.log('🔗 Using overlay settings:', overlaySettings);
     // Add cache-busting parameter to ensure OBS gets latest settings
     const cacheBuster = Date.now();
-    return `${baseUrl}/overlay/slots?userId=${userIdParam}&maxCalls=10&cb=${cacheBuster}`;
+    return `${baseUrl}/overlay/slots?userId=${userIdParam}&maxCalls=${overlaySettings.max_visible_calls || 10}&cb=${cacheBuster}`;
   };
 
   const copyOverlayUrl = () => {
