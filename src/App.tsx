@@ -7,6 +7,7 @@ import { AuthProvider } from "./components/auth/AuthProvider";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { SupportChat } from "./components/SupportChat";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Landing from "./pages/Landing";
@@ -142,6 +143,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <SupportChat />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

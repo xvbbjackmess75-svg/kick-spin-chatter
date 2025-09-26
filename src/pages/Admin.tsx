@@ -14,6 +14,7 @@ import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key, 
 import { toast } from '@/hooks/use-toast';
 import KickChatPoster from '@/components/KickChatPoster';
 import { SlotManagement } from '@/components/SlotManagement';
+import { AdminTicketManagement } from '@/components/AdminTicketManagement';
 
 interface FeaturePermission {
   id: string;
@@ -317,11 +318,12 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="roles">Role Manager</TabsTrigger>
           <TabsTrigger value="slots">Slot Management</TabsTrigger>
           <TabsTrigger value="chat">Chat Poster</TabsTrigger>
+          <TabsTrigger value="support">Support Tickets</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
 
@@ -642,6 +644,20 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <KickChatPoster />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="support" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Support Ticket Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdminTicketManagement />
             </CardContent>
           </Card>
         </TabsContent>
