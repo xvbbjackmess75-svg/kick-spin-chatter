@@ -16,7 +16,8 @@ export function AdminRoute({ children }: AdminRouteProps) {
     timestamp: Date.now()
   });
 
-  if (loading) {
+  // Always show loading if still loading OR if role hasn't been set yet
+  if (loading || role === 'viewer') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
