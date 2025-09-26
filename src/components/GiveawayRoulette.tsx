@@ -266,27 +266,20 @@ export function GiveawayRoulette({
     const securityInfo: UserSecurityInfo = { isAltAccount: false, isVpnProxyTorUser: false };
 
     try {
-      // Check alt account status
-      const { data: altData } = await supabase
-        .from('chat_messages')
-        .select('kick_username')
-        .eq('kick_username', username)
-        .limit(1);
+      // Check alt account status using the database function
+      const { data: altData, error: altError } = await supabase
+        .rpc('check_alt_account_by_username', { target_username: username });
 
-      if (altData && altData.length > 0) {
-        // You could implement alt detection logic here
-        securityInfo.isAltAccount = false; // Placeholder
+      if (!altError && altData) {
+        securityInfo.isAltAccount = altData;
       }
 
-      // Check VPN/Proxy status  
-      const { data: vpnData } = await supabase
-        .from('user_ip_tracking')
-        .select('is_vpn, is_proxy, is_tor')
-        .limit(1);
+      // Check VPN/Proxy/Tor status using the database function
+      const { data: vpnData, error: vpnError } = await supabase
+        .rpc('check_vpn_proxy_tor_by_username', { target_username: username });
 
-      if (vpnData && vpnData.length > 0) {
-        const record = vpnData[0];
-        securityInfo.isVpnProxyTorUser = record.is_vpn || record.is_proxy || record.is_tor;
+      if (!vpnError && vpnData) {
+        securityInfo.isVpnProxyTorUser = vpnData;
       }
     } catch (error) {
       console.error('Error checking user security info:', error);
