@@ -181,6 +181,7 @@ export function useAutoMonitor() {
     monitorStatus,
     isLoading,
     isActive: monitorStatus?.is_active || false,
+    isConnected: monitorStatus?.is_connected || false,
     canUseChatbot,
     startAutoMonitoring,
     sendBotMessage,

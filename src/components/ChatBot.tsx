@@ -26,7 +26,14 @@ interface CommandProcessed {
 export function ChatBot() {
   const { toast } = useToast();
   const { kickUser, canUseChatbot } = useKickAccount();
-  const { monitorStatus, isLoading, isActive } = useAutoMonitor();
+  const { monitorStatus, isLoading, isActive, checkMonitoringStatus } = useAutoMonitor();
+  
+  // Check if monitor is actually connected (not just database status)
+  const isConnected = monitorStatus?.is_connected || false;
+  const isActiveInDb = monitorStatus?.is_active || false;
+  
+  // True status: both active in DB AND connected
+  const actualStatus = isActiveInDb && isConnected;
 
   const getUptime = () => {
     if (!monitorStatus?.started_at) return "0m";
@@ -113,13 +120,19 @@ export function ChatBot() {
             Auto ChatBot Monitor
             <Badge 
               className={
-                isActive 
+                actualStatus 
                   ? "bg-kick-green/20 text-kick-green border-kick-green/30"
-                  : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                  : isActiveInDb
+                  ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                  : "bg-red-500/20 text-red-500 border-red-500/30"
               }
             >
-              <div className={`w-2 h-2 rounded-full mr-2 ${isActive ? 'bg-kick-green animate-pulse' : 'bg-yellow-500'}`} />
-              {isActive ? "Always On" : "Starting..."}
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                actualStatus ? 'bg-kick-green animate-pulse' : 
+                isActiveInDb ? 'bg-yellow-500 animate-pulse' : 
+                'bg-red-500'
+              }`} />
+              {actualStatus ? "Connected" : isActiveInDb ? "Connecting..." : "Disconnected"}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -181,9 +194,12 @@ export function ChatBot() {
           )}
 
           {/* Info */}
-          <div className="mt-6">
+          <div className="mt-6 space-y-2">
             <div className="text-sm text-muted-foreground">
               🤖 <strong>Always-On Mode:</strong> The chatbot automatically monitors your chat and responds to commands 24/7. No manual intervention required!
+            </div>
+            <div className="text-sm text-muted-foreground">
+              🎰 <strong>Slot Calls:</strong> Any viewer (registered or not) can use !kgs [slot_name] to join your active slots events.
             </div>
           </div>
         </CardContent>
@@ -199,6 +215,7 @@ export function ChatBot() {
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
                 <li>• <strong>24/7 Monitoring:</strong> Automatically started when you link your Kick account</li>
                 <li>• <strong>Instant Responses:</strong> Commands are processed immediately without delays</li>
+                <li>• <strong>Slot Calls (!kgs):</strong> Anyone can join slots events - no registration required</li>
                 <li>• <strong>Permission System:</strong> Respects viewer, subscriber, moderator, and owner levels</li>
                 <li>• <strong>Background Processing:</strong> Runs continuously without affecting your stream</li>
               </ul>
