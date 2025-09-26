@@ -62,10 +62,10 @@ export function GiveawayRoulette({
 
   // Provably fair winner selection
   const selectWinner = (): WinnerResult => {
-    const totalTickets = 1000;
+    const totalTickets = 100000;
     const ticketsPerParticipant = Math.floor(totalTickets / participants.length);
     
-    // Generate random winning ticket (1-1000)
+    // Generate random winning ticket (1-100000)
     const winningTicket = Math.floor(Math.random() * totalTickets) + 1;
     
     // Calculate which participant owns this ticket
