@@ -1573,15 +1573,26 @@ export default function Giveaways() {
                         Pick Winner
                       </Button>
                       {chatConnected && connectedChannel === extractChannel(giveaway.description) ? (
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="flex-1"
-                          onClick={stopChatMonitoring}
-                        >
-                          <MonitorX className="h-3 w-3 mr-2" />
-                          Stop Monitor
-                        </Button>
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            className="flex-1"
+                            onClick={stopChatMonitoring}
+                          >
+                            <MonitorX className="h-3 w-3 mr-2" />
+                            Stop Monitor
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+                            onClick={() => setIsLiveChatModalOpen(true)}
+                          >
+                            <MessageSquare className="h-3 w-3 mr-2" />
+                            View Chat
+                          </Button>
+                        </>
                       ) : (
                         <Button 
                           size="sm" 
