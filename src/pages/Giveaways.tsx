@@ -304,7 +304,7 @@ export default function Giveaways() {
             const { data: profileData } = await supabase
               .from('profiles')
               .select('user_id')
-              .eq('linked_kick_username', p.kick_username)
+              .or(`linked_kick_username.eq.${p.kick_username},kick_username.eq.${p.kick_username}`)
               .maybeSingle();
             
             let isVerified = false;
@@ -733,11 +733,11 @@ export default function Giveaways() {
       // Always check current verification status using verified_viewer role
       console.log(`🔍 Checking real-time verification status for ${username}...`);
       
-      // Get user_id first from profiles
+      // Get user_id first from profiles - check both linked_kick_username and kick_username fields
       const { data: profileData } = await supabase
         .from('profiles')
         .select('user_id')
-        .eq('linked_kick_username', username)
+        .or(`linked_kick_username.eq.${username},kick_username.eq.${username}`)
         .maybeSingle();
       
       let isVerified = false;
@@ -1437,11 +1437,11 @@ export default function Giveaways() {
 
       // Check verification status for each participant using verified_viewer role
       for (const participant of participants) {
-        // Get user_id first
+        // Get user_id first - check both linked_kick_username and kick_username fields
         const { data: profileData } = await supabase
           .from('profiles')
           .select('user_id')
-          .eq('linked_kick_username', participant.kick_username)
+          .or(`linked_kick_username.eq.${participant.kick_username},kick_username.eq.${participant.kick_username}`)
           .maybeSingle();
 
         let isVerified = false;
@@ -1449,6 +1449,9 @@ export default function Giveaways() {
           const { data: roleData } = await supabase
             .rpc('get_user_role', { _user_id: profileData.user_id });
           isVerified = roleData === 'verified_viewer';
+          console.log(`🔍 ${participant.kick_username} role check: ${roleData} (user_id: ${profileData.user_id})`);
+        } else {
+          console.log(`🔍 No profile found for ${participant.kick_username}`);
         }
         
         console.log(`🔍 ${participant.kick_username}: verified=${isVerified}`);
