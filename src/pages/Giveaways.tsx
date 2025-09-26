@@ -89,6 +89,13 @@ export default function Giveaways() {
   const [chatConnected, setChatConnected] = useState(false);
   const [connectedChannel, setConnectedChannel] = useState<string>("");
   const [isRouletteModalOpen, setIsRouletteModalOpen] = useState(false);
+  const [isLiveChatModalOpen, setIsLiveChatModalOpen] = useState(false);
+  const [liveParticipants, setLiveParticipants] = useState<Array<{
+    username: string;
+    timestamp: Date;
+    keyword: string;
+    isVerified: boolean;
+  }>>([]);
   const socketRef = useRef<WebSocket | null>(null);
   
   // Management states
@@ -205,6 +212,8 @@ export default function Giveaways() {
           case 'connected':
             setChatConnected(true);
             setConnectedChannel(data.channelName);
+            setIsLiveChatModalOpen(true); // Open live chat modal when monitoring starts
+            setLiveParticipants([]); // Reset participants list
             saveGiveawayMonitoringState(true, data.channelName); // Save persistent state
             toast({
               title: "✅ Chat Connected",
@@ -221,6 +230,7 @@ export default function Giveaways() {
           case 'disconnected':
             setChatConnected(false);
             setConnectedChannel("");
+            setIsLiveChatModalOpen(false); // Close live chat modal when disconnected
             saveGiveawayMonitoringState(false); // Clear persistent state
             break;
             
@@ -360,6 +370,15 @@ export default function Giveaways() {
 
           fetchGiveaways();
           
+          // Add to live participants list
+          const newParticipant = {
+            username: message.username,
+            timestamp: new Date(),
+            keyword: keyword,
+            isVerified: giveaway.verified_only ? true : false
+          };
+          setLiveParticipants(prev => [newParticipant, ...prev].slice(0, 50)); // Keep last 50 participants
+          
           toast({
             title: "🎉 New Participant!",
             description: `${message.username} entered "${giveaway.title}" giveaway!`,
@@ -449,6 +468,7 @@ export default function Giveaways() {
       socketRef.current.close();
       setChatConnected(false);
       setConnectedChannel("");
+      setIsLiveChatModalOpen(false); // Close live chat modal when manually stopped
       saveGiveawayMonitoringState(false); // Clear persistent state
       toast({
         title: "🛑 Chat Monitoring Stopped",
@@ -1613,6 +1633,109 @@ export default function Giveaways() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Live Chat Activity Modal */}
+        <Dialog open={isLiveChatModalOpen} onOpenChange={setIsLiveChatModalOpen}>
+          <DialogContent className="gaming-card border-border/50 max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-green-400" />
+                Live Chat Activity - {connectedChannel}
+                {chatConnected && (
+                  <Badge variant="outline" className="text-green-400 border-green-400/30">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+                    Monitoring
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Participants joining in real-time
+                </p>
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="text-primary">
+                    {liveParticipants.length} Entries
+                  </Badge>
+                  {chatConnected && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={stopChatMonitoring}
+                    >
+                      <MonitorX className="h-4 w-4 mr-2" />
+                      Stop Monitoring
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="bg-secondary/20 rounded-lg p-4 max-h-96 overflow-y-auto">
+                {liveParticipants.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Waiting for participants...</p>
+                    <p className="text-xs mt-1">Users will appear here when they enter the giveaway</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {liveParticipants.map((participant, index) => (
+                      <div 
+                        key={`${participant.username}-${participant.timestamp.getTime()}`}
+                        className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/50 animate-fade-in"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-8 h-8 bg-gradient-to-r from-kick-green to-kick-purple rounded-full flex items-center justify-center">
+                              <span className="text-xs font-semibold text-white">
+                                {participant.username.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            {participant.isVerified && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="h-2 w-2 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">
+                                {participant.username}
+                              </span>
+                              {participant.isVerified && (
+                                <Badge variant="outline" className="text-xs text-blue-400 border-blue-400/30">
+                                  Verified
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Used keyword: <span className="text-accent font-mono">{participant.keyword}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-muted-foreground">
+                            {participant.timestamp.toLocaleTimeString()}
+                          </div>
+                          <div className="text-xs text-green-400">
+                            #{index + 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {liveParticipants.length > 0 && (
+                <div className="text-xs text-muted-foreground text-center">
+                  Showing last {Math.min(liveParticipants.length, 50)} participants
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       </div>
     </KickAccountGuard>
