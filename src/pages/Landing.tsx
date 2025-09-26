@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/PageHeader';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
 import { 
   Zap, 
   MessageSquare, 
@@ -101,6 +103,34 @@ const showcaseFeatures = [
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // Check for Kick authentication
+  const kickUser = localStorage.getItem('kick_user');
+  const isKickAuthenticated = kickUser ? JSON.parse(kickUser).authenticated : false;
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!loading && (user || isKickAuthenticated)) {
+      console.log('🔄 User is authenticated, redirecting to dashboard...');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, isKickAuthenticated, loading, navigate]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kick-green mx-auto" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, they will be redirected above
+  // This component only renders for non-authenticated users
 
   return (
     <div className="min-h-screen bg-background">
