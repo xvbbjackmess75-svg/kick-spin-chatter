@@ -92,18 +92,41 @@ serve(async (req) => {
 
     console.log(`Found chatroom ID: ${chatroomId} for channel: ${channelName}`);
 
-    // Get the corresponding UUID channel_id from kick_channels table
+    // Get or create the corresponding UUID channel_id from kick_channels table
     console.log(`Looking up channel UUID for chatroom ID: ${chatroomId}`);
     
-    const { data: channelData, error: channelError } = await supabase
+    let { data: channelData, error: channelError } = await supabase
       .from('kick_channels')
       .select('id')
       .eq('channel_id', chatroomId.toString())
-      .single();
+      .maybeSingle();
 
-    if (channelError || !channelData) {
-      console.log(`No kick_channels record found for chatroom ${chatroomId}. Error:`, channelError);
-      // Try to get all messages for this user regardless of channel as fallback
+    // If no channel record exists, create one
+    if (!channelData && !channelError) {
+      console.log(`Creating new kick_channels record for chatroom ${chatroomId}`);
+      
+      const { data: newChannel, error: createError } = await supabase
+        .from('kick_channels')
+        .insert({
+          user_id: user.id,
+          channel_name: channelName,
+          channel_id: chatroomId.toString(),
+          is_active: true,
+          bot_enabled: false
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error(`Failed to create channel record:`, createError);
+      } else {
+        channelData = newChannel;
+        console.log(`Created new channel record with UUID: ${channelData?.id}`);
+      }
+    }
+
+    if (channelError) {
+      console.log(`Error looking up kick_channels record for chatroom ${chatroomId}:`, channelError);
     }
 
     // Fetch messages from our database (primary source)
@@ -149,8 +172,43 @@ serve(async (req) => {
       console.log(`Found ${messages.length} stored messages for user ${username} in chatroom ${chatroomId}`);
     } else {
       console.log(`No stored messages found. DB Error: ${dbError?.message || 'none'}, Messages count: ${storedMessages?.length || 0}`);
-      // Return empty results since Kick's public API doesn't provide chat history
-      messages = [];
+      
+      // If no stored messages, try to fetch some recent activity from Kick API as fallback
+      // Note: This is limited and may not work reliably due to Kick's API restrictions
+      try {
+        console.log(`Attempting to fetch recent messages from Kick API for ${channelName}`);
+        const kickResponse = await fetch(`https://kick.com/api/v1/channels/${channelName}/messages?limit=${Math.min(limit, 20)}`);
+        
+        if (kickResponse.ok) {
+          const kickData = await kickResponse.json();
+          if (kickData.data && Array.isArray(kickData.data)) {
+            // Filter messages for the specific user
+            const userMessages = kickData.data.filter((msg: any) => 
+              msg.sender?.username?.toLowerCase() === username.toLowerCase()
+            );
+            
+            messages = userMessages.map((msg: any) => ({
+              id: msg.id || `kick-${Date.now()}-${Math.random()}`,
+              content: msg.content || '',
+              created_at: msg.created_at || new Date().toISOString(),
+              sender: {
+                id: msg.sender?.id || 0,
+                username: msg.sender?.username || username,
+                slug: msg.sender?.slug || username.toLowerCase(),
+                identity: {
+                  badges: msg.sender?.identity?.badges || []
+                }
+              },
+              metadata: { source: 'kick_api_fallback' }
+            }));
+            
+            console.log(`Found ${messages.length} recent messages for user ${username} from Kick API`);
+          }
+        }
+      } catch (apiError) {
+        console.log(`Failed to fetch from Kick API:`, apiError);
+        messages = [];
+      }
     }
 
     // Transform messages to a consistent format
@@ -195,7 +253,12 @@ serve(async (req) => {
       },
       channelInfo: {
         name: channelName,
-        chatroomId
+        chatroomId,
+        channelUUID: channelData?.id || null,
+        hasStoredMessages: totalMessages > 0,
+        note: totalMessages === 0 ? 
+          "No chat history found. This could be because: 1) Chat monitoring hasn't been started yet, 2) No messages have been sent since monitoring began, or 3) The user hasn't been active in this channel recently." 
+          : null
       }
     };
 
@@ -216,6 +279,13 @@ serve(async (req) => {
           lastMessageDate: null,
           mostActiveHour: null,
           averageMessagesPerDay: 0
+        },
+        channelInfo: {
+          name: 'unknown',
+          chatroomId: null,
+          channelUUID: null,
+          hasStoredMessages: false,
+          note: "Error occurred while fetching chat history. Please try again or contact support."
         }
       }),
       {
