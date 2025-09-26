@@ -42,6 +42,7 @@ interface OverlaySettings {
 }
 
 export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: SlotsOverlayProps) {
+  console.log('🚀 SlotsOverlay component loaded! Props:', { userId, maxCalls, customSettings });
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);

@@ -26,6 +26,8 @@ interface OverlaySettings {
 }
 
 export default function SlotsOverlayPage() {
+  console.log('🚀 SlotsOverlayPage component loaded!');
+  
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('userId');
   const maxCalls = parseInt(searchParams.get('maxCalls') || '10');
