@@ -370,13 +370,15 @@ export default function TestOverlayBuilder() {
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [overlayType, setOverlayType] = useState<'slots' | 'bonus_hunt'>('slots');
   const [layoutName, setLayoutName] = useState('');
+  const [canvasWidth, setCanvasWidth] = useState(800);
+  const [canvasHeight, setCanvasHeight] = useState(600);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: 1920,
-      height: 1080,
+      width: canvasWidth,
+      height: canvasHeight,
       backgroundColor: 'transparent',
       selection: true, // Enable selection
       preserveObjectStacking: true,
@@ -403,7 +405,7 @@ export default function TestOverlayBuilder() {
     return () => {
       canvas.dispose();
     };
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   const addElement = (elementType: OverlayElement) => {
     if (!fabricCanvas) return;
@@ -699,34 +701,45 @@ export default function TestOverlayBuilder() {
           {/* Canvas with Responsive Sizing */}
           <Card className="col-span-8 p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Canvas (1920x1080) - Responsive View</h3>
-              <div className="flex items-center gap-2">
+              <h3 className="font-semibold">Canvas ({canvasWidth}x{canvasHeight})</h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Resolution:</Label>
+                  <Select 
+                    value={`${canvasWidth}x${canvasHeight}`} 
+                    onValueChange={(value) => {
+                      const [w, h] = value.split('x').map(Number);
+                      setCanvasWidth(w);
+                      setCanvasHeight(h);
+                    }}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="800x600">800x600</SelectItem>
+                      <SelectItem value="1280x720">1280x720</SelectItem>
+                      <SelectItem value="1920x1080">1920x1080</SelectItem>
+                      <SelectItem value="2560x1440">2560x1440</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Badge variant="secondary">
                   <Eye className="h-3 w-3 mr-1" />
                   Live Preview
                 </Badge>
-                <Select defaultValue="fit">
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fit">Fit to Screen</SelectItem>
-                    <SelectItem value="50">50%</SelectItem>
-                    <SelectItem value="75">75%</SelectItem>
-                    <SelectItem value="100">100%</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden bg-gray-900 flex justify-center">
-              <div className="relative w-full max-w-full" style={{ aspectRatio: '16/9' }}>
+            <div className="border border-border rounded-lg overflow-auto bg-gray-900 p-4 max-h-[70vh]">
+              <div className="w-fit mx-auto">
                 <canvas 
                   ref={canvasRef} 
-                  className="w-full h-full object-contain cursor-default" 
+                  className="cursor-default border border-gray-600" 
                   style={{ 
-                    maxHeight: '60vh',
                     pointerEvents: 'auto',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    maxWidth: '100%',
+                    height: 'auto'
                   }}
                 />
               </div>
