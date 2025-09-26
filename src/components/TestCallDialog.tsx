@@ -147,7 +147,7 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
       });
 
       setIsOpen(false);
-      onCallAdded();
+      // Don't call onCallAdded() for bulk inserts - real-time listener handles it
 
     } catch (error) {
       console.error(`❌ ERROR ${execId}:`, error);

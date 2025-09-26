@@ -210,11 +210,6 @@ export default function SlotsCalls() {
     // No longer needed with auto-monitor
   };
 
-  useEffect(() => {
-    if (selectedEvent) {
-      fetchCalls(selectedEvent.id);
-    }
-  }, [selectedEvent]);
 
   // Start monitoring using both auto-monitor (for processing) and WebSocket (for display)
   const initializeMonitoring = async () => {
