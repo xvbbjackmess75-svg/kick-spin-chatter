@@ -416,7 +416,7 @@ export default function SlotsCalls() {
   useEffect(() => {
     if (!selectedEvent) return;
 
-    console.log('🎰 Setting up realtime subscription for event:', selectedEvent.id);
+    console.log('🔗 CREATING realtime subscription for event:', selectedEvent.id, 'at', Date.now());
     
     const channel = supabase
       .channel(`slots_calls_${selectedEvent.id}`)
@@ -429,7 +429,7 @@ export default function SlotsCalls() {
           filter: `event_id=eq.${selectedEvent.id}`
         },
         (payload) => {
-          console.log('🎰 New slots call detected:', payload.new);
+          console.log('🎰 Real-time INSERT detected:', payload.new?.viewer_username, 'ID:', payload.new?.id);
           const newCall = payload.new as SlotsCall;
           
           toast({
@@ -484,6 +484,7 @@ export default function SlotsCalls() {
       .subscribe();
 
     return () => {
+      console.log('🔗 CLEANING UP realtime subscription for event:', selectedEvent.id, 'at', Date.now());
       supabase.removeChannel(channel);
     };
   }, [selectedEvent?.id]);
