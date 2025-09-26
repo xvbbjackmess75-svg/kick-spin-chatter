@@ -89,7 +89,7 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
 
             <Button 
               className="gaming-button w-full"
-              onClick={() => window.location.href = '/auth'}
+              onClick={() => window.location.href = '/account'}
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Link Your Kick Account
