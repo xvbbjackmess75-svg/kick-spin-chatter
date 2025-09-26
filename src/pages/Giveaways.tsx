@@ -45,7 +45,10 @@ import {
   Edit,
   UserX,
   MoreVertical,
-  LogIn
+  LogIn,
+  MessageSquare,
+  Clock,
+  User
 } from "lucide-react";
 
 interface RouletteParticipant {
@@ -96,6 +99,27 @@ export default function Giveaways() {
     keyword: string;
     isVerified: boolean;
   }>>([]);
+  const [chatHistory, setChatHistory] = useState<Array<{
+    username: string;
+    message: string;
+    timestamp: Date;
+    userId?: string;
+    badges?: string[];
+  }>>([]);
+  const [selectedUserActivity, setSelectedUserActivity] = useState<{
+    username: string;
+    messages: Array<{
+      message: string;
+      timestamp: Date;
+      badges?: string[];
+    }>;
+    stats: {
+      totalMessages: number;
+      giveawayEntries: number;
+      firstSeen: Date;
+      lastSeen: Date;
+    };
+  } | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   
   // Management states
@@ -224,6 +248,16 @@ export default function Giveaways() {
             
           case 'chat_message':
             console.log('Received chat message:', data.data);
+            // Store all chat messages for user activity tracking
+            const chatMessage = {
+              username: data.data.username,
+              message: data.data.content || '',
+              timestamp: new Date(),
+              userId: data.data.userId?.toString(),
+              badges: data.data.badges || []
+            };
+            setChatHistory(prev => [chatMessage, ...prev].slice(0, 100)); // Keep last 100 messages
+            
             handleChatMessage(data.data);
             break;
             
@@ -231,6 +265,7 @@ export default function Giveaways() {
             setChatConnected(false);
             setConnectedChannel("");
             setIsLiveChatModalOpen(false); // Close live chat modal when disconnected
+            setChatHistory([]); // Clear chat history when disconnected
             saveGiveawayMonitoringState(false); // Clear persistent state
             break;
             
@@ -463,12 +498,50 @@ export default function Giveaways() {
     }
   };
 
+  const viewUserActivity = (username: string) => {
+    const userMessages = chatHistory.filter(msg => msg.username === username);
+    const userParticipations = liveParticipants.filter(p => p.username === username);
+    
+    if (userMessages.length === 0 && userParticipations.length === 0) {
+      toast({
+        title: "No Activity Found",
+        description: `No chat activity found for ${username}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const allTimestamps = [
+      ...userMessages.map(m => m.timestamp),
+      ...userParticipations.map(p => p.timestamp)
+    ];
+
+    const stats = {
+      totalMessages: userMessages.length,
+      giveawayEntries: userParticipations.length,
+      firstSeen: allTimestamps.length > 0 ? new Date(Math.min(...allTimestamps.map(t => t.getTime()))) : new Date(),
+      lastSeen: allTimestamps.length > 0 ? new Date(Math.max(...allTimestamps.map(t => t.getTime()))) : new Date()
+    };
+
+    setSelectedUserActivity({
+      username,
+      messages: userMessages.map(m => ({
+        message: m.message,
+        timestamp: m.timestamp,
+        badges: m.badges
+      })),
+      stats
+    });
+  };
+
   const stopChatMonitoring = () => {
     if (socketRef.current) {
       socketRef.current.close();
       setChatConnected(false);
       setConnectedChannel("");
       setIsLiveChatModalOpen(false); // Close live chat modal when manually stopped
+      setChatHistory([]); // Clear chat history when stopped
+      setSelectedUserActivity(null); // Close user activity modal
       saveGiveawayMonitoringState(false); // Clear persistent state
       toast({
         title: "🛑 Chat Monitoring Stopped",
@@ -1683,7 +1756,8 @@ export default function Giveaways() {
                     {liveParticipants.map((participant, index) => (
                       <div 
                         key={`${participant.username}-${participant.timestamp.getTime()}`}
-                        className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/50 animate-fade-in"
+                        className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/50 animate-fade-in hover:bg-background/70 cursor-pointer transition-colors"
+                        onClick={() => viewUserActivity(participant.username)}
                       >
                         <div className="flex items-center gap-3">
                           <div className="relative">
@@ -1734,6 +1808,121 @@ export default function Giveaways() {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* User Activity Modal */}
+        <Dialog open={!!selectedUserActivity} onOpenChange={(open) => !open && setSelectedUserActivity(null)}>
+          <DialogContent className="gaming-card border-border/50 max-w-3xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-400" />
+                Chat Activity - {selectedUserActivity?.username}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedUserActivity && (
+              <div className="space-y-4">
+                {/* User Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                    <div className="text-lg font-bold text-blue-400">
+                      {selectedUserActivity.stats.totalMessages}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Messages</div>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                    <div className="text-lg font-bold text-green-400">
+                      {selectedUserActivity.stats.giveawayEntries}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Giveaway Entries</div>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                    <div className="text-lg font-bold text-purple-400">
+                      {((new Date().getTime() - selectedUserActivity.stats.firstSeen.getTime()) / (1000 * 60)).toFixed(0)}m
+                    </div>
+                    <div className="text-xs text-muted-foreground">Time Active</div>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                    <div className="text-lg font-bold text-orange-400">
+                      {selectedUserActivity.stats.lastSeen.toLocaleTimeString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Last Seen</div>
+                  </div>
+                </div>
+
+                {/* Recent Messages */}
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Recent Messages ({selectedUserActivity.messages.length})
+                  </h4>
+                  <div className="bg-secondary/20 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {selectedUserActivity.messages.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No chat messages recorded</p>
+                        <p className="text-xs mt-1">Only giveaway entries detected</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedUserActivity.messages.map((message, index) => (
+                          <div 
+                            key={`${message.timestamp.getTime()}-${index}`}
+                            className="flex items-start gap-3 p-3 bg-background/30 rounded-lg"
+                          >
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-semibold text-white">
+                                {selectedUserActivity.username.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">
+                                  {selectedUserActivity.username}
+                                </span>
+                                {message.badges && message.badges.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {message.badges.map((badge, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs px-1 py-0">
+                                        {badge}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                <span className="text-xs text-muted-foreground ml-auto">
+                                  {message.timestamp.toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <div className="text-sm text-foreground break-words">
+                                {message.message || <em className="text-muted-foreground">No message content</em>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Activity Timeline */}
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Activity Timeline
+                  </h4>
+                  <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      First seen: {selectedUserActivity.stats.firstSeen.toLocaleString()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      Last activity: {selectedUserActivity.stats.lastSeen.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
