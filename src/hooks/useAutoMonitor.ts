@@ -80,10 +80,16 @@ export function useAutoMonitor() {
           description: `Now monitoring for slots commands`,
         });
         
-        // Wait a moment then check status
+        // Wait a moment then check status multiple times to ensure we get updated status
         setTimeout(() => {
           checkMonitoringStatus();
-        }, 2000);
+        }, 1000);
+        setTimeout(() => {
+          checkMonitoringStatus();
+        }, 3000);
+        setTimeout(() => {
+          checkMonitoringStatus();
+        }, 5000);
       } else {
         console.error('❌ Monitoring failed:', response.data);
         throw new Error(response.data?.error || 'Failed to start monitoring');

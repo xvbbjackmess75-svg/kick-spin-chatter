@@ -211,11 +211,34 @@ export default function SlotsCalls() {
   const initializeMonitoring = async () => {
     if (!canUseChatbot) {
       toast({
+        title: "🔄 Restarting Monitor...",
+        description: "Initializing chat monitor, please wait...",
+      });
+      
+      toast({
         title: "Error",
         description: "Please link your Kick account to use chat monitoring",
         variant: "destructive",
       });
       return;
+    }
+
+    // Show immediate feedback
+    toast({
+      title: "🔄 Restarting Monitor...",
+      description: "Initializing chat monitor, please wait...",
+    });
+
+    try {
+      await startAutoMonitoring();
+      
+      // Check status multiple times to ensure UI updates
+      setTimeout(() => checkMonitoringStatus(), 1000);
+      setTimeout(() => checkMonitoringStatus(), 3000);
+      setTimeout(() => checkMonitoringStatus(), 5000);
+      
+    } catch (error) {
+      console.error('Failed to initialize monitoring:', error);
     }
 
     try {
@@ -1346,21 +1369,26 @@ export default function SlotsCalls() {
                       <>
                         <div className="flex items-center gap-2 text-sm">
                           <div className={`w-2 h-2 rounded-full ${
-                            monitorStatus?.is_active && monitorStatus?.is_connected ? 'bg-green-500 animate-pulse' : 
-                            'bg-red-500'
+                            monitorStatus?.is_active ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                           }`}></div>
                           <span className="text-muted-foreground">
-                            {monitorStatus?.is_active && monitorStatus?.is_connected ? 'Monitor Active' : 'Monitor Offline'}
+                            {monitorStatus?.is_active ? 'Monitor Active' : 'Monitor Offline'}
                           </span>
+                          {/* Show connection status separately */}
+                          {monitorStatus?.is_active && (
+                            <span className="text-xs text-muted-foreground">
+                              ({monitorStatus?.is_connected ? 'Connected' : 'Connecting...'})
+                            </span>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={monitorStatus?.is_active && monitorStatus?.is_connected ? () => stopMonitoring() : initializeMonitoring}
-                            variant={monitorStatus?.is_active && monitorStatus?.is_connected ? "destructive" : "default"}
+                            onClick={monitorStatus?.is_active ? () => stopMonitoring() : initializeMonitoring}
+                            variant={monitorStatus?.is_active ? "destructive" : "default"}
                             size="sm"
                             className="gaming-button"
                           >
-                            {monitorStatus?.is_active && monitorStatus?.is_connected ? (
+                            {monitorStatus?.is_active ? (
                               <>
                                 <Square className="h-3 w-3 mr-1" />
                                 Stop Auto-Monitor
