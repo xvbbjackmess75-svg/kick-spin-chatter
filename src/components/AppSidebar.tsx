@@ -42,9 +42,15 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
-  const { isAdmin, hasStreamerAccess } = useUserRole();
+  const { isAdmin, hasStreamerAccess, role, loading } = useUserRole();
   
-  console.log('🔧 AppSidebar - isAdmin:', isAdmin(), 'hasStreamerAccess:', hasStreamerAccess());
+  console.log('🔧 AppSidebar - Full state:', { 
+    role, 
+    loading, 
+    isAdmin: isAdmin(), 
+    hasStreamerAccess: hasStreamerAccess(),
+    currentPath 
+  });
 
   const isActive = (path: string) => currentPath === path;
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
