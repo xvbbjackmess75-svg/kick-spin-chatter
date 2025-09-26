@@ -291,8 +291,11 @@ export default function Giveaways() {
           case 'connected':
             setChatConnected(true);
             setConnectedChannel(data.channelName);
-            setIsLiveChatModalOpen(true); // Open live chat modal when monitoring starts
-            setLiveParticipants([]); // Reset participants list
+            // Only reset participants if this is a new monitoring session (not a reconnect/reopen)
+            if (!chatConnected) {
+              setLiveParticipants([]); // Reset participants list only for new sessions
+              setIsLiveChatModalOpen(true); // Open live chat modal when monitoring starts
+            }
             saveGiveawayMonitoringState(true, data.channelName); // Save persistent state
             toast({
               title: "✅ Chat Connected",
