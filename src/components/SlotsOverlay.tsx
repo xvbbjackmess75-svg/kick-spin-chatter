@@ -67,9 +67,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
       
-      // Load settings and data
+      // Load settings first, then data
       const loadData = async () => {
+        console.log('📝 Loading overlay settings first...');
         await fetchOverlaySettings();
+        console.log('📊 Loading event data...');
         await fetchActiveEventAndCalls();
       };
       
@@ -135,10 +137,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
       animationEnabled: overlaySettings.animation_enabled,
       scrollingSpeed: overlaySettings.scrolling_speed,
       eventStatus: event?.status,
-      shouldScroll: calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled
+      shouldScroll: calls.length > overlaySettings.max_visible_calls && overlaySettings.animation_enabled
     });
 
-    if (calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled) {
+    if (calls.length > overlaySettings.max_visible_calls && overlaySettings.animation_enabled) {
       console.log('🎬 Starting scroll animation - calls exceed visible limit');
       const interval = setInterval(() => {
         setScrollPosition(prev => {
@@ -187,7 +189,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
       if (data) {
         console.log('✅ Found overlay settings:', data);
-        console.log('🎨 Applying custom settings - colors:', {
+        console.log('🎨 Applying custom settings:', {
           background_color: data.background_color,
           text_color: data.text_color,
           accent_color: data.accent_color,
@@ -196,10 +198,13 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
           max_visible_calls: data.max_visible_calls,
           animation_enabled: data.animation_enabled
         });
-        setOverlaySettings(data);
+        // Apply the settings immediately
+        setOverlaySettings(prevSettings => ({
+          ...prevSettings,
+          ...data
+        }));
       } else {
         console.log('ℹ️ No custom overlay settings found, using defaults');
-        console.log('🎨 Using default settings:', overlaySettings);
       }
     } catch (error) {
       console.error("❌ Exception fetching overlay settings:", error);
