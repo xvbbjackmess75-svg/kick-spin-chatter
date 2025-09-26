@@ -182,6 +182,12 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
   }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled, overlaySettings.scrolling_speed, event?.status]);
 
   const fetchOverlaySettings = async () => {
+    // If customSettings are provided, don't fetch from database
+    if (customSettings) {
+      console.log('🎨 Using provided customSettings, skipping database fetch');
+      return;
+    }
+    
     if (!userId) {
       console.log('⚠️ No userId provided for overlay settings');
       return;
