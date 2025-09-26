@@ -130,6 +130,14 @@ export function AppSidebar() {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin/overlay-builder" className={getNavClass}>
+                      <Monitor className="h-5 w-5 mr-3" />
+                      {!collapsed && <span className="font-medium">Test Overlay Builder</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

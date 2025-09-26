@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./components/auth/AuthProvider";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Landing from "./pages/Landing";
@@ -27,6 +28,9 @@ import ViewerRegistration from "./pages/ViewerRegistration";
 import ViewerVerification from "./pages/ViewerVerification";
 import UpgradeToStreamer from "./pages/UpgradeToStreamer";
 import StreamerUpgradeRequest from "./pages/StreamerUpgradeRequest";
+import TestOverlayBuilder from "./pages/admin/TestOverlayBuilder";
+import TestSlotsOverlay from "./pages/admin/TestSlotsOverlay";
+import TestBonusHuntOverlay from "./pages/admin/TestBonusHuntOverlay";
 
 // Create QueryClient at module level with minimal configuration
 const queryClient = new QueryClient();
@@ -111,6 +115,24 @@ const App = () => (
                   </Layout>
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/admin/overlay-builder"
+              element={
+                <AdminRoute>
+                  <Layout>
+                    <TestOverlayBuilder />
+                  </Layout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/test-overlay/slots"
+              element={<TestSlotsOverlay />}
+            />
+            <Route
+              path="/test-overlay/bonus-hunt"
+              element={<TestBonusHuntOverlay />}
             />
             <Route
               path="/upgrade-to-streamer"

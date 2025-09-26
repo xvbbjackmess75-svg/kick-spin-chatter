@@ -854,6 +854,69 @@ export type Database = {
         }
         Relationships: []
       }
+      test_overlay_layouts: {
+        Row: {
+          created_at: string | null
+          id: string
+          layout_config: Json
+          name: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          layout_config: Json
+          name: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          layout_config?: Json
+          name?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      test_overlay_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          template_config: Json
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          template_config: Json
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          template_config?: Json
+          type?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
