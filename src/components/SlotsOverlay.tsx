@@ -52,11 +52,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     text_color: 'hsl(var(--foreground))',
     accent_color: 'hsl(var(--primary))',
     font_size: 'medium',
-    max_visible_calls: 5, // Reduce to test scrolling easier
+    max_visible_calls: 10,
     scrolling_speed: 50,
     show_background: true,
     show_borders: true,
-    animation_enabled: true // Force enable for testing
+    animation_enabled: true
   });
   
   // Force component remount when cache-buster changes by including it in key
@@ -187,9 +187,19 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
       if (data) {
         console.log('✅ Found overlay settings:', data);
+        console.log('🎨 Applying custom settings - colors:', {
+          background_color: data.background_color,
+          text_color: data.text_color,
+          accent_color: data.accent_color,
+          border_color: data.border_color,
+          scrolling_speed: data.scrolling_speed,
+          max_visible_calls: data.max_visible_calls,
+          animation_enabled: data.animation_enabled
+        });
         setOverlaySettings(data);
       } else {
         console.log('ℹ️ No custom overlay settings found, using defaults');
+        console.log('🎨 Using default settings:', overlaySettings);
       }
     } catch (error) {
       console.error("❌ Exception fetching overlay settings:", error);
