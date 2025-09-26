@@ -299,14 +299,22 @@ export default function Giveaways() {
           // Check real-time verification status for each participant
           for (const p of participants) {
             console.log(`🔍 Checking real-time verification for ${p.kick_username} in live chat...`);
+            
+            // Check if user has verified_viewer role instead of just linked accounts
             const { data: profileData } = await supabase
               .from('profiles')
-              .select('linked_kick_user_id, linked_discord_user_id')
+              .select('user_id')
               .eq('linked_kick_username', p.kick_username)
               .maybeSingle();
             
-            const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
-            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id}, Raw data:`, profileData);
+            let isVerified = false;
+            if (profileData?.user_id) {
+              const { data: roleData } = await supabase
+                .rpc('get_user_role', { _user_id: profileData.user_id });
+              isVerified = roleData === 'verified_viewer';
+            }
+            
+            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Role check for user_id: ${profileData?.user_id})`);
             
             allParticipants.push({
               username: p.kick_username,
@@ -708,16 +716,24 @@ export default function Giveaways() {
 
   const viewUserProfile = async (username: string) => {
     try {
-      // Always check current verification status from profiles table for accurate display
+      // Always check current verification status using verified_viewer role
       console.log(`🔍 Checking real-time verification status for ${username}...`);
+      
+      // Get user_id first from profiles
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+        .select('user_id')
         .eq('linked_kick_username', username)
         .maybeSingle();
       
-      const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
-      console.log(`✅ ${username} verification status: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id}, Raw data:`, profileData);
+      let isVerified = false;
+      if (profileData?.user_id) {
+        const { data: roleData } = await supabase
+          .rpc('get_user_role', { _user_id: profileData.user_id });
+        isVerified = roleData === 'verified_viewer';
+      }
+      
+      console.log(`✅ ${username} verification status: ${isVerified} (Role: ${isVerified ? 'verified_viewer' : 'viewer'}, User ID: ${profileData?.user_id})`);
 
       // Fetch user's recent giveaway participations
       const { data: participations, error } = await supabase
@@ -1395,15 +1411,21 @@ export default function Giveaways() {
         return;
       }
 
-      // Check verification status for each participant
+      // Check verification status for each participant using verified_viewer role
       for (const participant of participants) {
+        // Get user_id first
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('linked_kick_user_id, linked_discord_user_id')
+          .select('user_id')
           .eq('linked_kick_username', participant.kick_username)
-          .single();
+          .maybeSingle();
 
-        const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+        let isVerified = false;
+        if (profileData?.user_id) {
+          const { data: roleData } = await supabase
+            .rpc('get_user_role', { _user_id: profileData.user_id });
+          isVerified = roleData === 'verified_viewer';
+        }
         
         console.log(`🔍 ${participant.kick_username}: verified=${isVerified}`);
         
