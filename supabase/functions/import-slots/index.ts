@@ -29,7 +29,11 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const endPage = Math.min(startPage + pagesPerRun - 1, 263);
+    // Dynamically detect total pages available
+    const totalPages = await getTotalPages();
+    console.log(`Total pages available on website: ${totalPages}`);
+    
+    const endPage = Math.min(startPage + pagesPerRun - 1, totalPages);
     console.log(`Importing slots from pages ${startPage} to ${endPage} (${endPage - startPage + 1} pages)`);
 
     const allSlots: SlotData[] = [];
@@ -150,7 +154,7 @@ Deno.serve(async (req) => {
       console.log(`Inserted batch ${Math.floor(i / insertBatchSize) + 1}, total inserted: ${insertedCount}`);
     }
 
-    const nextStartPage = endPage < 263 ? endPage + 1 : null;
+    const nextStartPage = endPage < totalPages ? endPage + 1 : null;
     
     return new Response(
       JSON.stringify({
@@ -375,4 +379,66 @@ function extractTheme(name: string): string | undefined {
   }
   
   return undefined;
+}
+
+async function getTotalPages(): Promise<number> {
+  try {
+    console.log('Detecting total pages from website...');
+    
+    // Fetch the first page to find pagination info
+    const response = await fetch('https://www.aboutslots.com/all-casino-slots/');
+    if (!response.ok) {
+      console.error('Failed to fetch first page for pagination detection');
+      return 267; // Fallback to known value
+    }
+    
+    const html = await response.text();
+    
+    // Look for pagination links - common patterns on casino slot sites
+    const paginationPatterns = [
+      /page\/(\d+)["\s>]/g,  // Look for page/number patterns
+      /\/all-casino-slots\/(\d+)/g,  // Direct page number in URL
+      /"page":\s*(\d+)/g,  // JSON data with page numbers
+      /data-page="(\d+)"/g,  // Data attributes
+      /(?:page|Page)\s*(\d+)/g  // Generic page text
+    ];
+    
+    let maxPage = 267; // Current fallback
+    
+    for (const pattern of paginationPatterns) {
+      const matches = Array.from(html.matchAll(pattern));
+      for (const match of matches) {
+        const pageNum = parseInt(match[1]);
+        if (pageNum && pageNum > maxPage && pageNum < 1000) { // Reasonable upper bound
+          maxPage = pageNum;
+        }
+      }
+    }
+    
+    // Look for "Last" or final page link specifically
+    const lastPageMatch = html.match(/(?:last|final|end).*?(?:page|\/all-casino-slots\/)(\d+)/i);
+    if (lastPageMatch) {
+      const lastPage = parseInt(lastPageMatch[1]);
+      if (lastPage && lastPage > maxPage && lastPage < 1000) {
+        maxPage = lastPage;
+      }
+    }
+    
+    // Look for pagination navigation with numbered links
+    const numberedLinksRegex = /href="[^"]*\/all-casino-slots\/(\d+)[^"]*"/g;
+    const numberedMatches = Array.from(html.matchAll(numberedLinksRegex));
+    for (const match of numberedMatches) {
+      const pageNum = parseInt(match[1]);
+      if (pageNum && pageNum > maxPage && pageNum < 1000) {
+        maxPage = pageNum;
+      }
+    }
+    
+    console.log(`Detected total pages: ${maxPage}`);
+    return maxPage;
+    
+  } catch (error) {
+    console.error('Error detecting total pages:', error);
+    return 267; // Fallback to known value
+  }
 }
