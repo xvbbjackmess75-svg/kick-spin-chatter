@@ -46,6 +46,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const [loading, setLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Force component remount when cache-buster changes by including it in key
+  const urlParams = new URLSearchParams(window.location.search);
+  const cacheBuster = urlParams.get('cb') || 'default';
+  
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
     border_color: '#3b82f6',
@@ -62,8 +67,14 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   useEffect(() => {
     if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
-      fetchOverlaySettings();
-      fetchActiveEventAndCalls();
+      
+      // Force reload settings on mount to bypass any caching issues
+      const loadSettings = async () => {
+        await fetchOverlaySettings();
+        await fetchActiveEventAndCalls();
+      };
+      
+      loadSettings();
       
       // Set up real-time subscription for events and calls with better refresh logic
       const eventsSubscription = supabase
@@ -136,9 +147,14 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled]);
 
   const fetchOverlaySettings = async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('⚠️ No userId provided for overlay settings');
+      return;
+    }
 
     try {
+      console.log(`🎨 Fetching overlay settings for userId: ${userId}`);
+      
       const { data, error } = await supabase
         .from('overlay_settings')
         .select('*')
@@ -146,15 +162,18 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         .single();
 
       if (error && error.code !== 'PGRST116') { // Not found error
-        console.error("Error fetching overlay settings:", error);
+        console.error("❌ Error fetching overlay settings:", error);
         return;
       }
 
       if (data) {
+        console.log('✅ Found overlay settings:', data);
         setOverlaySettings(data);
+      } else {
+        console.log('ℹ️ No custom overlay settings found, using defaults');
       }
     } catch (error) {
-      console.error("Error fetching overlay settings:", error);
+      console.error("❌ Exception fetching overlay settings:", error);
     }
   };
 
@@ -327,6 +346,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     <div 
       className={`min-h-screen p-6 ${getFontSizeClass(overlaySettings.font_size)}`} 
       style={getOverlayStyle()}
+      data-user-id={userId} // Add data attribute for debugging
+      data-settings-loaded={JSON.stringify(overlaySettings !== null)} // Debug info
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}

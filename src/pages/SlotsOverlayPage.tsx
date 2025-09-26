@@ -486,7 +486,10 @@ export default function SlotsOverlayPage() {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => window.open(`/slots-overlay?userId=${userId}&maxCalls=${overlaySettings.max_visible_calls}`, '_blank')}
+                onClick={() => {
+                  const testUrl = `/overlay/slots?userId=${userId}&maxCalls=${overlaySettings.max_visible_calls}&cb=${Date.now()}`;
+                  window.open(testUrl, '_blank');
+                }}
                 className="flex-1"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />

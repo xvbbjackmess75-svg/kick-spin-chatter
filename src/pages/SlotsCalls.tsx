@@ -900,7 +900,9 @@ export default function SlotsCalls() {
   const getOverlayUrl = (userId?: string) => {
     const baseUrl = window.location.origin;
     const userIdParam = userId || user?.id;
-    return `${baseUrl}/overlay/slots?userId=${userIdParam}`;
+    // Add cache-busting parameter to ensure OBS gets latest settings
+    const cacheBuster = Date.now();
+    return `${baseUrl}/overlay/slots?userId=${userIdParam}&cb=${cacheBuster}`;
   };
 
   const copyOverlayUrl = () => {
@@ -908,9 +910,15 @@ export default function SlotsCalls() {
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "Copied!",
-        description: "Your personal overlay URL copied to clipboard",
+        description: "Overlay URL copied to clipboard. If OBS isn't showing latest settings, refresh the browser source.",
+        duration: 5000,
       });
     });
+  };
+
+  const openOverlayPreview = () => {
+    const url = getOverlayUrl();
+    window.open(url, '_blank');
   };
 
   const getStatusColor = (status: string) => {
@@ -952,6 +960,15 @@ export default function SlotsCalls() {
           >
             <Copy className="h-4 w-4 mr-2" />
             Copy Overlay URL
+          </Button>
+          
+          <Button
+            onClick={openOverlayPreview}
+            variant="outline"
+            className="gaming-button"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Preview Overlay
           </Button>
           
           
