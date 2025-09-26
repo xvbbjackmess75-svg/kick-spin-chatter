@@ -170,20 +170,21 @@ export function ChatBot() {
             </div>
             <div className="flex items-center gap-2">
               <Badge 
+                variant="outline"
                 className={
                   actualStatus 
-                    ? "bg-kick-green/20 text-kick-green border-kick-green/30"
+                    ? "bg-green-500/10 text-green-500 border-green-500/30"
                     : isActiveInDb
-                    ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                    : "bg-red-500/20 text-red-500 border-red-500/30"
+                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/30"
+                    : "bg-red-500/10 text-red-500 border-red-500/30"
                 }
               >
                 <div className={`w-2 h-2 rounded-full mr-2 ${
-                  actualStatus ? 'bg-kick-green animate-pulse' : 
+                  actualStatus ? 'bg-green-500 animate-pulse' : 
                   isActiveInDb ? 'bg-yellow-500 animate-pulse' : 
                   'bg-red-500'
                 }`} />
-                {actualStatus ? "Active" : isActiveInDb ? "Starting..." : "Stopped"}
+                {actualStatus ? "Monitor Active" : isActiveInDb ? "Starting Monitor..." : "Monitor Stopped"}
               </Badge>
               
               {actualStatus ? (
