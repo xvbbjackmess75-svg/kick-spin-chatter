@@ -104,7 +104,7 @@ export default function SlotsCalls() {
       let noteIndex = 0;
       
       const playNote = () => {
-        if (noteIndex < notes.length) {
+        if (noteIndex < notes.length && !isSoundMuted) {
           oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
           gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
@@ -143,6 +143,31 @@ export default function SlotsCalls() {
       
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log('Audio context not available');
+    }
+  };
+
+  const playWinnerHighlightSound = () => {
+    if (isSoundMuted) return;
+    try {
+      // Create a quick positive notification sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+      oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.1); // A5 note
+      
+      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.15);
     } catch (error) {
       console.log('Audio context not available');
     }
@@ -936,6 +961,9 @@ export default function SlotsCalls() {
         setEliminatedNames(new Set(losers)); // Show final state immediately
         console.log("⏭️ Animation skipped");
         
+        // Play winner highlight sound immediately when skipped
+        playWinnerHighlightSound();
+        
         // Close modal after short delay to show final results
         setTimeout(() => {
           setIsAnimationModalOpen(false);
@@ -977,9 +1005,13 @@ export default function SlotsCalls() {
 
       // Wait to show final winners (skippable)
       if (!animationSkipped) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Play win sound for final winners
+        // Highlight winners with sound effects
+        playWinnerHighlightSound();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Play final win sound
         playWinSound();
         
         // Animation completed naturally, close modal and apply changes
@@ -1926,8 +1958,14 @@ export default function SlotsCalls() {
                 </Button>
                 
                 <Button
-                  onClick={() => setIsSoundMuted(!isSoundMuted)}
-                  variant="outline"
+                  onClick={() => {
+                    setIsSoundMuted(!isSoundMuted);
+                    // Play a quick test sound when unmuting to confirm it works
+                    if (isSoundMuted) {
+                      setTimeout(() => playWinnerHighlightSound(), 100);
+                    }
+                  }}
+                  variant={isSoundMuted ? "destructive" : "outline"}
                   size="sm"
                   className="mb-4"
                 >
