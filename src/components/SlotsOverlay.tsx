@@ -137,6 +137,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
   // Update settings when customSettings change
   useEffect(() => {
     console.log('🎨 Custom settings effect triggered:', { customSettings });
+    console.log('🔍 CustomSettings keys/values:', customSettings ? Object.entries(customSettings) : 'null/undefined');
     if (customSettings) {
       console.log('🎨 Updating overlay with custom settings:', customSettings);
       setOverlaySettings(customSettings);

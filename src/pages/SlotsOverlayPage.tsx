@@ -195,11 +195,17 @@ export default function SlotsOverlayPage() {
       <div className="p-4">
         {/* Only render SlotsOverlay after settings are loaded */}
         {userId && settingsLoaded ? (
-          <SlotsOverlay 
-            userId={userId} 
-            maxCalls={maxCalls} 
-            customSettings={overlaySettings} 
-          />
+          <>
+            {(() => {
+              console.log('🚀 SlotsOverlayPage passing settings to SlotsOverlay:', overlaySettings);
+              return null;
+            })()}
+            <SlotsOverlay 
+              userId={userId} 
+              maxCalls={maxCalls} 
+              customSettings={overlaySettings} 
+            />
+          </>
         ) : (
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
