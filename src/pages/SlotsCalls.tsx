@@ -48,7 +48,7 @@ interface SlotsCall {
 export default function SlotsCalls() {
   const { user } = useAuth();
   const { canUseChatbot, isKickLinked, kickUser } = useKickAccount();
-  const { startAutoMonitoring, monitorStatus } = useAutoMonitor();
+  const { startAutoMonitoring, monitorStatus, checkMonitoringStatus } = useAutoMonitor();
   
   // Use auto-monitor for command processing + WebSocket for real-time chat display
   const socketRef = useRef<WebSocket | null>(null);
@@ -221,6 +221,11 @@ export default function SlotsCalls() {
       console.log('🤖 Restarting auto-monitor for fresh connection');
       await startAutoMonitoring();
       
+      // Refresh monitor status after starting
+      setTimeout(() => {
+        checkMonitoringStatus();
+      }, 2000);
+      
       // Start WebSocket for real-time chat display (no command processing)
       initializeChatDisplay();
       
@@ -230,8 +235,8 @@ export default function SlotsCalls() {
       }
       
       toast({
-        title: "🎰 Slots Monitoring Active",
-        description: `Auto-monitor processing commands + real-time chat display${autoStopEnabled ? ` (auto-stop in ${autoStopMinutes} min)` : ''}`,
+        title: "🎰 Monitor Restarting",
+        description: "Auto-monitor is being restarted - please wait a moment for status update",
       });
       
     } catch (error) {
