@@ -406,7 +406,7 @@ export function GiveawayRoulette({
               size="lg"
             >
               <Play className="h-5 w-5 mr-2" />
-              Pick Winner
+              {participants.length === 1 ? 'Pick Winner' : 'Pick Winner'}
             </Button>
           </div>
         )}

@@ -96,9 +96,9 @@ export function RouletteModal({
     // Remove winner from available participants
     setCurrentParticipants(prev => prev.filter(p => p.username !== winner.username));
     
-    // Reset current winner state and prepare for next selection
+    // Reset current winner state - NO MORE ROULETTE UNTIL MANUAL ACTION
     setCurrentPendingWinner(null);
-    setShowStartButton(true);
+    setShowStartButton(false); // Hide the start button since winner was selected
     setIsRolling(false);
   };
 
