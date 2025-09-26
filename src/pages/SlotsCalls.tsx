@@ -1121,7 +1121,7 @@ export default function SlotsCalls() {
     const userIdParam = userId || user?.id;
     // Add cache-busting parameter to ensure OBS gets latest settings
     const cacheBuster = Date.now();
-    return `${baseUrl}/overlay/slots?userId=${userIdParam}&cb=${cacheBuster}`;
+    return `${baseUrl}/overlay/slots?userId=${userIdParam}&maxCalls=10&cb=${cacheBuster}`;
   };
 
   const copyOverlayUrl = () => {
