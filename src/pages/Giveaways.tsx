@@ -41,6 +41,7 @@ import {
   MonitorX,
   AlertCircle,
   CheckCircle2,
+  CheckCircle,
   Trash2,
   Edit,
   UserX,
@@ -106,24 +107,17 @@ export default function Giveaways() {
     userId?: string;
     badges?: string[];
   }>>([]);
-  const [selectedUserActivity, setSelectedUserActivity] = useState<{
+  const [selectedUserProfile, setSelectedUserProfile] = useState<{
     username: string;
-    messages: Array<{
-      message: string;
-      timestamp: Date;
-      badges?: string[];
+    isVerified: boolean;
+    profilePicture?: string;
+    recentParticipations: Array<{
+      giveawayTitle: string;
+      channelName: string;
+      joinedAt: Date;
+      giveawayId: string;
     }>;
-    stats: {
-      totalMessages: number;
-      giveawayEntries: number;
-      firstSeen: Date;
-      lastSeen: Date;
-      mostActiveHour?: {
-        hour: number;
-        messageCount: number;
-      };
-      averageMessagesPerDay?: number;
-    };
+    totalGiveawayEntries: number;
   } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
@@ -609,94 +603,68 @@ export default function Giveaways() {
     }
   };
 
-  const viewUserActivity = async (username: string) => {
-    const userMessages = chatHistory.filter(msg => msg.username === username);
-    const userParticipations = liveParticipants.filter(p => p.username === username);
-    
-    setSelectedUserActivity({
-      username,
-      messages: userMessages.map(m => ({
-        message: m.message,
-        timestamp: m.timestamp,
-        badges: m.badges
-      })),
-      stats: {
-        totalMessages: userMessages.length,
-        giveawayEntries: userParticipations.length,
-        firstSeen: new Date(),
-        lastSeen: new Date()
-      }
-    });
-
-    // Fetch comprehensive chat history from Kick API
+  const viewUserProfile = async (username: string) => {
     try {
-      const channelInfo = getChannelInfo();
-      const targetChannel = channelInfo?.channelName || connectedChannel;
-      
-      if (!targetChannel) {
-        console.warn('No channel available for chat history fetch');
-        return;
-      }
+      // Get user verification status from live participants
+      const userParticipation = liveParticipants.find(p => p.username === username);
+      const isVerified = userParticipation?.isVerified || false;
 
-      console.log(`Fetching chat history for ${username} in channel ${targetChannel}`);
-      
-      const { data: historyData, error } = await supabase.functions.invoke('kick-user-chat-history', {
-        body: {
-          username,
-          channelName: targetChannel,
-          limit: 100
-        }
-      });
+      // Fetch user's recent giveaway participations
+      const { data: participations, error } = await supabase
+        .from('giveaway_participants')
+        .select(`
+          entered_at,
+          giveaway_id,
+          giveaways!inner(
+            title,
+            description,
+            created_at
+          )
+        `)
+        .eq('kick_username', username)
+        .order('entered_at', { ascending: false })
+        .limit(10);
 
       if (error) {
-        console.error('Error fetching chat history:', error);
-        toast({
-          title: "Chat History Unavailable", 
-          description: "Could not fetch complete chat history from Kick",
-          variant: "destructive"
-        });
-        return;
+        console.error('Error fetching user participations:', error);
       }
 
-      const { messages: fullHistory, statistics } = historyData;
-      
-      console.log(`Fetched ${fullHistory?.length || 0} historical messages for ${username}`);
-
-      // Update the activity modal with comprehensive data
-      setSelectedUserActivity({
-        username,
-        messages: [
-          ...fullHistory.map((m: any) => ({
-            message: m.message,
-            timestamp: new Date(m.timestamp),
-            badges: m.badges || []
-          })),
-          ...userMessages.map(m => ({
-            message: m.message,
-            timestamp: m.timestamp,
-            badges: m.badges
-          }))
-        ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
-        stats: {
-          totalMessages: statistics.totalMessages + userMessages.length,
-          giveawayEntries: userParticipations.length,
-          firstSeen: statistics.firstMessageDate ? new Date(statistics.firstMessageDate) : new Date(),
-          lastSeen: statistics.lastMessageDate ? new Date(statistics.lastMessageDate) : new Date(),
-          mostActiveHour: statistics.mostActiveHour,
-          averageMessagesPerDay: statistics.averageMessagesPerDay
-        }
+      // Extract channel names from giveaway descriptions and format participation data
+      const recentParticipations = (participations || []).map(p => {
+        const channelMatch = p.giveaways.description?.match(/Channel: (\w+)/);
+        return {
+          giveawayTitle: p.giveaways.title,
+          channelName: channelMatch ? channelMatch[1] : 'Unknown',
+          joinedAt: new Date(p.entered_at),
+          giveawayId: p.giveaway_id
+        };
       });
 
-      toast({
-        title: "📊 Chat History Loaded",
-        description: `Found ${statistics.totalMessages} historical messages for ${username}`,
+      // Try to get user's profile picture from Kick API or use initials
+      let profilePicture = undefined;
+      try {
+        const kickResponse = await fetch(`https://kick.com/api/v2/channels/${username}`);
+        if (kickResponse.ok) {
+          const kickData = await kickResponse.json();
+          profilePicture = kickData.user?.profile_pic;
+        }
+      } catch (error) {
+        console.log('Could not fetch profile picture from Kick');
+      }
+
+      setSelectedUserProfile({
+        username,
+        isVerified,
+        profilePicture,
+        recentParticipations,
+        totalGiveawayEntries: participations?.length || 0
       });
 
     } catch (error) {
-      console.error('Failed to fetch user chat history:', error);
+      console.error('Error fetching user profile:', error);
       toast({
         title: "Error",
-        description: "Failed to load comprehensive chat history",
+        description: "Failed to load user profile",
         variant: "destructive"
       });
     }
@@ -709,7 +677,7 @@ export default function Giveaways() {
       setConnectedChannel("");
       setIsLiveChatModalOpen(false); // Close live chat modal when manually stopped
       setChatHistory([]); // Clear chat history when stopped
-      setSelectedUserActivity(null); // Close user activity modal
+      setSelectedUserProfile(null); // Close user profile modal
       saveGiveawayMonitoringState(false); // Clear persistent state
       toast({
         title: "🛑 Chat Monitoring Stopped",
@@ -1936,7 +1904,7 @@ export default function Giveaways() {
                       <div 
                         key={`${participant.username}-${participant.timestamp.getTime()}`}
                         className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/50 animate-fade-in hover:bg-background/70 cursor-pointer transition-colors"
-                        onClick={() => viewUserActivity(participant.username)}
+                        onClick={() => viewUserProfile(participant.username)}
                       >
                         <div className="flex items-center gap-3">
                           <div className="relative">
@@ -1990,18 +1958,118 @@ export default function Giveaways() {
           </DialogContent>
         </Dialog>
 
-        {/* User Activity Modal */}
-        <Dialog open={!!selectedUserActivity} onOpenChange={(open) => !open && setSelectedUserActivity(null)}>
-          <DialogContent className="gaming-card border-border/50 max-w-3xl max-h-[80vh]">
+        {/* User Profile Modal */}
+        <Dialog open={!!selectedUserProfile} onOpenChange={(open) => !open && setSelectedUserProfile(null)}>
+          <DialogContent className="gaming-card border-border/50 max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-foreground flex items-center gap-2">
                 <User className="h-5 w-5 text-blue-400" />
-                Chat Activity - {selectedUserActivity?.username}
+                User Profile - {selectedUserProfile?.username}
               </DialogTitle>
             </DialogHeader>
-            {selectedUserActivity && (
-              <div className="space-y-4">
-                {/* User Stats */}
+            {selectedUserProfile && (
+              <div className="space-y-6">
+                {/* User Avatar and Basic Info */}
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {selectedUserProfile.profilePicture ? (
+                      <img 
+                        src={selectedUserProfile.profilePicture} 
+                        alt={selectedUserProfile.username}
+                        className="w-16 h-16 rounded-full border-2 border-kick-green/30"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-16 h-16 bg-gradient-to-r from-kick-green to-kick-purple rounded-full flex items-center justify-center border-2 border-kick-green/30 ${selectedUserProfile.profilePicture ? 'hidden' : ''}`}>
+                      <span className="text-xl font-bold text-white">
+                        {selectedUserProfile.username.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    {selectedUserProfile.isVerified && (
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-kick-green rounded-full flex items-center justify-center border-2 border-background">
+                        <CheckCircle className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                      {selectedUserProfile.username}
+                      {selectedUserProfile.isVerified && (
+                        <span className="text-xs bg-kick-green/20 text-kick-green px-2 py-1 rounded-full border border-kick-green/30">
+                          Verified
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUserProfile.totalGiveawayEntries} total giveaway entries
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent Giveaway Participations */}
+                <div className="space-y-4">
+                  <h4 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                    <Gift className="h-4 w-4" />
+                    Recent Giveaway Participations ({selectedUserProfile.recentParticipations.length})
+                  </h4>
+                  {selectedUserProfile.recentParticipations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-lg">
+                      <Gift className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No recent giveaway participations found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedUserProfile.recentParticipations.map((participation, index) => (
+                        <div 
+                          key={`${participation.giveawayId}-${index}`}
+                          className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/30"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-foreground">
+                              {participation.giveawayTitle}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Channel: @{participation.channelName}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-kick-green">
+                              {participation.joinedAt.toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {participation.joinedAt.toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* User Status */}
+                <div className="bg-secondary/10 rounded-lg p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${selectedUserProfile.isVerified ? 'bg-kick-green' : 'bg-gray-400'}`}></div>
+                      Verification Status: {selectedUserProfile.isVerified ? 'Verified User' : 'Unverified'}
+                    </div>
+                    <div className="text-muted-foreground">
+                      Total Entries: {selectedUserProfile.totalGiveawayEntries}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+      </div>
+    </KickAccountGuard>
+  );
+}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   <div className="text-center p-3 bg-secondary/20 rounded-lg">
                     <div className="text-lg font-bold text-blue-400">
@@ -2133,7 +2201,6 @@ export default function Giveaways() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
       </div>
     </KickAccountGuard>
   );
