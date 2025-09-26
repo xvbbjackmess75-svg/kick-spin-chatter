@@ -98,38 +98,6 @@ export default function SlotsCalls() {
     show_borders: true,
     animation_enabled: true
   });
-  
-  // Remove all test participants except KickGW
-  const removeTestParticipants = async () => {
-    if (!selectedEvent) return;
-    
-    try {
-      // Delete all test calls (those with viewer_kick_id starting with 'bulk_test_')
-      const { error } = await supabase
-        .from('slots_calls')
-        .delete()
-        .eq('event_id', selectedEvent.id)
-        .like('viewer_kick_id', 'bulk_test_%');
-
-      if (error) throw error;
-
-      toast({
-        title: "🧹 Test Participants Removed",
-        description: "All test participants have been removed from the event",
-      });
-
-      // Refresh the calls list
-      fetchCalls(selectedEvent.id);
-    } catch (error) {
-      console.error("Error removing test participants:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove test participants",
-        variant: "destructive"
-      });
-    }
-  };
-  
   // Prevent body scroll during animation modal
   useEffect(() => {
     if (isAnimationModalOpen) {
@@ -830,9 +798,9 @@ export default function SlotsCalls() {
 
     if (pendingCalls.length <= randomSelectionCount) {
       toast({
-        title: "Selection Not Needed",
-        description: `You have ${pendingCalls.length} pending calls, which is already ${randomSelectionCount <= pendingCalls.length ? 'equal to or ' : ''}less than your selection of ${randomSelectionCount}`,
-        variant: "destructive",
+        title: "Selection Not Needed", 
+        description: `You have ${pendingCalls.length} pending calls. Selection is only needed when you have more participants than winners.`,
+        variant: "destructive"
       });
       return;
     }
@@ -851,14 +819,14 @@ export default function SlotsCalls() {
     })).sort((a, b) => a.randomValue - b.randomValue);
     
     const selectedCalls = shuffled.slice(0, randomSelectionCount);
-    const callsToDelete = shuffled.slice(randomSelectionCount);
+    const callsToShow = shuffled.slice(randomSelectionCount); // These will show as eliminated in animation
     const winnersNames = selectedCalls.map(call => call.viewer_username);
 
     console.log("🎲 PREDETERMINED WINNERS (FINAL):", {
       totalCalls: pendingCalls.length,
       selectedCount: randomSelectionCount,
       winners: winnersNames,
-      eliminated: callsToDelete.map(c => c.viewer_username),
+      eliminatedInAnimation: callsToShow.map(c => c.viewer_username),
       timestamp: Date.now()
     });
 
@@ -869,14 +837,15 @@ export default function SlotsCalls() {
     setIsRandomSelectionDialogOpen(false);
     setIsAnimationModalOpen(true);
 
-    // STEP 3: Start animation with predetermined results
-    await startEliminationAnimation(allNames, winnersNames, selectedCalls, callsToDelete);
+    // STEP 3: Start animation with predetermined results (visual only)
+    await startEliminationAnimation(allNames, winnersNames, selectedCalls, callsToShow);
   };
 
-  const startEliminationAnimation = async (allNames: string[], winners: string[], selectedCalls: any[], callsToDelete: any[]) => {
-    console.log("🎬 STARTING ANIMATION with locked results:", {
+  const startEliminationAnimation = async (allNames: string[], winners: string[], selectedCalls: any[], callsToShowAsEliminated: any[]) => {
+    console.log("🎬 STARTING VISUAL ANIMATION with locked results:", {
       winners,
-      eliminatedCount: callsToDelete.length
+      visuallyEliminatedCount: callsToShowAsEliminated.length,
+      note: "This is visual only - no database records will be deleted"
     });
 
     const losers = allNames.filter(name => !winners.includes(name));
@@ -935,24 +904,28 @@ export default function SlotsCalls() {
     
     try {
       console.log("💾 APPLYING PREDETERMINED RESULTS:", {
-        deletingIds: callsToDelete.map(call => call.id),
-        keepingWinners: winners
+        selectedWinners: selectedCalls.map(call => call.viewer_username),
+        totalWinners: selectedCalls.length,
+        totalParticipants: allNames.length
       });
 
-      // Delete the non-selected calls (using locked predetermined results)
+      // Instead of deleting non-selected calls, mark selected calls as "completed" with winner status
       const { error } = await supabase
         .from('slots_calls')
-        .delete()
-        .in('id', callsToDelete.map(call => call.id));
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .in('id', selectedCalls.map(call => call.id));
 
       if (error) throw error;
 
       toast({
         title: "🎲 Random Selection Complete!",
-        description: `Selected ${selectedCalls.length} random calls out of ${allNames.length}. Removed ${callsToDelete.length} calls.`,
+        description: `Selected ${selectedCalls.length} winners out of ${allNames.length} participants. Winners marked as completed.`,
       });
       
-      // Refresh the calls list
+      // Refresh the calls list to show updated statuses
       if (selectedEvent) {
         fetchCalls(selectedEvent.id);
       }
@@ -1589,15 +1562,6 @@ export default function SlotsCalls() {
                                         Cancel
                                       </Button>
                                     </div>
-                                    
-                                    <Button
-                                      onClick={removeTestParticipants}
-                                      variant="outline"
-                                      className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10"
-                                      size="sm"
-                                    >
-                                      🧹 Remove All Test Participants
-                                    </Button>
                                   </div>
                                 </div>
                               </DialogContent>
@@ -1690,16 +1654,7 @@ export default function SlotsCalls() {
                                     >
                                       Cancel
                                     </Button>
-                                  </div>
-                                  
-                                  <Button
-                                    onClick={removeTestParticipants}
-                                    variant="outline"
-                                    className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10"
-                                    size="sm"
-                                  >
-                                    🧹 Remove All Test Participants
-                                  </Button>
+                                </div>
                                 </div>
                               </div>
                             </DialogContent>
@@ -1899,7 +1854,7 @@ export default function SlotsCalls() {
               🎲 Random Selection in Progress...
             </DialogTitle>
             <div className="text-center text-sm text-muted-foreground mt-2">
-              Winners are predetermined • Press ESC or click Skip to skip animation
+              Winners are predetermined • Press ESC or click Skip to skip animation • No participants will be deleted
             </div>
           </DialogHeader>
           
@@ -1983,7 +1938,7 @@ export default function SlotsCalls() {
                   {finalWinners.join(', ')}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Selection complete! Applying results to database...
+                  Winners have been marked as completed! All participants remain in the list.
                 </div>
               </div>
             )}
