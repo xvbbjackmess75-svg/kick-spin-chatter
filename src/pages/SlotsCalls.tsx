@@ -1289,12 +1289,12 @@ export default function SlotsCalls() {
                       <>
                         <div className="flex items-center gap-2 text-sm">
                           <div className={`w-2 h-2 rounded-full ${
-                            monitorStatus?.is_active && chatConnected ? 'bg-green-500 animate-pulse' : 
+                            monitorStatus?.is_active && monitorStatus?.is_connected ? 'bg-green-500 animate-pulse' : 
                             monitorStatus?.is_active ? 'bg-yellow-500 animate-pulse' : 
                             'bg-red-500'
                           }`}></div>
                           <span className="text-muted-foreground">
-                            {monitorStatus?.is_active && chatConnected ? 'Monitor Active' : 
+                            {monitorStatus?.is_active && monitorStatus?.is_connected ? 'Monitor Active' : 
                              monitorStatus?.is_active ? 'Monitor Starting...' : 
                              'Monitor Stopped'}
                           </span>
