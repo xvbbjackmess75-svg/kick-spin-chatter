@@ -1428,7 +1428,7 @@ export default function Giveaways() {
       description="Create and manage giveaways with real-time chat integration. Monitor your Kick channel for keywords and automatically add participants."
     >
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -1969,238 +1969,71 @@ export default function Giveaways() {
             </DialogHeader>
             {selectedUserProfile && (
               <div className="space-y-6">
-                {/* User Avatar and Basic Info */}
+                {/* User Info */}
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {selectedUserProfile.profilePicture ? (
-                      <img 
-                        src={selectedUserProfile.profilePicture} 
-                        alt={selectedUserProfile.username}
-                        className="w-16 h-16 rounded-full border-2 border-kick-green/30"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div className={`w-16 h-16 bg-gradient-to-r from-kick-green to-kick-purple rounded-full flex items-center justify-center border-2 border-kick-green/30 ${selectedUserProfile.profilePicture ? 'hidden' : ''}`}>
-                      <span className="text-xl font-bold text-white">
-                        {selectedUserProfile.username.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    {selectedUserProfile.isVerified && (
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-kick-green rounded-full flex items-center justify-center border-2 border-background">
-                        <CheckCircle className="h-3 w-3 text-white" />
-                      </div>
-                    )}
-                  </div>
+                  <Avatar className="h-16 w-16">
+                    <AvatarFallback className="bg-primary/20 text-primary text-lg font-semibold">
+                      {selectedUserProfile.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                      {selectedUserProfile.username}
-                      {selectedUserProfile.isVerified && (
-                        <span className="text-xs bg-kick-green/20 text-kick-green px-2 py-1 rounded-full border border-kick-green/30">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-semibold">{selectedUserProfile.username}</h3>
+                      {selectedUserProfile.isVerified ? (
+                        <Badge variant="secondary" className="text-green-400 border-green-400/30">
+                          <CheckCircle className="h-3 w-3 mr-1" />
                           Verified
-                        </span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-400 border-yellow-400/30">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Unverified
+                        </Badge>
                       )}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUserProfile.totalGiveawayEntries} total giveaway entries
+                    </div>
+                    <p className="text-muted-foreground">
+                      Total giveaway entries: {selectedUserProfile.totalGiveawayEntries}
                     </p>
                   </div>
                 </div>
 
-                {/* Recent Giveaway Participations */}
-                <div className="space-y-4">
-                  <h4 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                {/* Recent Giveaway Participation */}
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
                     <Gift className="h-4 w-4" />
-                    Recent Giveaway Participations ({selectedUserProfile.recentParticipations.length})
+                    Recent Giveaway Participation
                   </h4>
                   {selectedUserProfile.recentParticipations.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-lg">
-                      <Gift className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No recent giveaway participations found</p>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Gift className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No recent giveaway participation</p>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div className="space-y-2">
                       {selectedUserProfile.recentParticipations.map((participation, index) => (
                         <div 
                           key={`${participation.giveawayId}-${index}`}
-                          className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/30"
+                          className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg"
                         >
-                          <div className="flex-1">
-                            <div className="font-medium text-foreground">
-                              {participation.giveawayTitle}
-                            </div>
+                          <div>
+                            <div className="font-medium">{participation.giveawayTitle}</div>
                             <div className="text-sm text-muted-foreground">
-                              Channel: @{participation.channelName}
+                              Channel: {participation.channelName}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-kick-green">
-                              {participation.joinedAt.toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {participation.joinedAt.toLocaleTimeString()}
-                            </div>
+                          <div className="text-sm text-muted-foreground">
+                            {participation.joinedAt.toLocaleDateString()}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-
-                {/* User Status */}
-                <div className="bg-secondary/10 rounded-lg p-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${selectedUserProfile.isVerified ? 'bg-kick-green' : 'bg-gray-400'}`}></div>
-                      Verification Status: {selectedUserProfile.isVerified ? 'Verified User' : 'Unverified'}
-                    </div>
-                    <div className="text-muted-foreground">
-                      Total Entries: {selectedUserProfile.totalGiveawayEntries}
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
           </DialogContent>
         </Dialog>
-      </div>
-      </div>
-    </KickAccountGuard>
-  );
-}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                    <div className="text-lg font-bold text-blue-400">
-                      {selectedUserActivity.stats.totalMessages}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Total Messages</div>
-                  </div>
-                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                    <div className="text-lg font-bold text-green-400">
-                      {selectedUserActivity.stats.giveawayEntries}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Giveaway Entries</div>
-                  </div>
-                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                    <div className="text-lg font-bold text-purple-400">
-                      {selectedUserActivity.stats.firstSeen.toLocaleDateString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">First Seen</div>
-                  </div>
-                  <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                    <div className="text-lg font-bold text-orange-400">
-                      {selectedUserActivity.stats.lastSeen.toLocaleTimeString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Last Seen</div>
-                  </div>
-                  {selectedUserActivity.stats.mostActiveHour && (
-                    <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                      <div className="text-lg font-bold text-yellow-400">
-                        {selectedUserActivity.stats.mostActiveHour.hour}:00
-                      </div>
-                      <div className="text-xs text-muted-foreground">Most Active Hour</div>
-                    </div>
-                  )}
-                  {selectedUserActivity.stats.averageMessagesPerDay !== undefined && (
-                    <div className="text-center p-3 bg-secondary/20 rounded-lg">
-                      <div className="text-lg font-bold text-cyan-400">
-                        {selectedUserActivity.stats.averageMessagesPerDay.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Avg/Day</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Activity Insights */}
-                {selectedUserActivity.stats.mostActiveHour && (
-                  <div className="bg-secondary/10 rounded-lg p-3">
-                    <h4 className="font-medium mb-2 text-sm text-foreground">📊 Activity Insights</h4>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>Most active at {selectedUserActivity.stats.mostActiveHour.hour}:00 with {selectedUserActivity.stats.mostActiveHour.messageCount} messages</p>
-                      {selectedUserActivity.stats.averageMessagesPerDay && (
-                        <p>Sends an average of {selectedUserActivity.stats.averageMessagesPerDay.toFixed(1)} messages per day</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent Messages */}
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Recent Messages ({selectedUserActivity.messages.length})
-                  </h4>
-                  <div className="bg-secondary/20 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    {selectedUserActivity.messages.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p>No chat messages recorded</p>
-                        <p className="text-xs mt-1">Only giveaway entries detected</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {selectedUserActivity.messages.map((message, index) => (
-                          <div 
-                            key={`${message.timestamp.getTime()}-${index}`}
-                            className="flex items-start gap-3 p-3 bg-background/30 rounded-lg"
-                          >
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-semibold text-white">
-                                {selectedUserActivity.username.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm">
-                                  {selectedUserActivity.username}
-                                </span>
-                                {message.badges && message.badges.length > 0 && (
-                                  <div className="flex gap-1">
-                                    {message.badges.map((badge, i) => (
-                                      <Badge key={i} variant="outline" className="text-xs px-1 py-0">
-                                        {badge}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                                <span className="text-xs text-muted-foreground ml-auto">
-                                  {message.timestamp.toLocaleTimeString()}
-                                </span>
-                              </div>
-                              <div className="text-sm text-foreground break-words">
-                                {message.message || <em className="text-muted-foreground">No message content</em>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Activity Timeline */}
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Activity Timeline
-                  </h4>
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      First seen: {selectedUserActivity.stats.firstSeen.toLocaleString()}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                      Last activity: {selectedUserActivity.stats.lastSeen.toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        </div>
       </div>
     </KickAccountGuard>
   );
