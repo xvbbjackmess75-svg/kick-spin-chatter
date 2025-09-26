@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key, MessageSquare, Search, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import KickChatPoster from '@/components/KickChatPoster';
+import { SlotManagement } from '@/components/SlotManagement';
 
 interface FeaturePermission {
   id: string;
@@ -569,11 +570,13 @@ export default function Admin() {
         </TabsContent>
 
         <TabsContent value="slots" className="space-y-4">
+          <SlotManagement />
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                Slot Management
+                Bulk Slot Import
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -581,7 +584,7 @@ export default function Admin() {
                 <div>
                   <h3 className="font-semibold">Daily Slot Import</h3>
                   <p className="text-sm text-muted-foreground">
-                    Import latest slots from aboutslots.com (263 pages)
+                    Import latest slots from aboutslots.com (auto-detects total pages)
                   </p>
                   {lastImportDate && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -602,8 +605,8 @@ export default function Admin() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">263</div>
-                    <div className="text-sm text-muted-foreground">Total Pages</div>
+                    <div className="text-2xl font-bold">Auto</div>
+                    <div className="text-sm text-muted-foreground">Page Detection</div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -620,8 +623,8 @@ export default function Admin() {
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">Daily</div>
-                    <div className="text-sm text-muted-foreground">Update Freq</div>
+                    <div className="text-2xl font-bold">Enhanced</div>
+                    <div className="text-sm text-muted-foreground">Provider Detection</div>
                   </CardContent>
                 </Card>
               </div>

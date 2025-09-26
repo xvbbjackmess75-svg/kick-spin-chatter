@@ -326,20 +326,63 @@ function extractProviderFromContext(html: string, slug: string): string {
     'Skywind Group', 'Spinomenal', 'Booming Games', 'Endorphina',
     'BGaming', 'Wazdan', 'Playson', 'Tom Horn Gaming', 'Kalamba Games',
     'Octoplay', 'Habanero', 'Betsoft', 'Pragmatic', 'Evoplay',
-    'Mascot Gaming', 'Fugaso', 'GameArt', 'iSoftBet', 'Platipus Gaming'
+    'Mascot Gaming', 'Fugaso', 'GameArt', 'iSoftBet', 'Platipus Gaming',
+    'Amatic Industries', 'EGT Interactive', 'Booongo', 'Spade Gaming',
+    'PG Soft', 'Play Pearls', 'Oryx Gaming', 'Games Global', 'OneTouch',
+    'Revolver Gaming', 'Stakelogic', 'Swintt', 'Golden Hero', 'Slotmill',
+    'Fazi', 'Apollo Games', 'CT Gaming', 'Vibra Gaming', 'Popiplay',
+    'Red Rake Gaming', 'Triple Cherry', 'Rubyplay', 'Smart Soft',
+    'Zillion Games', 'Leander Games', 'Cayetano Gaming', 'Ainsworth',
+    'Lightning Box', 'Fortune Factory Studios', 'Just For The Win'
   ];
 
-  // Look for provider in the vicinity of the slot
+  // First try to find provider in structured data near the slot
   const slotIndex = html.toLowerCase().indexOf(slug.toLowerCase());
   if (slotIndex !== -1) {
-    const contextStart = Math.max(0, slotIndex - 2000);
-    const contextEnd = Math.min(html.length, slotIndex + 2000);
-    const context = html.substring(contextStart, contextEnd).toLowerCase();
+    // Look for provider in a larger context window
+    const contextStart = Math.max(0, slotIndex - 3000);
+    const contextEnd = Math.min(html.length, slotIndex + 3000);
+    const context = html.substring(contextStart, contextEnd);
     
+    // Look for provider in various patterns
+    const providerPatterns = [
+      new RegExp(`"provider"\\s*:\\s*"([^"]+)"`, 'i'),
+      new RegExp(`data-provider\\s*=\\s*"([^"]+)"`, 'i'),
+      new RegExp(`provider[:\\s]+"([^"]+)"`, 'i'),
+      new RegExp(`by\\s+([^\\s<]+)`, 'i'),
+      new RegExp(`from\\s+([^\\s<]+)`, 'i'),
+    ];
+    
+    for (const pattern of providerPatterns) {
+      const match = context.match(pattern);
+      if (match) {
+        const foundProvider = match[1].trim();
+        // Check if it matches any known provider
+        const matchedProvider = providers.find(p => 
+          p.toLowerCase() === foundProvider.toLowerCase() ||
+          foundProvider.toLowerCase().includes(p.toLowerCase()) ||
+          p.toLowerCase().includes(foundProvider.toLowerCase())
+        );
+        if (matchedProvider) {
+          return matchedProvider;
+        }
+      }
+    }
+    
+    // Fallback: search for any provider name in context (case insensitive)
+    const lowerContext = context.toLowerCase();
     for (const provider of providers) {
-      if (context.includes(provider.toLowerCase())) {
+      if (lowerContext.includes(provider.toLowerCase())) {
         return provider;
       }
+    }
+  }
+  
+  // Last resort: look anywhere in the page
+  const lowerHtml = html.toLowerCase();
+  for (const provider of providers) {
+    if (lowerHtml.includes(provider.toLowerCase())) {
+      return provider;
     }
   }
   
