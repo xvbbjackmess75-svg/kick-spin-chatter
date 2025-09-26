@@ -21,6 +21,13 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
   const executionRef = useRef(false); // Track execution state
   const { toast } = useToast();
 
+  // Force re-render debug
+  console.log("🔄 TestCallDialog rendered with protection mechanisms", { 
+    isAddingBulk, 
+    executionRef: executionRef.current,
+    timestamp: Date.now() 
+  });
+
   const addTestCall = async () => {
     if (!selectedEvent || !testSlotName.trim() || !testUsername.trim()) {
       toast({
@@ -73,46 +80,53 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
   };
 
   const addBulkTestCalls = useCallback(async () => {
-    // TRIPLE PROTECTION: Check multiple conditions to prevent any possible double execution
-    if (!selectedEvent || bulkCount < 1 || isAddingBulk || executionRef.current) {
-      console.log("🚫 BLOCKED: Conditions check failed", {
-        hasEvent: !!selectedEvent,
-        validCount: bulkCount >= 1,
-        notAddingBulk: !isAddingBulk,
-        notExecuting: !executionRef.current,
-        timestamp: Date.now()
+    console.log("🎯 FUNCTION CALLED: addBulkTestCalls started", {
+      isAddingBulk,
+      executionRef: executionRef.current,
+      selectedEvent: !!selectedEvent,
+      bulkCount,
+      timestamp: Date.now()
+    });
+
+    // ABSOLUTE PREVENTION: Multiple layers of protection
+    if (isAddingBulk || executionRef.current) {
+      console.log("🚫 EXECUTION BLOCKED: Already in progress", {
+        isAddingBulk,
+        executionRef: executionRef.current
       });
       return;
     }
 
-    // Set ALL protection flags IMMEDIATELY
+    if (!selectedEvent || bulkCount < 1) {
+      console.log("🚫 VALIDATION FAILED:", { selectedEvent: !!selectedEvent, bulkCount });
+      toast({
+        title: "Error",
+        description: "Please enter a valid number of test calls",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // IMMEDIATE LOCK - Set both flags instantly
+    console.log("🔒 LOCKING EXECUTION");
     setIsAddingBulk(true);
     executionRef.current = true;
     
-    console.log(`🎯 EXECUTION STARTED: ${bulkCount} test calls at ${Date.now()}`);
-    
-    // Generate a unique execution ID for tracking
-    const executionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🆔 EXECUTION ID: ${executionId}`);
+    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`🚀 EXECUTION START: ${executionId} - Creating ${bulkCount} calls`);
 
     try {
       const slotNames = [
         "Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Reactoonz",
-        "Legacy of Dead", "Moon Princess", "Fruit Party", "Big Bass Bonanza", "Dog House",
-        "Mental", "Tombstone", "Hand of Anubis", "Fire in the Hole", "Vampire vs Wolves",
-        "Money Train", "Dead or Alive", "Jammin Jars", "The Dog House Megaways", "Razor Shark"
+        "Legacy of Dead", "Moon Princess", "Fruit Party", "Big Bass Bonanza", "Dog House"
       ];
       
       const usernames = [
-        "TestUser", "GamerPro", "SlotFan", "LuckyPlayer", "BigWinner", "SpinMaster", 
-        "BonusHunter", "JackpotKing", "WildCatcher", "MegaWins", "CrazyGambler", 
-        "SlotLover", "FortuneFinder", "WinStreaker", "BetMaster", "ReelKing"
+        "TestUser", "GamerPro", "SlotFan", "LuckyPlayer", "BigWinner", 
+        "SpinMaster", "BonusHunter", "JackpotKing", "WildCatcher", "MegaWins"
       ];
 
-      // Create batch with execution ID for absolute uniqueness
-      const batchTimestamp = Date.now();
-      console.log(`📦 CREATING BATCH: ${executionId} with ${bulkCount} calls`);
-
+      // Create exactly the requested number of calls
       const calls = [];
       for (let i = 0; i < bulkCount; i++) {
         const randomSlot = slotNames[Math.floor(Math.random() * slotNames.length)];
@@ -121,14 +135,14 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         calls.push({
           event_id: selectedEvent.id,
           viewer_username: randomUser,
-          viewer_kick_id: `${executionId}_${i}`, // Use execution ID for absolute uniqueness
+          viewer_kick_id: `${executionId}_${i}`,
           slot_name: randomSlot,
           bet_amount: selectedEvent.bet_size,
           status: 'pending'
         });
       }
 
-      console.log(`📋 GENERATED: ${calls.length} calls for execution ${executionId}`);
+      console.log(`📋 CREATED ARRAY: ${calls.length} calls for ${executionId}`);
 
       // Get starting call order
       const { data: orderData } = await supabase
@@ -141,7 +155,7 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
         call.call_order = startOrder + index;
       });
 
-      // Single database insert
+      // Single database operation
       const { error, data } = await supabase
         .from('slots_calls')
         .insert(calls)
@@ -149,26 +163,25 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
 
       if (error) throw error;
 
-      console.log(`✅ DATABASE INSERT SUCCESSFUL: ${data?.length || calls.length} calls inserted for execution ${executionId}`);
+      console.log(`✅ SUCCESS: ${data?.length || 0} calls inserted for ${executionId}`);
 
       toast({
-        title: "✅ Bulk Test Calls Added",
-        description: `Successfully added ${calls.length} test calls (ID: ${executionId.slice(-6)})`,
+        title: "✅ Test Calls Added", 
+        description: `Successfully added ${data?.length || calls.length} test calls`,
       });
 
       setIsOpen(false);
       onCallAdded();
 
     } catch (error) {
-      console.error(`❌ EXECUTION FAILED: ${executionId}`, error);
+      console.error(`❌ ERROR: ${executionId}`, error);
       toast({
         title: "Error",
-        description: `Failed to add bulk test calls: ${error.message || 'Unknown error'}`,
+        description: `Failed to add test calls: ${error.message}`,
         variant: "destructive"
       });
     } finally {
-      console.log(`🏁 EXECUTION COMPLETED: ${executionId} at ${Date.now()}`);
-      // Reset ALL protection flags
+      console.log(`🔓 UNLOCKING: ${executionId}`);
       setIsAddingBulk(false);
       executionRef.current = false;
     }

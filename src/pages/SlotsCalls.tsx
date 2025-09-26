@@ -1880,9 +1880,9 @@ export default function SlotsCalls() {
                 <div 
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: animationNames.length > 0 && finalWinners.length > 0
-                      ? `${Math.min(100, (eliminatedNames.size / Math.max(1, animationNames.length - finalWinners.length)) * 100)}%`
-                      : '0%'
+                    width: animationNames.length > 0 && finalWinners.length > 0 && (animationNames.length - finalWinners.length) > 0
+                      ? `${Math.min(100, (eliminatedNames.size / (animationNames.length - finalWinners.length)) * 100)}%`
+                      : eliminatedNames.size > 0 ? '100%' : '0%'
                   }}
                 />
               </div>
