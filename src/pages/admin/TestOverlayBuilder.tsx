@@ -100,13 +100,16 @@ const elementLibrary: OverlayElement[] = [
     name: 'Total Calls',
     icon: Users,
     properties: {
-      width: 120,
-      height: 60,
+      width: 140,
+      height: 70,
       dataSource: 'totalCalls',
-      backgroundColor: 'rgba(34,197,94,0.1)',
+      backgroundColor: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%)',
       textColor: '#22c55e',
-      fontSize: 16,
-      label: 'Total'
+      fontSize: 18,
+      label: 'Total',
+      borderColor: 'rgba(34,197,94,0.3)',
+      borderWidth: 1,
+      shadow: '0 4px 12px rgba(34,197,94,0.2)'
     }
   },
   {
@@ -115,13 +118,16 @@ const elementLibrary: OverlayElement[] = [
     name: 'Completed Calls',
     icon: Trophy,
     properties: {
-      width: 120,
-      height: 60,
+      width: 140,
+      height: 70,
       dataSource: 'completedCalls',
-      backgroundColor: 'rgba(59,130,246,0.1)',
+      backgroundColor: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)',
       textColor: '#3b82f6',
-      fontSize: 16,
-      label: 'Done'
+      fontSize: 18,
+      label: 'Done',
+      borderColor: 'rgba(59,130,246,0.3)',
+      borderWidth: 1,
+      shadow: '0 4px 12px rgba(59,130,246,0.2)'
     }
   },
   {
@@ -130,13 +136,16 @@ const elementLibrary: OverlayElement[] = [
     name: 'Pending Calls',
     icon: Clock,
     properties: {
-      width: 120,
-      height: 60,
+      width: 140,
+      height: 70,
       dataSource: 'pendingCalls',
-      backgroundColor: 'rgba(245,158,11,0.1)',
+      backgroundColor: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
       textColor: '#f59e0b',
-      fontSize: 16,
-      label: 'Pending'
+      fontSize: 18,
+      label: 'Pending',
+      borderColor: 'rgba(245,158,11,0.3)',
+      borderWidth: 1,
+      shadow: '0 4px 12px rgba(245,158,11,0.2)'
     }
   },
   {
@@ -372,6 +381,7 @@ export default function TestOverlayBuilder() {
   const [layoutName, setLayoutName] = useState('');
   const [canvasWidth, setCanvasWidth] = useState(800);
   const [canvasHeight, setCanvasHeight] = useState(600);
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -430,7 +440,67 @@ export default function TestOverlayBuilder() {
     return demoData[dataSource] || '0';
   };
 
-  const addElement = (elementType: OverlayElement) => {
+  // Template configurations
+  const templates = {
+    'slots-modern': {
+      name: 'Modern Slots Overlay',
+      description: 'Clean and modern layout for slots calls',
+      elements: [
+        { type: 'total-calls', x: 50, y: 50 },
+        { type: 'completed-calls', x: 220, y: 50 },
+        { type: 'pending-calls', x: 390, y: 50 },
+        { type: 'top-multiplier', x: 560, y: 50 },
+        { type: 'event-title', x: 50, y: 150 },
+        { type: 'event-status', x: 400, y: 150 },
+        { type: 'call-list', x: 50, y: 220 }
+      ]
+    },
+    'bonus-hunt-classic': {
+      name: 'Classic Bonus Hunt',
+      description: 'Traditional bonus hunt layout with all stats',
+      elements: [
+        { type: 'total-bonuses', x: 50, y: 50 },
+        { type: 'profit-loss', x: 200, y: 50 },
+        { type: 'current-avg', x: 370, y: 50 },
+        { type: 'required-avg', x: 540, y: 50 },
+        { type: 'currently-opening', x: 50, y: 150 },
+        { type: 'biggest-win', x: 280, y: 150 },
+        { type: 'win-rate', x: 450, y: 150 },
+        { type: 'bonus-grid', x: 50, y: 250 }
+      ]
+    },
+    'minimal-stats': {
+      name: 'Minimal Stats',
+      description: 'Clean minimal overlay with essential stats only',
+      elements: [
+        { type: 'total-calls', x: 50, y: 50 },
+        { type: 'completed-calls', x: 220, y: 50 },
+        { type: 'top-multiplier', x: 390, y: 50 },
+        { type: 'timer', x: 560, y: 50 }
+      ]
+    }
+  };
+
+  const loadTemplate = (templateKey: string) => {
+    if (!fabricCanvas) return;
+    
+    fabricCanvas.clear();
+    setActiveTemplate(templateKey);
+    
+    const template = templates[templateKey as keyof typeof templates];
+    if (!template) return;
+
+    template.elements.forEach(elementConfig => {
+      const elementType = elementLibrary.find(el => el.id === elementConfig.type);
+      if (elementType) {
+        addElementAtPosition(elementType, elementConfig.x, elementConfig.y);
+      }
+    });
+    
+    toast.success(`Loaded ${template.name} template`);
+  };
+
+  const addElementAtPosition = (elementType: OverlayElement, x: number, y: number) => {
     if (!fabricCanvas) return;
 
     let fabricObject;
@@ -546,8 +616,11 @@ export default function TestOverlayBuilder() {
       fabricCanvas.add(fabricObject);
       fabricCanvas.setActiveObject(fabricObject);
       fabricCanvas.renderAll();
-      toast.success(`Added ${elementType.name}`);
-    }
+    toast.success(`Added ${elementType.name}`);
+  };
+
+  const addElement = (elementType: OverlayElement) => {
+    addElementAtPosition(elementType, 100, 100);
   };
 
   const updateSelectedElement = (property: string, value: any) => {
@@ -671,13 +744,31 @@ export default function TestOverlayBuilder() {
           {/* Element Palette - Left Panel */}
           <Card className="col-span-3 p-4">
             <h3 className="font-semibold mb-4">Elements</h3>
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 text-xs">
+            <Tabs defaultValue="templates" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 text-xs">
+                <TabsTrigger value="templates">Templates</TabsTrigger>
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="slots">Slots</TabsTrigger>
                 <TabsTrigger value="bonus">Bonus</TabsTrigger>
                 <TabsTrigger value="stats">Stats</TabsTrigger>
               </TabsList>
+              
+              <TabsContent value="templates" className="space-y-3">
+                {Object.entries(templates).map(([key, template]) => (
+                  <div key={key} className="border rounded-lg p-3">
+                    <h4 className="font-medium text-sm mb-1">{template.name}</h4>
+                    <p className="text-xs text-muted-foreground mb-2">{template.description}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => loadTemplate(key)}
+                    >
+                      Load Template
+                    </Button>
+                  </div>
+                ))}
+              </TabsContent>
               
               <TabsContent value="basic" className="space-y-2">
                 {elementLibrary.filter(el => el.type === 'text' || el.type === 'shape' || el.type === 'container').map((element) => (
