@@ -150,7 +150,7 @@ export default function SlotsCalls() {
 
   // Auto-scroll to follow animation progress
   const scrollToCurrentElimination = (eliminatedCount: number, totalToEliminate: number) => {
-    if (!gridRef.current) return;
+    if (!gridRef?.current) return;
     
     // Calculate scroll position based on elimination progress
     const container = gridRef.current;
