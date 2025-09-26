@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Canvas as FabricCanvas, Rect, Circle, FabricText } from 'fabric';
+import { Canvas as FabricCanvas, Rect, Circle, FabricText, Group } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -475,8 +475,10 @@ export default function TestOverlayBuilder() {
           width: elementType.properties.width,
           height: elementType.properties.height,
           fill: elementType.properties.backgroundColor,
-          rx: 8,
-          ry: 8,
+          rx: elementType.properties.borderRadius || 8,
+          ry: elementType.properties.borderRadius || 8,
+          stroke: elementType.properties.borderColor,
+          strokeWidth: elementType.properties.borderWidth || 0,
         });
 
         const demoValue = getDemoData(elementType.properties.dataSource);
@@ -491,19 +493,34 @@ export default function TestOverlayBuilder() {
           originY: 'center',
           left: elementType.properties.width / 2,
           top: elementType.properties.height / 2,
+          fontWeight: elementType.properties.fontWeight || 'normal',
+          textAlign: 'center',
         });
 
+        // Create a group to keep text and background together
+        fabricObject = new Group([bg, text], {
+          left: 100,
+          top: 100,
+          selectable: true,
+          hasControls: true,
+          hasBorders: true,
+        });
+        break;
+
+      case 'container':
         fabricObject = new Rect({
           left: 100,
           top: 100,
           width: elementType.properties.width,
           height: elementType.properties.height,
           fill: elementType.properties.backgroundColor,
+          stroke: elementType.properties.borderColor,
+          strokeWidth: elementType.properties.borderWidth || 1,
+          strokeDashArray: elementType.properties.borderStyle === 'dashed' ? [5, 5] : undefined,
           rx: 8,
           ry: 8,
         });
         break;
-
       default:
         return;
     }
@@ -525,26 +542,6 @@ export default function TestOverlayBuilder() {
         evented: true,
       });
       
-      // Add overlay text for data elements
-      if (elementType.type === 'data') {
-        const demoValue = getDemoData(elementType.properties.dataSource);
-        const displayText = elementType.properties.label 
-          ? `${elementType.properties.label}: ${demoValue}`
-          : demoValue;
-
-        const overlayText = new FabricText(displayText, {
-          fontSize: elementType.properties.fontSize,
-          fill: elementType.properties.textColor,
-          originX: 'center',
-          originY: 'center',
-          left: fabricObject.left! + elementType.properties.width / 2,
-          top: fabricObject.top! + elementType.properties.height / 2,
-          selectable: false,
-          evented: false,
-        });
-        
-        fabricCanvas.add(overlayText);
-      }
       
       fabricCanvas.add(fabricObject);
       fabricCanvas.setActiveObject(fabricObject);
