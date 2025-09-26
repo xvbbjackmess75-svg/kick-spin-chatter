@@ -1479,15 +1479,27 @@ export default function Giveaways() {
                         <Trophy className="h-3 w-3 mr-2" />
                         Pick Winner
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={() => joinChatChannel(extractChannel(giveaway.description))}
-                      >
-                        <Monitor className="h-3 w-3 mr-2" />
-                        Monitor
-                      </Button>
+                      {chatConnected && connectedChannel === extractChannel(giveaway.description) ? (
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="flex-1"
+                          onClick={stopChatMonitoring}
+                        >
+                          <MonitorX className="h-3 w-3 mr-2" />
+                          Stop Monitor
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+                          onClick={() => joinChatChannel(extractChannel(giveaway.description))}
+                        >
+                          <Monitor className="h-3 w-3 mr-2" />
+                          Start Monitor
+                        </Button>
+                      )}
                     </>
                   ) : (
                     <Button size="sm" variant="outline" className="w-full" disabled>
