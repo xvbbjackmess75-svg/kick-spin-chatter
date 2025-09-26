@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key, MessageSquare } from 'lucide-react';
+import { Database, Users, Settings, Shield, Calendar, AlertTriangle, Lock, Key, MessageSquare, Search, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import KickChatPoster from '@/components/KickChatPoster';
 
@@ -56,6 +56,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [importingSlots, setImportingSlots] = useState(false);
   const [lastImportDate, setLastImportDate] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -279,6 +280,14 @@ export default function Admin() {
     }
   };
 
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => 
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.kick_username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -327,6 +336,15 @@ export default function Admin() {
                   Refresh Users
                 </Button>
               </div>
+              <div className="flex items-center gap-2 mt-4">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by email, name, or Kick username..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -336,13 +354,14 @@ export default function Admin() {
                     <TableHead>Email</TableHead>
                     <TableHead>Display Name</TableHead>
                     <TableHead>Kick Account</TableHead>
+                    <TableHead>Verified</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((usr) => (
+                  {filteredUsers.map((usr) => (
                     <TableRow key={usr.id}>
                       <TableCell className="font-mono text-xs">{usr.id.substring(0, 8)}...</TableCell>
                       <TableCell className="font-medium">{usr.email}</TableCell>
@@ -355,6 +374,16 @@ export default function Admin() {
                           </div>
                         ) : (
                           <span className="text-muted-foreground">Not connected</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {usr.role === 'verified_viewer' ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="text-sm font-medium">Verified</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not verified</span>
                         )}
                       </TableCell>
                       <TableCell>
