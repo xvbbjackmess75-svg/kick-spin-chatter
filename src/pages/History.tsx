@@ -108,11 +108,16 @@ export default function History() {
               (giveaway.giveaway_winners || []).map(async (winner) => {
                 const { data: profileData } = await supabase
                   .from('profiles')
-                  .select('linked_kick_user_id, linked_discord_user_id')
+                  .select('user_id')
                   .eq('linked_kick_username', winner.winner_username)
-                  .single();
+                  .maybeSingle();
                 
-                const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+                let isVerified = false;
+                if (profileData?.user_id) {
+                  const { data: roleData } = await supabase
+                    .rpc('get_user_role', { _user_id: profileData.user_id });
+                  isVerified = roleData === 'verified_viewer';
+                }
                 
                 return {
                   ...winner,

@@ -542,14 +542,18 @@ export default function Giveaways() {
         if (giveaway.verified_only) {
           console.log(`🔍 Checking verification status for ${message.username} (verified_only giveaway)`);
           
-          // Check if the user is verified (has both Kick and Discord linked)
+          // Check if user has verified_viewer role
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+            .select('user_id')
             .eq('linked_kick_username', message.username)
-            .single();
+            .maybeSingle();
           
-          userIsVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          if (profileData?.user_id) {
+            const { data: roleData } = await supabase
+              .rpc('get_user_role', { _user_id: profileData.user_id });
+            userIsVerified = roleData === 'verified_viewer';
+          }
           
           if (!userIsVerified) {
             console.log(`❌ User ${message.username} is not verified - skipping entry for verified-only giveaway`);
@@ -563,12 +567,17 @@ export default function Giveaways() {
           
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+            .select('user_id')
             .eq('linked_kick_username', message.username)
-            .single();
+            .maybeSingle();
           
-          userIsVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
-          console.log(`🔍 User ${message.username} verification status: ${userIsVerified} (Kick ID: ${profileData?.linked_kick_user_id}, Discord ID: ${profileData?.linked_discord_user_id})`);
+          if (profileData?.user_id) {
+            const { data: roleData } = await supabase
+              .rpc('get_user_role', { _user_id: profileData.user_id });
+            userIsVerified = roleData === 'verified_viewer';
+          }
+          
+          console.log(`🔍 User ${message.username} verification status: ${userIsVerified} (Role check)`);
         }
         
         try {
@@ -934,14 +943,19 @@ export default function Giveaways() {
       // Fetch verification status for each participant
       const participantsWithVerification = await Promise.all(
         (data || []).map(async (p, index) => {
-          // Check if the participant has both Kick and Discord linked + get custom avatar
+          // Check verification status using verified_viewer role + get custom avatar
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id, custom_avatar_url')
+            .select('user_id, custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
-            .single();
+            .maybeSingle();
           
-          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          let isVerified = false;
+          if (profileData?.user_id) {
+            const { data: roleData } = await supabase
+              .rpc('get_user_role', { _user_id: profileData.user_id });
+            isVerified = roleData === 'verified_viewer';
+          }
           
           // Use avatar utility to get best available avatar
           const avatar = getBestAvatar({
@@ -1200,14 +1214,19 @@ export default function Giveaways() {
 
       const mappedParticipants: RouletteParticipant[] = await Promise.all(
         availableParticipants.map(async (p, index) => {
-          // Check if the participant has both Kick and Discord linked + get custom avatar
+          // Check verification status using verified_viewer role + get custom avatar
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('linked_kick_user_id, linked_discord_user_id, custom_avatar_url')
+            .select('user_id, custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
-            .single();
+            .maybeSingle();
           
-          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          let isVerified = false;
+          if (profileData?.user_id) {
+            const { data: roleData } = await supabase
+              .rpc('get_user_role', { _user_id: profileData.user_id });
+            isVerified = roleData === 'verified_viewer';
+          }
           
           // Use avatar utility to get best available avatar
           const avatar = getBestAvatar({
