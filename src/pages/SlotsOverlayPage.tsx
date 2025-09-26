@@ -56,6 +56,14 @@ export default function SlotsOverlayPage() {
     }
   }, [userId]);
 
+  // Refetch settings when auth state changes (for window.open scenarios)
+  useEffect(() => {
+    if (userId && user && window.opener) {
+      console.log('🔄 Auth loaded after window.open, refetching settings...');
+      fetchOverlaySettings();
+    }
+  }, [user, userId]);
+
   const fetchOverlaySettings = async () => {
     if (!userId) return;
 
@@ -63,6 +71,13 @@ export default function SlotsOverlayPage() {
       console.log('🔍 Fetching overlay settings for userId:', userId);
       console.log('🔍 Current URL:', window.location.href);
       console.log('🔍 Opened via window.open?', window.opener !== null);
+      console.log('🔍 Auth user:', user?.id);
+      
+      // Wait a bit for auth to initialize if opened in new tab
+      if (window.opener && !user) {
+        console.log('⏳ Waiting for auth to initialize...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       const { data, error } = await supabase
         .from('overlay_settings')
