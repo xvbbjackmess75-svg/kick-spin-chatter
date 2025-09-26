@@ -194,6 +194,27 @@ serve(async (req) => {
           throw updateError
         }
 
+        // Clean up pending approval status from display name
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', userId)
+          .single()
+
+        if (profile?.display_name) {
+          const cleanDisplayName = profile.display_name
+            .replace(/\s*\(Pending Streamer Approval\)/, '')
+            .replace(/\s*\(Pending Streamer\)/, '')
+            .trim()
+
+          if (cleanDisplayName !== profile.display_name) {
+            await supabaseAdmin
+              .from('profiles')
+              .update({ display_name: cleanDisplayName })
+              .eq('user_id', userId)
+          }
+        }
+
         return new Response(
           JSON.stringify({ success: true }),
           { 
