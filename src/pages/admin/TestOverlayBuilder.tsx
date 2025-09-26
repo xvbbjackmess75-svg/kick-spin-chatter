@@ -407,6 +407,29 @@ export default function TestOverlayBuilder() {
     };
   }, [canvasWidth, canvasHeight]);
 
+  // Demo data for different overlay types
+  const getDemoData = (dataSource: string) => {
+    const demoData: { [key: string]: string } = {
+      totalCalls: '47',
+      completedCalls: '23',
+      pendingCalls: '24',
+      topMultiplier: '847x',
+      eventTitle: 'Slots Marathon Stream',
+      eventStatus: 'LIVE',
+      totalBonuses: '12',
+      profitLoss: '+$2,847',
+      currentAvg: '127x',
+      requiredAvg: '250x',
+      currentlyOpening: 'Sweet Bonanza',
+      winRate: '43%',
+      avgBet: '$5.50',
+      biggestWin: '$12,500',
+      timer: '02:47:15',
+      participants: '1,247'
+    };
+    return demoData[dataSource] || '0';
+  };
+
   const addElement = (elementType: OverlayElement) => {
     if (!fabricCanvas) return;
 
@@ -456,7 +479,12 @@ export default function TestOverlayBuilder() {
           ry: 8,
         });
 
-        const text = new FabricText(`${elementType.name}: 0`, {
+        const demoValue = getDemoData(elementType.properties.dataSource);
+        const displayText = elementType.properties.label 
+          ? `${elementType.properties.label}: ${demoValue}`
+          : demoValue;
+
+        const text = new FabricText(displayText, {
           fontSize: elementType.properties.fontSize,
           fill: elementType.properties.textColor,
           originX: 'center',
@@ -496,6 +524,27 @@ export default function TestOverlayBuilder() {
         lockScalingY: false,
         evented: true,
       });
+      
+      // Add overlay text for data elements
+      if (elementType.type === 'data') {
+        const demoValue = getDemoData(elementType.properties.dataSource);
+        const displayText = elementType.properties.label 
+          ? `${elementType.properties.label}: ${demoValue}`
+          : demoValue;
+
+        const overlayText = new FabricText(displayText, {
+          fontSize: elementType.properties.fontSize,
+          fill: elementType.properties.textColor,
+          originX: 'center',
+          originY: 'center',
+          left: fabricObject.left! + elementType.properties.width / 2,
+          top: fabricObject.top! + elementType.properties.height / 2,
+          selectable: false,
+          evented: false,
+        });
+        
+        fabricCanvas.add(overlayText);
+      }
       
       fabricCanvas.add(fabricObject);
       fabricCanvas.setActiveObject(fabricObject);
