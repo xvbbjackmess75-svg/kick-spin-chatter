@@ -13,20 +13,17 @@ interface TestCallDialogProps {
 }
 
 export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogProps) {
+  console.log("🔥 COMPONENT RENDER: TestCallDialog loaded", Date.now());
+  
   const [isOpen, setIsOpen] = useState(false);
   const [testSlotName, setTestSlotName] = useState("");
   const [testUsername, setTestUsername] = useState("");
   const [bulkCount, setBulkCount] = useState(50);
   const [isAddingBulk, setIsAddingBulk] = useState(false);
-  const executionRef = useRef(false); // Track execution state
+  const executionRef = useRef(false);
   const { toast } = useToast();
 
-  // Force re-render debug
-  console.log("🔄 TestCallDialog rendered with protection mechanisms", { 
-    isAddingBulk, 
-    executionRef: executionRef.current,
-    timestamp: Date.now() 
-  });
+  console.log("🔥 STATE VALUES:", { bulkCount, isAddingBulk, executionRef: executionRef.current });
 
   const addTestCall = async () => {
     if (!selectedEvent || !testSlotName.trim() || !testUsername.trim()) {
@@ -79,83 +76,62 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
     }
   };
 
-  const addBulkTestCalls = useCallback(async () => {
-    console.log("🎯 FUNCTION CALLED: addBulkTestCalls started", {
-      isAddingBulk,
-      executionRef: executionRef.current,
-      selectedEvent: !!selectedEvent,
-      bulkCount,
-      timestamp: Date.now()
+  // SIMPLE APPROACH: Create a non-useCallback function with absolute protection
+  const addBulkTestCalls = async () => {
+    const startTime = Date.now();
+    console.log("🚀 BULK ADD STARTED:", { 
+      startTime, 
+      bulkCount, 
+      isAddingBulk, 
+      refFlag: executionRef.current,
+      hasEvent: !!selectedEvent 
     });
 
-    // ABSOLUTE PREVENTION: Multiple layers of protection
-    if (isAddingBulk || executionRef.current) {
-      console.log("🚫 EXECUTION BLOCKED: Already in progress", {
-        isAddingBulk,
-        executionRef: executionRef.current
-      });
+    // IMMEDIATE PREVENTION: Check if already running
+    if (isAddingBulk) {
+      console.log("🚫 BLOCKED: isAddingBulk is true");
+      return;
+    }
+
+    if (executionRef.current) {
+      console.log("🚫 BLOCKED: executionRef is true");
       return;
     }
 
     if (!selectedEvent || bulkCount < 1) {
-      console.log("🚫 VALIDATION FAILED:", { selectedEvent: !!selectedEvent, bulkCount });
-      toast({
-        title: "Error",
-        description: "Please enter a valid number of test calls",
-        variant: "destructive"
-      });
+      console.log("🚫 BLOCKED: Invalid parameters", { selectedEvent: !!selectedEvent, bulkCount });
       return;
     }
 
-    // IMMEDIATE LOCK - Set both flags instantly
-    console.log("🔒 LOCKING EXECUTION");
+    // LOCK IMMEDIATELY
+    console.log("🔒 SETTING LOCKS");
     setIsAddingBulk(true);
     executionRef.current = true;
-    
-    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🚀 EXECUTION START: ${executionId} - Creating ${bulkCount} calls`);
+
+    const execId = `simple_${startTime}_${Math.random().toString(36).substr(2, 6)}`;
+    console.log(`🎯 EXECUTION ID: ${execId}`);
 
     try {
-      const slotNames = [
-        "Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Reactoonz",
-        "Legacy of Dead", "Moon Princess", "Fruit Party", "Big Bass Bonanza", "Dog House"
-      ];
-      
-      const usernames = [
-        "TestUser", "GamerPro", "SlotFan", "LuckyPlayer", "BigWinner", 
-        "SpinMaster", "BonusHunter", "JackpotKing", "WildCatcher", "MegaWins"
-      ];
+      const slots = ["Sweet Bonanza", "Gates of Olympus", "Book of Dead", "Starburst", "Dog House"];
+      const names = ["TestUser", "GamerPro", "SlotFan", "LuckyPlayer", "BigWinner"];
 
-      // Create exactly the requested number of calls
+      console.log(`📝 CREATING ${bulkCount} CALLS for ${execId}`);
+      
       const calls = [];
       for (let i = 0; i < bulkCount; i++) {
-        const randomSlot = slotNames[Math.floor(Math.random() * slotNames.length)];
-        const randomUser = usernames[Math.floor(Math.random() * usernames.length)] + Math.floor(Math.random() * 1000);
-        
         calls.push({
           event_id: selectedEvent.id,
-          viewer_username: randomUser,
-          viewer_kick_id: `${executionId}_${i}`,
-          slot_name: randomSlot,
+          viewer_username: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 1000),
+          viewer_kick_id: `${execId}_${i}`,
+          slot_name: slots[Math.floor(Math.random() * slots.length)],
           bet_amount: selectedEvent.bet_size,
-          status: 'pending'
+          status: 'pending',
+          call_order: 1 + i
         });
       }
 
-      console.log(`📋 CREATED ARRAY: ${calls.length} calls for ${executionId}`);
+      console.log(`💾 INSERTING ${calls.length} calls to database for ${execId}`);
 
-      // Get starting call order
-      const { data: orderData } = await supabase
-        .rpc('get_next_call_order', { event_uuid: selectedEvent.id });
-      
-      const startOrder = orderData || 1;
-      
-      // Add call_order to each call
-      calls.forEach((call, index) => {
-        call.call_order = startOrder + index;
-      });
-
-      // Single database operation
       const { error, data } = await supabase
         .from('slots_calls')
         .insert(calls)
@@ -163,29 +139,29 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
 
       if (error) throw error;
 
-      console.log(`✅ SUCCESS: ${data?.length || 0} calls inserted for ${executionId}`);
+      console.log(`✅ SUCCESS: ${data?.length} calls inserted for ${execId}`);
 
       toast({
-        title: "✅ Test Calls Added", 
-        description: `Successfully added ${data?.length || calls.length} test calls`,
+        title: "✅ Test Calls Added",
+        description: `Added ${data?.length || calls.length} test calls (${execId})`,
       });
 
       setIsOpen(false);
       onCallAdded();
 
     } catch (error) {
-      console.error(`❌ ERROR: ${executionId}`, error);
+      console.error(`❌ ERROR ${execId}:`, error);
       toast({
         title: "Error",
-        description: `Failed to add test calls: ${error.message}`,
+        description: `Failed: ${error.message}`,
         variant: "destructive"
       });
     } finally {
-      console.log(`🔓 UNLOCKING: ${executionId}`);
+      console.log(`🔓 UNLOCKING ${execId}`);
       setIsAddingBulk(false);
       executionRef.current = false;
     }
-  }, [selectedEvent, bulkCount, isAddingBulk, toast, onCallAdded]);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -237,13 +213,19 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
                 max="200"
               />
              </div>
-             <Button 
-               onClick={addBulkTestCalls} 
-               className="w-full gaming-button"
-               disabled={!selectedEvent || selectedEvent.status !== 'active' || isAddingBulk}
-               onDoubleClick={(e) => e.preventDefault()} // Prevent double-click
-               style={{ pointerEvents: isAddingBulk ? 'none' : 'auto' }} // Additional protection
-             >
+              <Button 
+                onClick={() => {
+                  console.log("🔥 BUTTON CLICKED: About to call addBulkTestCalls", Date.now());
+                  addBulkTestCalls();
+                }} 
+                className="w-full gaming-button"
+                disabled={!selectedEvent || selectedEvent.status !== 'active' || isAddingBulk}
+                onDoubleClick={(e) => {
+                  console.log("🚫 DOUBLE CLICK PREVENTED");
+                  e.preventDefault();
+                }}
+                style={{ pointerEvents: isAddingBulk ? 'none' : 'auto' }}
+              >
                {isAddingBulk ? (
                  <>
                    <div className="animate-spin mr-2">⏳</div>
