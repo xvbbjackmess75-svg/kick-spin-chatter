@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, RotateCcw, Play, Trophy, Users, CheckCircle2 } from 'lucide-react';
 import { VerificationBadge } from '@/components/VerificationBadge';
+import { UserProfileModal } from '@/components/UserProfileModal';
 
 interface Participant {
   id: number;
@@ -44,6 +45,8 @@ export function GiveawayRoulette({
   const [showResult, setShowResult] = useState(false);
   const [isResultLocked, setIsResultLocked] = useState(false);
   const [lockedIndicatorPosition, setLockedIndicatorPosition] = useState<number | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<Participant | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create extended participants array for seamless scrolling
@@ -263,6 +266,12 @@ export function GiveawayRoulette({
     }
   }, [participants, showStartButton, isSpinning, selectedWinner, isResultLocked]);
 
+  // Handle opening user profile
+  const handleOpenProfile = (participant: Participant) => {
+    setSelectedProfileUser(participant);
+    setProfileModalOpen(true);
+  };
+
   return (
     <Card className="gaming-card w-full">
       <CardHeader>
@@ -383,7 +392,12 @@ export function GiveawayRoulette({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xl font-bold text-foreground">{selectedWinner.username}</p>
+                  <button 
+                    onClick={() => handleOpenProfile(selectedWinner)}
+                    className="text-xl font-bold text-foreground hover:text-kick-green transition-colors cursor-pointer"
+                  >
+                    {selectedWinner.username}
+                  </button>
                   {winnerResult && (
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p>Winning Ticket: #{winnerResult.winningTicket}</p>
@@ -454,15 +468,27 @@ export function GiveawayRoulette({
                         {participant.username.slice(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-foreground">
+                    <button
+                      onClick={() => handleOpenProfile(participant)}
+                      className="text-xs text-foreground hover:text-kick-green transition-colors cursor-pointer"
+                    >
                       {participant.isVerified && '🛡️ '}{participant.username}
-                    </span>
+                    </button>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* User Profile Modal */}
+        <UserProfileModal
+          isOpen={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          username={selectedProfileUser?.username || ''}
+          avatar={selectedProfileUser?.avatar}
+          isVerified={selectedProfileUser?.isVerified}
+        />
       </CardContent>
     </Card>
   );
