@@ -283,6 +283,70 @@ serve(async (req) => {
                   chatroomId: chatroomId
                 };
 
+                // Store message in database for chat history
+                try {
+                  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+                  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+                  
+                  if (supabaseUrl && supabaseKey) {
+                    const supabase = createClient(supabaseUrl, supabaseKey);
+                    
+                    // Get or create the channel record
+                    let { data: channelData, error: channelError } = await supabase
+                      .from('kick_channels')
+                      .select('id')
+                      .eq('channel_id', chatroomId.toString())
+                      .maybeSingle();
+
+                    // If no channel record exists, create one  
+                    if (!channelData && !channelError) {
+                      console.log(`Creating kick_channels record for chatroom ${chatroomId}`);
+                      const { data: newChannel, error: createError } = await supabase
+                        .from('kick_channels')
+                        .insert({
+                          channel_name: globalChannelName || 'unknown',
+                          channel_id: chatroomId.toString(),
+                          is_active: true,
+                          bot_enabled: false
+                        })
+                        .select('id')
+                        .single();
+
+                      if (!createError && newChannel) {
+                        channelData = newChannel;
+                        console.log(`Created channel record with UUID: ${channelData.id}`);
+                      }
+                    }
+
+                    // Store the chat message
+                    if (channelData?.id) {
+                      const { error: insertError } = await supabase
+                        .from('chat_messages')
+                        .insert({
+                          id: messageData.id,
+                          channel_id: channelData.id,
+                          kick_username: messageData.sender?.username || 'unknown',
+                          kick_user_id: messageData.sender?.id?.toString() || '0',
+                          message: messageData.content || '',
+                          user_type: messageData.sender?.identity?.badges?.some((b: any) => b.type === 'broadcaster') ? 'broadcaster' :
+                                    messageData.sender?.identity?.badges?.some((b: any) => b.type === 'moderator') ? 'moderator' : 'viewer',
+                          timestamp: messageData.created_at || new Date().toISOString()
+                        });
+
+                      if (insertError) {
+                        // Don't log duplicate key errors as they're expected for duplicate messages
+                        if (!insertError.message?.includes('duplicate key')) {
+                          console.error('Error storing chat message:', insertError);
+                        }
+                      } else {
+                        console.log(`💾 Stored chat message from ${messageData.sender?.username}: ${messageData.content?.substring(0, 50)}...`);
+                      }
+                    }
+                  }
+                } catch (dbError) {
+                  console.error('Database error while storing message:', dbError);
+                }
+
                 // Forward chat message to client
                 socket.send(JSON.stringify({
                   type: 'chat_message',
