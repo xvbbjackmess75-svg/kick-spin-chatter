@@ -743,28 +743,36 @@ export default function Giveaways() {
       console.log(`🔍 Checking real-time verification status for ${username}...`);
       
       // Get user_id first from profiles - try linked_kick_username first, then kick_username
+      console.log(`🔧 Debug: Starting profile lookup for "${username}"`);
+      
       let profileData = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('user_id, linked_kick_username, kick_username')
         .eq('linked_kick_username', username)
         .maybeSingle();
       
+      console.log(`🔧 Debug: First query (linked_kick_username) result:`, profileData);
+      
       // If not found, try kick_username field
       if (!profileData.data) {
+        console.log(`🔧 Debug: Trying kick_username field...`);
         profileData = await supabase
           .from('profiles')
-          .select('user_id')
+          .select('user_id, linked_kick_username, kick_username')
           .eq('kick_username', username)
           .maybeSingle();
+        console.log(`🔧 Debug: Second query (kick_username) result:`, profileData);
       }
-      
-      console.log(`🔧 Debug: Profile lookup for ${username}:`, profileData);
       
       let isVerified = false;
       if (profileData.data?.user_id) {
+        console.log(`🔧 Debug: Found user_id: ${profileData.data.user_id}, checking role...`);
         const { data: roleData } = await supabase
           .rpc('get_user_role', { _user_id: profileData.data.user_id });
+        console.log(`🔧 Debug: Role data returned:`, roleData);
         isVerified = roleData === 'verified_viewer';
+      } else {
+        console.log(`🔧 Debug: No user_id found in profile data`);
       }
       
       console.log(`✅ ${username} verification status: ${isVerified} (Role: ${isVerified ? 'verified_viewer' : 'viewer'}, User ID: ${profileData.data?.user_id})`);
