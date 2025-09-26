@@ -235,6 +235,14 @@ export function GiveawayRoulette({
     }, 500);
   };
 
+  // Reset component state when showStartButton becomes true
+  useEffect(() => {
+    if (showStartButton) {
+      console.log("🔄 Resetting GiveawayRoulette state for new selection");
+      resetRoulette();
+    }
+  }, [showStartButton]);
+
   // Auto-start roulette when explicitly requested (showStartButton is false and no current state)
   useEffect(() => {
     console.log("🔄 GiveawayRoulette useEffect triggered:", {
