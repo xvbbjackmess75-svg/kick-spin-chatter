@@ -159,8 +159,10 @@ async function startUserMonitoring(userId: string, tokenInfo: any, supabase: any
       activeMonitors.delete(userId);
     }
 
-    // Start background monitoring task
-    // EdgeRuntime.waitUntil(runChatMonitor(userId, kickUsername, kickUserId?.toString(), monitoringTokenInfo, supabase));
+    // Start background monitoring task - using setTimeout to start immediately
+    setTimeout(() => {
+      runChatMonitor(userId, kickUsername, kickUserId?.toString(), monitoringTokenInfo, supabase);
+    }, 100);
 
     console.log(`✅ Monitoring started for @${kickUsername}`);
 
@@ -801,14 +803,16 @@ setInterval(async () => {
             .single();
           
           if (profile && profile.kick_username) {
-            // Restart the monitor with stored info - the monitor function will handle duplicate prevention
-            // EdgeRuntime.waitUntil(runChatMonitor(
-            //   monitor.user_id, 
-            //   monitor.kick_username, 
-            //   monitor.channel_id, 
-            //   { access_token: Deno.env.get('KICK_BOT_TOKEN') }, // Use bot token for auto-restart
-            //   supabase
-            // ));
+            // Restart the monitor with stored info - using setTimeout to prevent blocking
+            setTimeout(() => {
+              runChatMonitor(
+                monitor.user_id, 
+                monitor.kick_username, 
+                monitor.channel_id, 
+                { access_token: Deno.env.get('KICK_BOT_TOKEN') }, // Use bot token for auto-restart
+                supabase
+              );
+            }, 1000);
           }
         }
       }
