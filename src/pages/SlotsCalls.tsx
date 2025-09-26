@@ -1471,10 +1471,7 @@ export default function SlotsCalls() {
                           >
                             Close Entry
                           </Button>
-                        </div>
-                        
-                        {/* Test Call Section - Positioned below action buttons */}
-                        <div className="mt-4 pt-4 border-t border-border">
+                          
                           <TestCallDialog 
                             selectedEvent={selectedEvent}
                             onCallAdded={() => fetchCalls(selectedEvent.id)}
