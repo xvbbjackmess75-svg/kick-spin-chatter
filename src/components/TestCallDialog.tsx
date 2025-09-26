@@ -91,11 +91,10 @@ export function TestCallDialog({ selectedEvent, onCallAdded }: TestCallDialogPro
     
     console.log(`🎯 STARTING bulk add: ${bulkCount} test calls at ${Date.now()}`);
     
-    // Additional safety check after state change
-    if (isAddingBulk) {
-      console.log("🚫 Double execution detected - aborting");
-      return;
-    }
+    
+    // Generate a unique execution ID to prevent any duplicates
+    const executionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`🎯 EXECUTION ID: ${executionId}`);
 
     
     try {

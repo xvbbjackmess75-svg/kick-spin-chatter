@@ -98,7 +98,48 @@ export default function SlotsCalls() {
     show_borders: true,
     animation_enabled: true
   });
+  
+  // Remove all test participants except KickGW
+  const removeTestParticipants = async () => {
+    if (!selectedEvent) return;
+    
+    try {
+      // Delete all test calls (those with viewer_kick_id starting with 'bulk_test_')
+      const { error } = await supabase
+        .from('slots_calls')
+        .delete()
+        .eq('event_id', selectedEvent.id)
+        .like('viewer_kick_id', 'bulk_test_%');
 
+      if (error) throw error;
+
+      toast({
+        title: "🧹 Test Participants Removed",
+        description: "All test participants have been removed from the event",
+      });
+
+      // Refresh the calls list
+      fetchCalls(selectedEvent.id);
+    } catch (error) {
+      console.error("Error removing test participants:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove test participants",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Prevent body scroll during animation modal
+  useEffect(() => {
+    if (isAnimationModalOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isAnimationModalOpen]);
+  
   // Color presets for overlay themes
   const colorPresets = [
     {
@@ -843,50 +884,54 @@ export default function SlotsCalls() {
     // ANIMATION PHASE: Visual only, results already locked
     // User interactions during this phase cannot affect the outcome
     let animationCompleted = false;
-    let skipped = false;
+    let animationSkipped = false;
 
     // Set up skip mechanism
-    const skipHandler = () => {
-      if (!animationCompleted) {
-        skipped = true;
+    const skipAnimation = () => {
+      if (!animationCompleted && !animationSkipped) {
+        animationSkipped = true;
         setEliminatedNames(new Set(losers)); // Show final state immediately
-        console.log("⏭️ Animation skipped by user");
+        console.log("⏭️ Animation skipped");
       }
     };
 
-    // Add global skip listener (ESC key or click)
-    const handleEscapeOrClick = (e: KeyboardEvent | MouseEvent) => {
-      if (e.type === 'keydown' && (e as KeyboardEvent).key === 'Escape') {
-        skipHandler();
+    // Add global skip listener (ESC key)
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        skipAnimation();
       }
     };
 
-    document.addEventListener('keydown', handleEscapeOrClick);
+    // Store reference for cleanup
+    const skipHandler = skipAnimation;
+    
+    document.addEventListener('keydown', handleEscape);
     
     try {
-      if (!skipped) {
-        // Eliminate losers one by one with animation
-        for (let i = 0; i < losers.length && !skipped; i++) {
-          await new Promise(resolve => setTimeout(resolve, 400));
-          if (!skipped) {
-            setEliminatedNames(prev => new Set([...prev, losers[i]]));
-          }
+      // Animate elimination one by one (unless skipped)
+      for (let i = 0; i < losers.length && !animationSkipped; i++) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        if (!animationSkipped) {
+          setEliminatedNames(prev => new Set([...prev, losers[i]]));
         }
+      }
 
-        // Wait to show final winners (skippable)
-        if (!skipped) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+      // Wait to show final winners (skippable)
+      if (!animationSkipped) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       animationCompleted = true;
     } finally {
       // Cleanup listeners
-      document.removeEventListener('keydown', handleEscapeOrClick);
+      document.removeEventListener('keydown', handleEscape);
     }
 
     // EXECUTION PHASE: Apply the predetermined results
     setIsAnimationModalOpen(false);
+    
+    // Restore body scroll
+    document.body.style.overflow = 'unset';
     
     try {
       console.log("💾 APPLYING PREDETERMINED RESULTS:", {
@@ -1527,20 +1572,31 @@ export default function SlotsCalls() {
                                     </p>
                                   </div>
                                   
-                                  <div className="flex gap-2">
+                                  <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                      <Button
+                                        onClick={performRandomSelection}
+                                        className="flex-1 gaming-button"
+                                        variant="destructive"
+                                      >
+                                        🎲 Perform Random Selection
+                                      </Button>
+                                      <Button
+                                        onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                        variant="outline"
+                                        className="flex-1"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                    
                                     <Button
-                                      onClick={performRandomSelection}
-                                      className="flex-1 gaming-button"
-                                      variant="destructive"
-                                    >
-                                      🎲 Perform Random Selection
-                                    </Button>
-                                    <Button
-                                      onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                      onClick={removeTestParticipants}
                                       variant="outline"
-                                      className="flex-1"
+                                      className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10"
+                                      size="sm"
                                     >
-                                      Cancel
+                                      🧹 Remove All Test Participants
                                     </Button>
                                   </div>
                                 </div>
@@ -1618,20 +1674,31 @@ export default function SlotsCalls() {
                                   </p>
                                 </div>
                                 
-                                <div className="flex gap-2">
+                                <div className="space-y-2">
+                                  <div className="flex gap-2">
+                                    <Button
+                                      onClick={performRandomSelection}
+                                      className="flex-1 gaming-button"
+                                      variant="destructive"
+                                    >
+                                      🎲 Perform Random Selection
+                                    </Button>
+                                    <Button
+                                      onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                      variant="outline"
+                                      className="flex-1"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                  
                                   <Button
-                                    onClick={performRandomSelection}
-                                    className="flex-1 gaming-button"
-                                    variant="destructive"
-                                  >
-                                    🎲 Perform Random Selection
-                                  </Button>
-                                  <Button
-                                    onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                    onClick={removeTestParticipants}
                                     variant="outline"
-                                    className="flex-1"
+                                    className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10"
+                                    size="sm"
                                   >
-                                    Cancel
+                                    🧹 Remove All Test Participants
                                   </Button>
                                 </div>
                               </div>
@@ -1832,11 +1899,11 @@ export default function SlotsCalls() {
               🎲 Random Selection in Progress...
             </DialogTitle>
             <div className="text-center text-sm text-muted-foreground mt-2">
-              Winners are predetermined • Press ESC or click here to skip animation
+              Winners are predetermined • Press ESC or click Skip to skip animation
             </div>
           </DialogHeader>
           
-          <div className="p-6">
+          <div className="p-6" onWheel={(e) => e.preventDefault()}>
             <div className="text-center mb-6">
               <p className="text-lg mb-2">
                 Selecting {finalWinners.length} winners from {animationNames.length} participants
@@ -1845,7 +1912,9 @@ export default function SlotsCalls() {
                 <div 
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${(eliminatedNames.size / (animationNames.length - finalWinners.length)) * 100}%` 
+                    width: animationNames.length > finalWinners.length 
+                      ? `${Math.min(100, (eliminatedNames.size / (animationNames.length - finalWinners.length)) * 100)}%`
+                      : '100%'
                   }}
                 />
               </div>
@@ -1853,10 +1922,10 @@ export default function SlotsCalls() {
               {/* Skip Animation Button */}
               <Button
                 onClick={() => {
-                  // Skip to final results
+                  // Skip to final results immediately
                   const losers = animationNames.filter(name => !finalWinners.includes(name));
                   setEliminatedNames(new Set(losers));
-                  console.log("⏭️ Animation skipped manually");
+                  console.log("⏭️ Animation skipped manually - showing final results");
                 }}
                 variant="outline"
                 size="sm"
@@ -1869,11 +1938,12 @@ export default function SlotsCalls() {
 
             {/* Results Grid - Scroll locked during animation */}
             <div 
-              className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-4 border rounded-lg bg-secondary/10 scrollbar-hide"
-              onScroll={(e) => {
-                // Log scroll attempts but don't prevent (for accessibility)
-                console.log("📜 User scrolled during animation - results remain locked");
+              className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-hidden p-4 border rounded-lg bg-secondary/10"
+              style={{ 
+                overflowY: eliminatedNames.size === animationNames.length - finalWinners.length ? 'auto' : 'hidden'
               }}
+              onWheel={(e) => e.preventDefault()} // Block all scrolling during animation
+              onTouchMove={(e) => e.preventDefault()} // Block touch scrolling
             >
               {animationNames.map((name, index) => {
                 const isEliminated = eliminatedNames.has(name);
