@@ -119,7 +119,7 @@ export default function Giveaways() {
     }>;
     totalGiveawayEntries: number;
   } | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(false); // WebSocket connection state
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
