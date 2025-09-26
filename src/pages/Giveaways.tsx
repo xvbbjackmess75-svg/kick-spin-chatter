@@ -696,9 +696,16 @@ export default function Giveaways() {
 
   const viewUserProfile = async (username: string) => {
     try {
-      // Get user verification status from live participants
-      const userParticipation = liveParticipants.find(p => p.username === username);
-      const isVerified = userParticipation?.isVerified || false;
+      // Always check current verification status from profiles table for accurate display
+      console.log(`🔍 Checking real-time verification status for ${username}...`);
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+        .eq('linked_kick_username', username)
+        .single();
+      
+      const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+      console.log(`✅ ${username} verification status: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id})`);
 
       // Fetch user's recent giveaway participations
       const { data: participations, error } = await supabase
