@@ -132,10 +132,10 @@ export function RouletteModal({
       return;
     }
     
-    console.log("🎯 Adding another winner - available participants:", currentParticipants.length);
-    setShowStartButton(false);
-    setCurrentPendingWinner(null);
-    // Don't set isRolling here - let the GiveawayRoulette component handle it
+    console.log("🎯 Adding another winner - resetting roulette state");
+    setShowStartButton(true); // Show the Pick Winner button
+    setCurrentPendingWinner(null); // Clear current selection
+    setIsRolling(false); // Ensure not rolling
   };
 
   // Handle reroll

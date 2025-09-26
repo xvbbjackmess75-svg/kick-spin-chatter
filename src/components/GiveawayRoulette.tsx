@@ -235,13 +235,19 @@ export function GiveawayRoulette({
     }, 500);
   };
 
-  // Auto-start roulette when participants change and showStartButton is false
+  // Auto-start roulette when explicitly requested (showStartButton is false and no current state)
   useEffect(() => {
+    console.log("🔄 GiveawayRoulette useEffect triggered:", {
+      participantsCount: participants.length,
+      showStartButton,
+      isSpinning,
+      selectedWinner: selectedWinner?.username,
+      isResultLocked
+    });
+    
+    // Only auto-start if showStartButton is false AND we don't have a current winner
     if (participants.length > 0 && !showStartButton && !isSpinning && !selectedWinner && !isResultLocked) {
       console.log("🎰 Auto-starting roulette with", participants.length, "participants");
-      // Reset any locked state first
-      setIsResultLocked(false);
-      setLockedIndicatorPosition(null);
       const timer = setTimeout(() => {
         startRoulette();
       }, 500);
