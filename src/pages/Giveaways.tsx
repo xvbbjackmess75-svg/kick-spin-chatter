@@ -513,6 +513,7 @@ export default function Giveaways() {
         console.log(`✅ KEYWORD MATCH! "${keyword}" detected from user: ${message.username}`);
         
         // Check if giveaway requires verification
+        let userIsVerified = false;
         if (giveaway.verified_only) {
           console.log(`🔍 Checking verification status for ${message.username} (verified_only giveaway)`);
           
@@ -523,14 +524,26 @@ export default function Giveaways() {
             .eq('linked_kick_username', message.username)
             .single();
           
-          const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          userIsVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
           
-          if (!isVerified) {
+          if (!userIsVerified) {
             console.log(`❌ User ${message.username} is not verified - skipping entry for verified-only giveaway`);
             continue;
           }
           
           console.log(`✅ User ${message.username} is verified - allowing entry`);
+        } else {
+          // Even if giveaway doesn't require verification, we still want to check and store the user's verification status
+          console.log(`🔍 Checking verification status for ${message.username} (for display purposes)`);
+          
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
+            .eq('linked_kick_username', message.username)
+            .single();
+          
+          userIsVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+          console.log(`🔍 User ${message.username} verification status: ${userIsVerified} (Kick ID: ${profileData?.linked_kick_user_id}, Discord ID: ${profileData?.linked_discord_user_id})`);
         }
         
         try {
@@ -552,7 +565,7 @@ export default function Giveaways() {
               giveaway_id: giveaway.id,
               kick_username: message.username,
               kick_user_id: message.userId?.toString() || message.username,
-              is_verified: giveaway.verified_only ? true : false
+              is_verified: userIsVerified
             });
 
           if (insertError) {
@@ -577,7 +590,7 @@ export default function Giveaways() {
             username: message.username,
             timestamp: new Date(),
             keyword: keyword,
-            isVerified: giveaway.verified_only ? true : false
+            isVerified: userIsVerified
           };
           setLiveParticipants(prev => [newParticipant, ...prev].slice(0, 50)); // Keep last 50 participants
           
@@ -1342,6 +1355,70 @@ export default function Giveaways() {
     }
   };
 
+  // Function to refresh verification status for existing participants
+  const refreshVerificationStatus = async (giveawayId: string) => {
+    try {
+      console.log('🔄 Refreshing verification status for existing participants...');
+      
+      // Get all participants for this giveaway
+      const { data: participants, error } = await supabase
+        .from('giveaway_participants')
+        .select('id, kick_username')
+        .eq('giveaway_id', giveawayId);
+
+      if (error) {
+        console.error('❌ Error fetching participants:', error);
+        return;
+      }
+
+      if (!participants || participants.length === 0) {
+        console.log('ℹ️ No participants to update');
+        return;
+      }
+
+      // Check verification status for each participant
+      for (const participant of participants) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('linked_kick_user_id, linked_discord_user_id')
+          .eq('linked_kick_username', participant.kick_username)
+          .single();
+
+        const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
+        
+        console.log(`🔍 ${participant.kick_username}: verified=${isVerified}`);
+        
+        // Update the participant's verification status
+        const { error: updateError } = await supabase
+          .from('giveaway_participants')
+          .update({ is_verified: isVerified })
+          .eq('id', participant.id);
+
+        if (updateError) {
+          console.error(`❌ Error updating verification for ${participant.kick_username}:`, updateError);
+        } else {
+          console.log(`✅ Updated verification status for ${participant.kick_username}: ${isVerified}`);
+        }
+      }
+
+      // Refresh the giveaways data
+      await fetchGiveaways();
+      
+      toast({
+        title: "✅ Verification Status Updated",
+        description: "All participant verification statuses have been refreshed",
+      });
+      
+    } catch (error) {
+      console.error('❌ Error refreshing verification status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh verification status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const updateGiveaway = async (giveawayId: string, newKeyword: string) => {
     if (!newKeyword.trim()) {
       toast({
@@ -1731,6 +1808,13 @@ export default function Giveaways() {
                         Add Test User
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => refreshVerificationStatus(giveaway.id)}
+                        className="flex items-center gap-2 text-blue-400"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Refresh Verification
+                      </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => setClearParticipantsId(giveaway.id)}
                         className="flex items-center gap-2 text-yellow-400"
