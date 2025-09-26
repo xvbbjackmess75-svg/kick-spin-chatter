@@ -37,6 +37,7 @@ export default function SlotsOverlayPage() {
   
   // Overlay customization states
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
     border_color: '#3b82f6',
@@ -109,6 +110,8 @@ export default function SlotsOverlayPage() {
       }
     } catch (error) {
       console.error("Error fetching overlay settings:", error);
+    } finally {
+      setSettingsLoaded(true);
     }
   };
 
@@ -190,11 +193,21 @@ export default function SlotsOverlayPage() {
       )}
       
       <div className="p-4">
-        <SlotsOverlay 
-          userId={userId || undefined} 
-          maxCalls={maxCalls} 
-          customSettings={overlaySettings} 
-        />
+        {/* Only render SlotsOverlay after settings are loaded */}
+        {userId && settingsLoaded ? (
+          <SlotsOverlay 
+            userId={userId} 
+            maxCalls={maxCalls} 
+            customSettings={overlaySettings} 
+          />
+        ) : (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading overlay settings...</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Overlay Customization Dialog */}
