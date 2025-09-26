@@ -283,9 +283,19 @@ export function GiveawayRoulette({
                       {participant.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="text-xs mt-1 text-center text-foreground/80 truncate w-full relative z-10">
-                    {participant.username}
-                  </p>
+                  <div className="flex flex-col items-center gap-0.5 w-full relative z-10">
+                    {participant.isVerified && (
+                      <VerificationBadge 
+                        isVerified={true} 
+                        size="sm" 
+                        showText={false}
+                        className="scale-75"
+                      />
+                    )}
+                    <p className="text-xs text-center text-foreground/80 truncate w-full">
+                      {participant.username}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
