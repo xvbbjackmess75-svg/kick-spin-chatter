@@ -46,16 +46,11 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const [loading, setLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Force component remount when cache-buster changes by including it in key
-  const urlParams = new URLSearchParams(window.location.search);
-  const cacheBuster = urlParams.get('cb') || 'default';
-  
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
-    border_color: '#3b82f6',
-    text_color: '#ffffff',
-    accent_color: '#3b82f6',
+    border_color: 'hsl(var(--primary))',
+    text_color: 'hsl(var(--foreground))',
+    accent_color: 'hsl(var(--primary))',
     font_size: 'medium',
     max_visible_calls: 10,
     scrolling_speed: 50,
@@ -63,6 +58,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     show_borders: true,
     animation_enabled: true
   });
+  
+  // Force component remount when cache-buster changes by including it in key
+  const urlParams = new URLSearchParams(window.location.search);
+  const cacheBuster = urlParams.get('cb') || 'default';
 
   useEffect(() => {
     if (userId) {
@@ -336,6 +335,19 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const totalCalls = calls.length;
   const completedCalls = calls.filter(call => call.status === 'completed').length;
   const pendingCalls = calls.filter(call => call.status === 'pending').length;
+  
+  // Calculate financial stats
+  const totalCost = calls.reduce((sum, call) => sum + (call.bet_amount || 0), 0);
+  const totalReturns = calls.filter(call => call.status === 'completed').reduce((sum, call) => sum + (call.win_amount || 0), 0);
+  const totalProfit = totalReturns - totalCost;
+  const currentROI = totalCost > 0 ? ((totalProfit / totalCost) * 100) : 0;
+  
+  // Calculate required multiplier to break even
+  const completedWins = calls.filter(call => call.status === 'completed' && (call.win_amount || 0) > 0);
+  const pendingCost = calls.filter(call => call.status === 'pending').reduce((sum, call) => sum + (call.bet_amount || 0), 0);
+  const remainingLoss = Math.max(0, totalCost - totalReturns);
+  const avgBetSize = pendingCost / Math.max(1, pendingCalls);
+  const requiredMultiplier = pendingCalls > 0 && avgBetSize > 0 ? (remainingLoss / avgBetSize) + 1 : 0;
 
   // Create duplicated calls for infinite scroll effect when needed
   const infiniteScrollCalls = calls.length > (overlaySettings.max_visible_calls || maxCalls) 
@@ -369,7 +381,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         </div>
 
         {/* Stats Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
           {/* Total Calls */}
           <div 
             className="p-2 rounded-md border"
@@ -418,6 +430,31 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
             </div>
             <div className="text-sm font-bold" style={{color: overlaySettings.text_color}}>
               {pendingCalls}
+            </div>
+          </div>
+
+          {/* Cost/Returns */}
+          <div 
+            className="p-2 rounded-md border"
+            style={{
+              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+            }}
+          >
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingUp className={`h-3 w-3 ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>P&L</span>
+            </div>
+            <div className={`text-xs font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ${totalCost.toFixed(0)}→${totalReturns.toFixed(0)}
+            </div>
+            <div className={`text-xs ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {currentROI > 0 ? '+' : ''}{currentROI.toFixed(0)}%
+              {pendingCalls > 0 && requiredMultiplier > 0 && (
+                <div className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>
+                  Need {requiredMultiplier.toFixed(1)}x
+                </div>
+              )}
             </div>
           </div>
 
@@ -537,15 +574,30 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <div 
-                            className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              call.status === 'completed' ? 'bg-green-500/20 text-green-300' :
-                              call.status === 'pending' ? 'bg-orange-500/20 text-orange-300' :
-                              'bg-gray-500/20 text-gray-300'
-                            }`}
-                          >
-                            {call.status === 'completed' ? 'Done' : call.status === 'pending' ? 'Pending' : call.status}
-                          </div>
+                          {call.status === 'completed' ? (
+                            (() => {
+                              const cost = call.bet_amount || 0;
+                              const returns = call.win_amount || 0;
+                              const profit = returns - cost;
+                              const isProfit = profit > 0;
+                              const percentage = cost > 0 ? ((profit / cost) * 100) : 0;
+                              
+                              return (
+                                <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${isProfit ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                                  ${cost.toFixed(0)}→${returns.toFixed(0)} ({percentage > 0 ? '+' : ''}{percentage.toFixed(0)}%)
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div 
+                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                call.status === 'pending' ? 'bg-orange-500/20 text-orange-300' :
+                                'bg-gray-500/20 text-gray-300'
+                              }`}
+                            >
+                              {call.status === 'pending' ? 'Pending' : call.status}
+                            </div>
+                          )}
                           
                           {call.status === 'completed' && call.win_amount && call.multiplier && (
                             <div className="flex items-center gap-1">

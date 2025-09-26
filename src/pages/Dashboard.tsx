@@ -70,6 +70,14 @@ export default function Dashboard() {
       bgColor: "bg-accent/10",
       path: "/history"
     },
+    {
+      icon: Target,
+      title: "Slots Calls Analytics",
+      description: "Track your slots events costs, returns, and ROI with real-time overlay support",
+      color: "text-purple-400",
+      bgColor: "bg-purple-400/10",
+      path: "/slots-calls"
+    },
   ];
 
   return (
@@ -163,7 +171,7 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-foreground">Platform Features</h2>
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
             <Card key={index} className="gaming-card hover:scale-[1.02] transition-all duration-200 cursor-pointer" onClick={() => navigate(feature.path)}>
               <CardContent className="p-6">

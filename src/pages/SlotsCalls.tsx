@@ -104,14 +104,18 @@ export default function SlotsCalls() {
       let noteIndex = 0;
       
       const playNote = () => {
-        if (noteIndex < notes.length && !isSoundMuted) {
-          oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        if (noteIndex < notes.length) {
+          if (!isSoundMuted) {
+            oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          }
           noteIndex++;
-          setTimeout(playNote, 150);
-        } else {
-          oscillator.stop();
+          if (noteIndex < notes.length) {
+            setTimeout(playNote, 150);
+          } else {
+            oscillator.stop();
+          }
         }
       };
       
