@@ -35,10 +35,12 @@ export function useUserRole() {
     if (!user) return;
 
     try {
+      console.log('🔧 Fetching user role for user:', user.id);
       const { data, error } = await supabase
         .rpc('get_user_role', { _user_id: user.id });
 
       if (error) throw error;
+      console.log('🔧 User role fetched:', data);
       setRole(data || 'viewer'); // Default to viewer instead of user
     } catch (error) {
       console.error('Error fetching user role:', error);
