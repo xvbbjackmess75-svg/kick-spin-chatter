@@ -25,6 +25,7 @@ interface SlotsEvent {
 interface SlotsOverlayProps {
   userId?: string;
   maxCalls?: number;
+  initialSettings?: Partial<OverlaySettings>;
 }
 
 interface OverlaySettings {
@@ -40,7 +41,7 @@ interface OverlaySettings {
   animation_enabled: boolean;
 }
 
-export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProps) {
+export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }: SlotsOverlayProps) {
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,8 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
     scrolling_speed: 50,
     show_background: true,
     show_borders: true,
-    animation_enabled: true
+    animation_enabled: true,
+    ...initialSettings // Apply any initial settings passed from parent
   });
   
   // Force component remount when cache-buster changes by including it in key
@@ -128,15 +130,25 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
+    console.log('🎬 Scroll effect check:', {
+      callsLength: calls.length,
+      maxVisibleCalls: overlaySettings.max_visible_calls,
+      maxCallsProp: maxCalls,
+      animationEnabled: overlaySettings.animation_enabled,
+      scrollingSpeed: overlaySettings.scrolling_speed,
+      shouldScroll: calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled
+    });
+
     if (calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled) {
+      console.log('🎬 Starting scroll animation');
       const interval = setInterval(() => {
         setScrollPosition(prev => {
           // Calculate actual item height including spacing (40px + 4px spacing)
           const itemHeight = 44;
           const maxScroll = calls.length * itemHeight;
           
-          // Smooth continuous scroll - move by small increments
-          const scrollSpeed = Math.max(1, (101 - (overlaySettings.scrolling_speed || 50)) / 20); // Convert speed setting to actual pixels per interval
+          // Convert speed setting to actual pixels per interval (1-100 scale to 0.5-5 pixels)
+          const scrollSpeed = Math.max(0.5, (overlaySettings.scrolling_speed || 50) / 20);
           const newPosition = prev + scrollSpeed;
           
           // Reset to 0 when we've scrolled past all original items to create infinite loop
@@ -144,8 +156,12 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         });
       }, 50); // Fixed 50ms intervals for smooth animation
 
-      return () => clearInterval(interval);
+      return () => {
+        console.log('🎬 Stopping scroll animation');
+        clearInterval(interval);
+      };
     } else {
+      console.log('🎬 No scroll needed - resetting position');
       setScrollPosition(0);
     }
   }, [calls.length, overlaySettings.max_visible_calls, maxCalls, overlaySettings.animation_enabled, overlaySettings.scrolling_speed]);
@@ -172,7 +188,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
       if (data) {
         console.log('✅ Found overlay settings:', data);
-        setOverlaySettings(data);
+        setOverlaySettings(prev => ({
+          ...prev,
+          ...data
+        }));
       } else {
         console.log('ℹ️ No custom overlay settings found, using defaults');
       }
@@ -356,6 +375,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
 
   // Create duplicated calls for infinite scroll effect when needed
   const shouldEnableInfiniteScroll = calls.length > (overlaySettings.max_visible_calls || maxCalls) && overlaySettings.animation_enabled;
+  console.log('🎬 Infinite scroll check:', { shouldEnableInfiniteScroll, callsLength: calls.length, maxVisible: overlaySettings.max_visible_calls, animationEnabled: overlaySettings.animation_enabled });
   const infiniteScrollCalls = shouldEnableInfiniteScroll 
     ? [...calls, ...calls, ...calls] // Triple the calls array for seamless infinite loop
     : calls;
