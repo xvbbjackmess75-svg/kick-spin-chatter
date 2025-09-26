@@ -25,7 +25,6 @@ interface SlotsEvent {
 interface SlotsOverlayProps {
   userId?: string;
   maxCalls?: number;
-  initialSettings?: Partial<OverlaySettings>;
 }
 
 interface OverlaySettings {
@@ -41,7 +40,7 @@ interface OverlaySettings {
   animation_enabled: boolean;
 }
 
-export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }: SlotsOverlayProps) {
+export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProps) {
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,8 +56,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
     scrolling_speed: 50,
     show_background: true,
     show_borders: true,
-    animation_enabled: true,
-    ...initialSettings // Apply any initial settings passed from parent
+    animation_enabled: true
   });
   
   // Force component remount when cache-buster changes by including it in key
@@ -68,17 +66,10 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
   useEffect(() => {
     if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
-      console.log('🎨 Initial settings passed:', initialSettings);
       
       // Load settings and data
       const loadData = async () => {
-        // Only fetch settings if no initial settings were provided
-        if (!initialSettings || Object.keys(initialSettings).length === 0) {
-          console.log('🔍 No initial settings, fetching from database');
-          await fetchOverlaySettings();
-        } else {
-          console.log('✅ Using initial settings from parent');
-        }
+        await fetchOverlaySettings();
         await fetchActiveEventAndCalls();
       };
       
@@ -133,18 +124,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
         clearInterval(intervalId);
       };
     }
-  }, [userId, initialSettings]); // Add initialSettings to dependencies
-
-  // Update settings when initialSettings changes
-  useEffect(() => {
-    if (initialSettings && Object.keys(initialSettings).length > 0) {
-      console.log('🎨 Updating overlay settings from props:', initialSettings);
-      setOverlaySettings(prev => ({
-        ...prev,
-        ...initialSettings
-      }));
-    }
-  }, [initialSettings]);
+  }, [userId]);
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
@@ -197,21 +177,18 @@ export default function SlotsOverlay({ userId, maxCalls = 10, initialSettings }:
         .from('overlay_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // Not found error
+      if (error) {
         console.error("❌ Error fetching overlay settings:", error);
         return;
       }
 
       if (data) {
-        console.log('✅ Found overlay settings from database:', data);
-        setOverlaySettings(prev => ({
-          ...prev,
-          ...data
-        }));
+        console.log('✅ Found overlay settings:', data);
+        setOverlaySettings(data);
       } else {
-        console.log('ℹ️ No custom overlay settings found in database, keeping current settings');
+        console.log('ℹ️ No custom overlay settings found, using defaults');
       }
     } catch (error) {
       console.error("❌ Exception fetching overlay settings:", error);
