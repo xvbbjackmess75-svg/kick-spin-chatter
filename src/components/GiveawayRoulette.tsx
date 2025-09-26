@@ -118,7 +118,7 @@ export function GiveawayRoulette({
     setShowResult(false);
     setScrollPosition(0);
     
-    // Step 4: Add escape key listener for skipping
+    // Step 4: Add escape key listener for skipping (keep ESC functionality)
     const handleSkip = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isSpinning) {
         console.log("⏭️ Animation skipped with ESC key");
@@ -176,27 +176,24 @@ export function GiveawayRoulette({
       
       // Animate to winner
       setTimeout(() => {
-        if (isSpinning) { // Only animate if not skipped
-          setScrollPosition(targetPosition);
-        }
+        setScrollPosition(targetPosition);
       }, 100);
       
       // Show final result and LOCK positions
       setTimeout(() => {
-        if (isSpinning) { // Only complete if not skipped
-          setIsSpinning(false);
-          setShowResult(true);
-          
-          // LOCK the indicator position at the current center
-          setLockedIndicatorPosition(centerPosition);
-          
-          console.log("✅ FINAL RESULT LOCKED:", {
-            winner: result.winner.username,
-            scrollPosition: targetPosition,
-            lockedIndicatorPosition: centerPosition,
-            containerWidth: actualContainerWidth
-          });
-        }
+        setIsSpinning(false);
+        setShowResult(true);
+        
+        // LOCK the indicator position at the current center
+        setLockedIndicatorPosition(centerPosition);
+        
+        console.log("✅ FINAL RESULT LOCKED:", {
+          winner: result.winner.username,
+          scrollPosition: targetPosition,
+          lockedIndicatorPosition: centerPosition,
+          containerWidth: actualContainerWidth
+        });
+        
         document.removeEventListener('keydown', handleSkip);
       }, 4000);
     };
