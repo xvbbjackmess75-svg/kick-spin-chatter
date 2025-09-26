@@ -50,6 +50,11 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   const [loading, setLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Force component remount when cache-buster changes by including it in key
+  const urlParams = new URLSearchParams(window.location.search);
+  const cacheBuster = urlParams.get('cb') || 'default';
+  
   const [overlaySettings, setOverlaySettings] = useState<BonusHuntOverlaySettings>({
     background_color: 'rgba(0, 0, 0, 0.95)',
     border_color: '#3b82f6',
@@ -68,12 +73,19 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
   useEffect(() => {
     if (userId) {
-      fetchOverlaySettings();
-      fetchActiveSessionAndBonuses();
+      console.log(`🔄 Setting up bonus hunt overlay for userId: ${userId}`);
       
-      // Set up real-time subscription for sessions and bets
+      // Force reload settings on mount to bypass any caching issues
+      const loadSettings = async () => {
+        await fetchOverlaySettings();
+        await fetchActiveSessionAndBonuses();
+      };
+      
+      loadSettings();
+      
+      // Set up real-time subscription for sessions and bets with better refresh logic
       const sessionsSubscription = supabase
-        .channel('bonus_hunt_sessions_changes')
+        .channel(`bonus_hunt_sessions_${userId}`)
         .on(
           'postgres_changes',
           {
@@ -82,14 +94,16 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
             table: 'bonus_hunt_sessions',
             filter: `user_id=eq.${userId}`
           },
-          () => {
-            fetchActiveSessionAndBonuses();
+          (payload) => {
+            console.log('🔔 Bonus hunt session change detected:', payload);
+            // Always refresh when sessions change for this user
+            setTimeout(() => fetchActiveSessionAndBonuses(), 100);
           }
         )
         .subscribe();
 
       const betsSubscription = supabase
-        .channel('bonus_hunt_bets_changes')
+        .channel(`bonus_hunt_bets_${userId}`)
         .on(
           'postgres_changes',
           {
@@ -98,20 +112,27 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
             table: 'bonus_hunt_bets'
           },
           (payload: any) => {
-            // Only update if it's for the current active session
-            if (session && payload.new && (payload.new as any).session_id === session.id) {
-              fetchActiveSessionAndBonuses();
-            }
+            console.log('🔔 Bonus hunt bet change detected:', payload);
+            // Refresh on any bet change since we filter by user in the function
+            setTimeout(() => fetchActiveSessionAndBonuses(), 100);
           }
         )
         .subscribe();
 
+      // Also set up a periodic refresh every 5 seconds to ensure OBS stays synced
+      const intervalId = setInterval(() => {
+        console.log('🔄 Periodic bonus hunt overlay refresh');
+        fetchActiveSessionAndBonuses();
+      }, 5000);
+
       return () => {
+        console.log('🧹 Cleaning up bonus hunt overlay subscriptions');
         supabase.removeChannel(sessionsSubscription);
         supabase.removeChannel(betsSubscription);
+        clearInterval(intervalId);
       };
     }
-  }, [userId, session?.id]);
+  }, [userId]); // Remove session?.id dependency to avoid recreation
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {
@@ -133,9 +154,14 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
   }, [bonuses.length, overlaySettings.max_visible_bonuses, maxBonuses, overlaySettings.animation_enabled]);
 
   const fetchOverlaySettings = async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('⚠️ No userId provided for bonus hunt overlay settings');
+      return;
+    }
 
     try {
+      console.log(`🎨 Fetching bonus hunt overlay settings for userId: ${userId}`);
+      
       const { data, error } = await supabase
         .from('bonus_hunt_overlay_settings')
         .select('*')
@@ -143,11 +169,12 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
         .single();
 
       if (error && error.code !== 'PGRST116') { // Not found error
-        console.error("Error fetching overlay settings:", error);
+        console.error("❌ Error fetching bonus hunt overlay settings:", error);
         return;
       }
 
       if (data) {
+        console.log('✅ Found bonus hunt overlay settings:', data);
         setOverlaySettings({
           background_color: data.background_color || 'rgba(0, 0, 0, 0.95)',
           border_color: (data as any).border_color || '#3b82f6',
@@ -163,9 +190,11 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
           show_top_multipliers: data.show_top_multipliers ?? true,
           show_expected_payouts: data.show_expected_payouts ?? true
         });
+      } else {
+        console.log('ℹ️ No custom bonus hunt overlay settings found, using defaults');
       }
     } catch (error) {
-      console.error("Error fetching overlay settings:", error);
+      console.error("❌ Exception fetching bonus hunt overlay settings:", error);
     }
   };
 
@@ -332,6 +361,8 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
     <div 
       className={`min-h-screen p-6 ${getFontSizeClass(overlaySettings.font_size)}`} 
       style={getOverlayStyle()}
+      data-user-id={userId} // Add data attribute for debugging
+      data-settings-loaded={JSON.stringify(overlaySettings !== null)} // Debug info
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}

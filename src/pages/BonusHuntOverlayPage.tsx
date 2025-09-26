@@ -518,7 +518,10 @@ export default function BonusHuntOverlayPage() {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => window.open(`/bonus-hunt-overlay?userId=${userId}&maxBonuses=${overlaySettings.max_visible_bonuses}`, '_blank')}
+                onClick={() => {
+                  const testUrl = `/bonus-hunt-overlay?userId=${userId}&maxBonuses=${overlaySettings.max_visible_bonuses}&cb=${Date.now()}`;
+                  window.open(testUrl, '_blank');
+                }}
                 className="flex-1"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
