@@ -66,21 +66,27 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
 
   // Effect to handle custom settings and initial setup
   useEffect(() => {
-    if (customSettings) {
-      console.log('🎨 Using custom settings from parent:', customSettings);
-      setOverlaySettings(customSettings);
-    } else if (userId) {
-      console.log(`🔄 Setting up overlay for userId: ${userId}`);
-      
-      // Load settings first, then data
-      const loadData = async () => {
-        console.log('📝 Loading overlay settings first...');
+    if (!userId) {
+      console.log('⚠️ No userId provided for overlay');
+      return;
+    }
+
+    console.log(`🔄 Setting up overlay for userId: ${userId}`);
+    
+    // Load data and settings
+    const loadData = async () => {
+      if (customSettings) {
+        console.log('🎨 Using custom settings from parent:', customSettings);
+        setOverlaySettings(customSettings);
+      } else {
+        console.log('📝 Loading overlay settings from database...');
         await fetchOverlaySettings();
-        console.log('📊 Loading event data...');
-        await fetchActiveEventAndCalls();
-      };
-      
-      loadData();
+      }
+      console.log('📊 Loading event data...');
+      await fetchActiveEventAndCalls();
+    };
+    
+    loadData();
       
       // Set up real-time subscription for events and calls with better refresh logic
       const eventsSubscription = supabase
@@ -130,9 +136,6 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
         supabase.removeChannel(callsSubscription);
         clearInterval(intervalId);
       };
-    } else if (!customSettings) {
-      console.log('⚠️ No userId provided and no custom settings');
-    }
   }, [userId, customSettings]);
 
   
