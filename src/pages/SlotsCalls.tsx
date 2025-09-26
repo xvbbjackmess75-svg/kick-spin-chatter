@@ -919,19 +919,7 @@ export default function SlotsCalls() {
     });
 
     try {
-      // Mark selected calls as completed (winners)
-      for (const call of selectedCalls) {
-        const { error } = await supabase
-          .from('slots_calls')
-          .update({ status: 'completed' })
-          .eq('id', call.id);
-          
-        if (error) {
-          console.error("❌ Error updating winner:", error);
-        }
-      }
-
-      // Delete eliminated calls from database
+      // Delete eliminated calls from database (winners stay as pending)
       const callIdsToDelete = callsToShowAsEliminated.map(c => c.id);
       if (callIdsToDelete.length > 0) {
         const { error: deleteError } = await supabase
@@ -951,7 +939,7 @@ export default function SlotsCalls() {
 
       toast({
         title: "🎉 Random Selection Complete",
-        description: `${selectedCalls.length} winners selected and ${callsToShowAsEliminated.length} calls removed`,
+        description: `${selectedCalls.length} winners selected and ${callsToShowAsEliminated.length} calls removed. Winners remain as pending calls.`,
       });
 
     } catch (error) {
