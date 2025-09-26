@@ -363,7 +363,7 @@ export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: 
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center p-8" style={getOverlayStyle()}>
-          <div className="animate-spin h-8 w-8 border-2 border-current border-t-transparent rounded-full mx-auto mb-4" style={{borderColor: overlaySettings.accent_color, borderTopColor: 'transparent'}} />
+          <div className="animate-spin h-8 w-8 border-2 border-current border-t-transparent rounded-full mx-auto mb-4" style={{borderBottomColor: overlaySettings.accent_color, borderLeftColor: overlaySettings.accent_color, borderRightColor: overlaySettings.accent_color, borderTopColor: 'transparent'}} />
           <p style={{color: overlaySettings.text_color}}>Loading...</p>
         </div>
       </div>
