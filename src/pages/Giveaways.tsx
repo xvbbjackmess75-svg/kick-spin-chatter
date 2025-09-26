@@ -931,19 +931,18 @@ export default function Giveaways() {
       // Fetch verification status for each participant
       const participantsWithVerification = await Promise.all(
         (data || []).map(async (p, index) => {
-          // Check verification status using verified_viewer role + get custom avatar
+          // Use the new verification function + get custom avatar
+          const { data: isVerified } = await supabase
+            .rpc('check_user_verification_by_kick_username', { 
+              kick_username_param: p.kick_username 
+            });
+          
+          // Get custom avatar from profile (this still works with RLS since we're only getting the avatar)
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('user_id, custom_avatar_url')
+            .select('custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
             .maybeSingle();
-          
-          let isVerified = false;
-          if (profileData?.user_id) {
-            const { data: roleData } = await supabase
-              .rpc('get_user_role', { _user_id: profileData.user_id });
-            isVerified = roleData === 'verified_viewer';
-          }
           
           // Use avatar utility to get best available avatar
           const avatar = getBestAvatar({
@@ -955,7 +954,7 @@ export default function Giveaways() {
             id: index,
             username: p.kick_username,
             avatar,
-            isVerified
+            isVerified: isVerified || false
           };
         })
       );
@@ -1202,19 +1201,18 @@ export default function Giveaways() {
 
       const mappedParticipants: RouletteParticipant[] = await Promise.all(
         availableParticipants.map(async (p, index) => {
-          // Check verification status using verified_viewer role + get custom avatar
+          // Use the new verification function + get custom avatar
+          const { data: isVerified } = await supabase
+            .rpc('check_user_verification_by_kick_username', { 
+              kick_username_param: p.kick_username 
+            });
+          
+          // Get custom avatar from profile (this still works with RLS since we're only getting the avatar)
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('user_id, custom_avatar_url')
+            .select('custom_avatar_url')
             .eq('linked_kick_username', p.kick_username)
             .maybeSingle();
-          
-          let isVerified = false;
-          if (profileData?.user_id) {
-            const { data: roleData } = await supabase
-              .rpc('get_user_role', { _user_id: profileData.user_id });
-            isVerified = roleData === 'verified_viewer';
-          }
           
           // Use avatar utility to get best available avatar
           const avatar = getBestAvatar({
@@ -1226,7 +1224,7 @@ export default function Giveaways() {
             id: index + 1,
             username: p.kick_username,
             avatar,
-            isVerified
+            isVerified: isVerified || false
           };
         })
       );
