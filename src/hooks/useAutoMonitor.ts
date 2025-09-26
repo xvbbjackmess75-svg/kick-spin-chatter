@@ -29,12 +29,25 @@ export function useAutoMonitor() {
     // Check status immediately
     checkMonitoringStatus();
 
-    // Set up periodic status checks
+    // Set up periodic status checks every 10 seconds
     const interval = setInterval(() => {
       checkMonitoringStatus();
-    }, 30000); // Check every 30 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
+  }, [user]);
+
+  // Add a separate effect to handle page visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        // Page is now visible, refresh status immediately
+        setTimeout(() => checkMonitoringStatus(), 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
 
   const startAutoMonitoring = async () => {

@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { useAutoMonitor } from "@/hooks/useAutoMonitor";
 import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette, Trash2 } from "lucide-react";
+import { TestCallDialog } from "@/components/TestCallDialog";
 
 interface SlotsEvent {
   id: string;
@@ -1440,8 +1441,13 @@ export default function SlotsCalls() {
                             variant="outline"
                             size="sm"
                           >
-                            Close Entry
-                          </Button>
+                          Close Entry
+                        </Button>
+                        
+                        <TestCallDialog 
+                          selectedEvent={selectedEvent}
+                          onCallAdded={() => fetchCalls(selectedEvent.id)}
+                        />
                         </div>
                       </>
                     )}
