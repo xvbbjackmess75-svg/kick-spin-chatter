@@ -306,7 +306,7 @@ export default function Giveaways() {
               .maybeSingle();
             
             const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
-            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id})`);
+            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id}, Raw data:`, profileData);
             
             allParticipants.push({
               username: p.kick_username,
@@ -714,10 +714,10 @@ export default function Giveaways() {
         .from('profiles')
         .select('linked_kick_user_id, linked_discord_user_id, linked_kick_username')
         .eq('linked_kick_username', username)
-        .single();
+        .maybeSingle();
       
       const isVerified = !!(profileData?.linked_kick_user_id && profileData?.linked_discord_user_id);
-      console.log(`✅ ${username} verification status: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id})`);
+      console.log(`✅ ${username} verification status: ${isVerified} (Kick: ${profileData?.linked_kick_user_id}, Discord: ${profileData?.linked_discord_user_id}, Raw data:`, profileData);
 
       // Fetch user's recent giveaway participations
       const { data: participations, error } = await supabase
