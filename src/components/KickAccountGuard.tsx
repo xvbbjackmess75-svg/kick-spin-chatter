@@ -135,21 +135,9 @@ export function KickAccountGuard({ children, feature, description }: KickAccount
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <img 
-                src={getBestAvatar({
-                  customAvatar: null, // KickAccountGuard doesn't have access to profile custom avatar
-                  kickUsername: kickUser?.username
-                }) || '/placeholder-avatar.jpg'} 
-                alt={kickUser?.username}
-                className="w-12 h-12 rounded-full border-2 border-kick-green/30"
-                onLoad={() => {
-                  console.log('✅ Avatar loaded successfully:', kickUser?.avatar);
-                }}
-                onError={(e) => {
-                  console.error('❌ Avatar failed to load:', kickUser?.avatar);
-                  e.currentTarget.src = '/placeholder-avatar.jpg';
-                }}
-              />
+              <div className="w-12 h-12 rounded-full border-2 border-kick-green/30 bg-kick-green/20 flex items-center justify-center text-kick-green font-semibold">
+                {getUserInitials({ username: kickUser?.username })}
+              </div>
               <div>
                 <p className="font-semibold text-foreground">
                   @{channelInfo?.channelName}

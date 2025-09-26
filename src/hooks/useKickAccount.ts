@@ -20,23 +20,7 @@ interface KickApiUser {
   };
 }
 
-// Function to get Kick avatar URL (try multiple formats)
-const getKickAvatarUrl = (username: string): string => {
-  // Try the user's ID format first since we know it from metadata
-  const knownAvatars = {
-    'RobertGamba': 'https://files.kick.com/images/user/8683119/profile_picture',
-    'robertgamba': 'https://files.kick.com/images/user/8683119/profile_picture'
-  };
-  
-  if (knownAvatars[username] || knownAvatars[username.toLowerCase()]) {
-    const avatar = knownAvatars[username] || knownAvatars[username.toLowerCase()];
-    console.log('🎯 Using known avatar for', username, ':', avatar);
-    return avatar;
-  }
-  
-  // Default fallback that will actually work
-  return `https://ui-avatars.com/api/?name=${username}&background=1B1E28&color=67F5A1&size=200&bold=true`;
-};
+// No longer fetching avatar URLs from Kick since they're unreliable
 
 export function useKickAccount() {
   const { user } = useAuth();
@@ -67,15 +51,11 @@ export function useKickAccount() {
           if (profile.linked_kick_user_id && profile.linked_kick_username) {
             console.log('✅ Found linked Kick account');
             
-            // Use a working avatar URL format
-            const avatarUrl = getKickAvatarUrl(profile.linked_kick_username);
-            console.log('🖼️ Using avatar URL:', avatarUrl);
-            
             setKickUser({
               id: parseInt(profile.linked_kick_user_id),
               username: profile.linked_kick_username,
               display_name: profile.linked_kick_username,
-              avatar: avatarUrl,
+              avatar: '', // No longer using avatar URLs
               authenticated: true
             });
           } 
@@ -83,15 +63,11 @@ export function useKickAccount() {
           else if (profile.kick_user_id && profile.kick_username) {
             console.log('✅ Found Kick account (legacy format)');
             
-            // Use a working avatar URL format
-            const avatarUrl = getKickAvatarUrl(profile.kick_username);
-            console.log('🖼️ Using avatar URL:', avatarUrl);
-            
             setKickUser({
               id: parseInt(profile.kick_user_id),
               username: profile.kick_username,
               display_name: profile.kick_username,
-              avatar: avatarUrl,
+              avatar: '', // No longer using avatar URLs
               authenticated: true
             });
           } else {
@@ -120,8 +96,6 @@ export function useKickAccount() {
   // Debug logging
   console.log('🔧 useKickAccount debug:', {
     kickUser: kickUser?.username,
-    kickUserAvatar: kickUser?.avatar,
-    avatarLength: kickUser?.avatar?.length,
     supabaseUser: user?.email,
     isKickLinked,
     hasSupabaseAccount,
