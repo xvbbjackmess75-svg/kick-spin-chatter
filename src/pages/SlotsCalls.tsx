@@ -861,6 +861,13 @@ export default function SlotsCalls() {
         animationSkipped = true;
         setEliminatedNames(new Set(losers)); // Show final state immediately
         console.log("⏭️ Animation skipped");
+        
+        // Close modal after short delay to show final results
+        setTimeout(() => {
+          setIsAnimationModalOpen(false);
+          // Apply database changes after animation ends
+          applyDatabaseChanges(selectedCalls, callsToShowAsEliminated);
+        }, 1500);
       }
     };
 
@@ -871,8 +878,8 @@ export default function SlotsCalls() {
       }
     };
 
-    // Store reference for cleanup
-    const skipHandler = skipAnimation;
+    // Store skip function in a ref so the button can access it
+    (window as any).skipRouletteAnimation = skipAnimation;
     
     document.addEventListener('keydown', handleEscape);
     
@@ -888,52 +895,70 @@ export default function SlotsCalls() {
       // Wait to show final winners (skippable)
       if (!animationSkipped) {
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Animation completed naturally, close modal and apply changes
+        setIsAnimationModalOpen(false);
+        await applyDatabaseChanges(selectedCalls, callsToShowAsEliminated);
       }
 
       animationCompleted = true;
     } finally {
-      // Cleanup listeners
+      // Cleanup listeners and global function
       document.removeEventListener('keydown', handleEscape);
+      delete (window as any).skipRouletteAnimation;
     }
 
-    // EXECUTION PHASE: Apply the predetermined results
-    setIsAnimationModalOpen(false);
-    
-    // Restore body scroll
-    document.body.style.overflow = 'unset';
-    
+  };
+
+  // EXECUTION PHASE: Apply the predetermined results
+  const applyDatabaseChanges = async (selectedCalls: any[], callsToShowAsEliminated: any[]) => {
+    console.log("📝 APPLYING DATABASE CHANGES:", {
+      selectedCount: selectedCalls.length,
+      eliminatedCount: callsToShowAsEliminated.length,
+      winners: selectedCalls.map(c => c.viewer_username)
+    });
+
     try {
-      console.log("💾 APPLYING PREDETERMINED RESULTS:", {
-        selectedWinners: selectedCalls.map(call => call.viewer_username),
-        totalWinners: selectedCalls.length,
-        totalParticipants: allNames.length
-      });
+      // Mark selected calls as completed (winners)
+      for (const call of selectedCalls) {
+        const { error } = await supabase
+          .from('slots_calls')
+          .update({ status: 'completed' })
+          .eq('id', call.id);
+          
+        if (error) {
+          console.error("❌ Error updating winner:", error);
+        }
+      }
 
-      // Instead of deleting non-selected calls, mark selected calls as "completed" with winner status
-      const { error } = await supabase
-        .from('slots_calls')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .in('id', selectedCalls.map(call => call.id));
+      // Delete eliminated calls from database
+      const callIdsToDelete = callsToShowAsEliminated.map(c => c.id);
+      if (callIdsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('slots_calls')
+          .delete()
+          .in('id', callIdsToDelete);
+          
+        if (deleteError) {
+          console.error("❌ Error deleting eliminated calls:", deleteError);
+        }
+      }
 
-      if (error) throw error;
+      // Refresh the calls list
+      if (selectedEvent) {
+        await fetchCalls(selectedEvent.id);
+      }
 
       toast({
-        title: "🎲 Random Selection Complete!",
-        description: `Selected ${selectedCalls.length} winners out of ${allNames.length} participants. Winners marked as completed.`,
+        title: "🎉 Random Selection Complete",
+        description: `${selectedCalls.length} winners selected and ${callsToShowAsEliminated.length} calls removed`,
       });
-      
-      // Refresh the calls list to show updated statuses
-      if (selectedEvent) {
-        fetchCalls(selectedEvent.id);
-      }
+
     } catch (error) {
-      console.error("Error performing random selection:", error);
+      console.error("❌ Database operation failed:", error);
       toast({
         title: "Error",
-        description: "Failed to perform random selection",
+        description: "Failed to apply random selection changes",
         variant: "destructive",
       });
     }
@@ -1867,9 +1892,9 @@ export default function SlotsCalls() {
                 <div 
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: animationNames.length > finalWinners.length 
-                      ? `${Math.min(100, (eliminatedNames.size / (animationNames.length - finalWinners.length)) * 100)}%`
-                      : '100%'
+                    width: animationNames.length > 0 && finalWinners.length > 0
+                      ? `${Math.min(100, (eliminatedNames.size / Math.max(1, animationNames.length - finalWinners.length)) * 100)}%`
+                      : '0%'
                   }}
                 />
               </div>
@@ -1877,10 +1902,10 @@ export default function SlotsCalls() {
               {/* Skip Animation Button */}
               <Button
                 onClick={() => {
-                  // Skip to final results immediately
-                  const losers = animationNames.filter(name => !finalWinners.includes(name));
-                  setEliminatedNames(new Set(losers));
-                  console.log("⏭️ Animation skipped manually - showing final results");
+                  // Call the global skip function that handles everything properly
+                  if ((window as any).skipRouletteAnimation) {
+                    (window as any).skipRouletteAnimation();
+                  }
                 }}
                 variant="outline"
                 size="sm"
@@ -1891,14 +1916,24 @@ export default function SlotsCalls() {
               </Button>
             </div>
 
-            {/* Results Grid - Scroll locked during animation */}
+            {/* Results Grid - Scrolling enabled only when animation is complete */}
             <div 
-              className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-hidden p-4 border rounded-lg bg-secondary/10"
+              className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 p-4 border rounded-lg bg-secondary/10"
               style={{ 
                 overflowY: eliminatedNames.size === animationNames.length - finalWinners.length ? 'auto' : 'hidden'
               }}
-              onWheel={(e) => e.preventDefault()} // Block all scrolling during animation
-              onTouchMove={(e) => e.preventDefault()} // Block touch scrolling
+              onWheel={(e) => {
+                // Only allow scrolling when animation is complete
+                if (eliminatedNames.size < animationNames.length - finalWinners.length) {
+                  e.preventDefault();
+                }
+              }}
+              onTouchMove={(e) => {
+                // Only allow touch scrolling when animation is complete
+                if (eliminatedNames.size < animationNames.length - finalWinners.length) {
+                  e.preventDefault();
+                }
+              }}
             >
               {animationNames.map((name, index) => {
                 const isEliminated = eliminatedNames.has(name);
