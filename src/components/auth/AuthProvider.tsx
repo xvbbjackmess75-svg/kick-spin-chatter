@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to track user IP
+  // Function to track user IP - moved directly into AuthProvider to avoid circular dependency
   const trackUserIP = async (userId: string) => {
     try {
       await supabase.functions.invoke('track-user-ip', {

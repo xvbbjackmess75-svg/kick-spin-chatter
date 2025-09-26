@@ -15,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import KickChatPoster from '@/components/KickChatPoster';
 import { SlotManagement } from '@/components/SlotManagement';
 import { AdminTicketManagement } from '@/components/AdminTicketManagement';
-import AltAccountDetector from '@/components/AltAccountDetector';
+import { AltAccountDetector } from '@/components/AltAccountDetector';
 import { VpnProxyDetector } from '@/components/VpnProxyDetector';
 
 interface FeaturePermission {

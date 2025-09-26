@@ -21,7 +21,7 @@ interface PotentialAltAccount {
   }>;
 }
 
-export default function AltAccountDetector() {
+function AltAccountDetector() {
   const [altAccounts, setAltAccounts] = useState<PotentialAltAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,3 +199,6 @@ export default function AltAccountDetector() {
     </div>
   );
 }
+
+export { AltAccountDetector };
+export default AltAccountDetector;

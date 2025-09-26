@@ -47,3 +47,20 @@ export function useIPTracking() {
 
   return { trackUserIP };
 }
+
+// Standalone function for tracking IP without hook dependencies
+export const trackIP = async (userId: string) => {
+  try {
+    const { error } = await supabase.functions.invoke('track-user-ip', {
+      body: {
+        user_id: userId
+      }
+    });
+
+    if (error) {
+      console.error('Error tracking IP:', error);
+    }
+  } catch (error) {
+    console.error('Error calling IP tracking function:', error);
+  }
+};
