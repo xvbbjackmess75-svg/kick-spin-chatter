@@ -151,6 +151,11 @@ export default function SlotsOverlayPage() {
 
   return (
     <div className="min-h-screen bg-transparent relative">
+      {(() => {
+        console.log('🔍 SlotsOverlayPage rendering with:', { userId, maxCalls, overlaySettings });
+        return null;
+      })()}
+      
       {/* Settings Button - Only show if user owns this overlay */}
       {user && userId && user.id === userId && (
         <Button
