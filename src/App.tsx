@@ -28,7 +28,7 @@ import ViewerRegistration from "./pages/ViewerRegistration";
 import ViewerVerification from "./pages/ViewerVerification";
 import UpgradeToStreamer from "./pages/UpgradeToStreamer";
 import StreamerUpgradeRequest from "./pages/StreamerUpgradeRequest";
-import TestOverlayBuilder from "./pages/admin/TestOverlayBuilder";
+
 import TestSlotsOverlay from "./pages/admin/TestSlotsOverlay";
 import TestBonusHuntOverlay from "./pages/admin/TestBonusHuntOverlay";
 
@@ -114,16 +114,6 @@ const App = () => (
                     <Admin />
                   </Layout>
                 </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/overlay-builder"
-              element={
-                <AdminRoute>
-                  <Layout>
-                    <TestOverlayBuilder />
-                  </Layout>
-                </AdminRoute>
               }
             />
             <Route

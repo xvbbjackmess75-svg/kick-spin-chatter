@@ -156,8 +156,7 @@ export function Layout({ children }: LayoutProps) {
     // Add admin-specific items if user is admin
     if (role === 'admin') {
       baseItems.push(
-        { path: "/admin", label: "Admin Panel", icon: SettingsIcon },
-        { path: "/admin/overlay-builder", label: "Test Overlay Builder", icon: MonitorPlay }
+        { path: "/admin", label: "Admin Panel", icon: SettingsIcon }
       );
     }
     

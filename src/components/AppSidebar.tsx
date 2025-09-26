@@ -19,7 +19,7 @@ import {
   Zap,
   Trophy,
   History,
-  Monitor,
+  
   Dices,
   Shield
 } from "lucide-react";
@@ -135,14 +135,6 @@ export function AppSidebar() {
                     <NavLink to="/admin" className={getNavClass}>
                       <Shield className="h-5 w-5 mr-3" />
                       {!collapsed && <span className="font-medium">Admin Panel</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink to="/admin/overlay-builder" className={getNavClass}>
-                      <Monitor className="h-5 w-5 mr-3" />
-                      {!collapsed && <span className="font-medium">Test Overlay Builder</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
