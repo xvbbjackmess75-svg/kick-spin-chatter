@@ -616,7 +616,8 @@ export default function TestOverlayBuilder() {
       fabricCanvas.add(fabricObject);
       fabricCanvas.setActiveObject(fabricObject);
       fabricCanvas.renderAll();
-    toast.success(`Added ${elementType.name}`);
+      toast.success(`Added ${elementType.name}`);
+    }
   };
 
   const addElement = (elementType: OverlayElement) => {
