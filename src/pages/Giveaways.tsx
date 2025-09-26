@@ -170,7 +170,7 @@ export default function Giveaways() {
         return false;
       }
       
-      return data || false;
+      return Boolean(data);
     } catch (error) {
       console.error('Error checking alt account:', error);
       return false;
@@ -192,7 +192,7 @@ export default function Giveaways() {
         return false;
       }
       
-      return data || false;
+      return Boolean(data);
     } catch (error) {
       console.error('Error checking VPN/Proxy/Tor:', error);
       return false;
@@ -221,6 +221,44 @@ export default function Giveaways() {
     }));
 
     return securityInfo;
+  };
+
+  // UserSecurityBadges component
+  const UserSecurityBadges = ({ username }: { username: string }) => {
+    const [securityInfo, setSecurityInfo] = useState<UserSecurityInfo>({ isAltAccount: false, isVpnProxyTorUser: false });
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      if (!username) return;
+      
+      const loadSecurityInfo = async () => {
+        setLoading(true);
+        const info = await getUserSecurityInfo(username);
+        setSecurityInfo(info);
+        setLoading(false);
+      };
+
+      loadSecurityInfo();
+    }, [username]);
+
+    if (!username || loading) return null;
+
+    return (
+      <>
+        {securityInfo.isAltAccount && (
+          <Badge variant="outline" className="text-red-500 border-red-500/30 bg-red-500/10">
+            <UserMinus className="h-3 w-3 mr-1" />
+            Alt Accounter
+          </Badge>
+        )}
+        {securityInfo.isVpnProxyTorUser && (
+          <Badge variant="outline" className="text-orange-500 border-orange-500/30 bg-orange-500/10">
+            <Shield className="h-3 w-3 mr-1" />
+            VPN/Proxy/Tor User
+          </Badge>
+        )}
+      </>
+    );
   };
 
   useEffect(() => {
@@ -2254,50 +2292,6 @@ export default function Giveaways() {
         </Dialog>
 
         {/* User Security Badges Component */}
-        <UserSecurityBadges username="" />
-
-        {/* User Security Badges Component */}
-        {(() => {
-          const UserSecurityBadges = ({ username }: { username: string }) => {
-            const [securityInfo, setSecurityInfo] = useState<UserSecurityInfo>({ isAltAccount: false, isVpnProxyTorUser: false });
-            const [loading, setLoading] = useState(false);
-
-            useEffect(() => {
-              if (!username) return;
-              
-              const loadSecurityInfo = async () => {
-                setLoading(true);
-                const info = await getUserSecurityInfo(username);
-                setSecurityInfo(info);
-                setLoading(false);
-              };
-
-              loadSecurityInfo();
-            }, [username]);
-
-            if (!username || loading) return null;
-
-            return (
-              <>
-                {securityInfo.isAltAccount && (
-                  <Badge variant="outline" className="text-red-500 border-red-500/30 bg-red-500/10">
-                    <UserMinus className="h-3 w-3 mr-1" />
-                    Alt Accounter
-                  </Badge>
-                )}
-                {securityInfo.isVpnProxyTorUser && (
-                  <Badge variant="outline" className="text-orange-500 border-orange-500/30 bg-orange-500/10">
-                    <Shield className="h-3 w-3 mr-1" />
-                    VPN/Proxy/Tor User
-                  </Badge>
-                )}
-              </>
-            );
-          };
-
-          return null;
-        })()}
-
         {/* User Profile Modal */}
         <Dialog open={!!selectedUserProfile} onOpenChange={(open) => !open && setSelectedUserProfile(null)}>
           <DialogContent className="gaming-card border-border/50 max-w-2xl">

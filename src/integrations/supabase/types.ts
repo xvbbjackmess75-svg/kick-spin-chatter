@@ -1087,8 +1087,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_alt_account_by_username: {
+        Args: { target_username: string }
+        Returns: boolean
+      }
       check_user_verification_by_kick_username: {
         Args: { kick_username_param: string }
+        Returns: boolean
+      }
+      check_vpn_proxy_tor_by_username: {
+        Args: { target_username: string }
         Returns: boolean
       }
       get_current_user_id: {
