@@ -81,10 +81,88 @@ export default function SlotsCalls() {
   const [randomSelectionCount, setRandomSelectionCount] = useState(10);
   const [isRandomSelectionDialogOpen, setIsRandomSelectionDialogOpen] = useState(false);
   const [isAnimationModalOpen, setIsAnimationModalOpen] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
   const [animationNames, setAnimationNames] = useState<string[]>([]);
   const [eliminatedNames, setEliminatedNames] = useState<Set<string>>(new Set());
   const [finalWinners, setFinalWinners] = useState<string[]>([]);
+  const gridRef = useRef<HTMLDivElement>(null);
   
+  // Sound effect functions
+  const playWinSound = () => {
+    if (isSoundMuted) return;
+    try {
+      // Create a satisfying win sound using Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Create ascending notes for celebration
+      const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+      let noteIndex = 0;
+      
+      const playNote = () => {
+        if (noteIndex < notes.length) {
+          oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          noteIndex++;
+          setTimeout(playNote, 150);
+        } else {
+          oscillator.stop();
+        }
+      };
+      
+      oscillator.type = 'triangle';
+      oscillator.start();
+      playNote();
+    } catch (error) {
+      console.log('Audio context not available');
+    }
+  };
+
+  const playEliminationSound = () => {
+    if (isSoundMuted) return;
+    try {
+      // Create a descending elimination sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+      
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log('Audio context not available');
+    }
+  };
+
+  // Auto-scroll to follow animation progress
+  const scrollToCurrentElimination = (eliminatedCount: number, totalToEliminate: number) => {
+    if (!gridRef.current) return;
+    
+    // Calculate scroll position based on elimination progress
+    const container = gridRef.current;
+    const progress = eliminatedCount / totalToEliminate;
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const targetScroll = progress * maxScroll;
+    
+    container.scrollTo({
+      top: targetScroll,
+      behavior: 'smooth'
+    });
+  };
   // Overlay customization states
   const [overlaySettings, setOverlaySettings] = useState({
     background_color: 'rgba(0, 0, 0, 0.95)',
@@ -861,6 +939,7 @@ export default function SlotsCalls() {
         // Close modal after short delay to show final results
         setTimeout(() => {
           setIsAnimationModalOpen(false);
+          playWinSound(); // Play win sound even when skipped
           // Apply database changes after animation ends
           applyDatabaseChanges(selectedCalls, callsToShowAsEliminated);
         }, 1500);
@@ -884,13 +963,24 @@ export default function SlotsCalls() {
       for (let i = 0; i < losers.length && !animationSkipped; i++) {
         await new Promise(resolve => setTimeout(resolve, 400));
         if (!animationSkipped) {
-          setEliminatedNames(prev => new Set([...prev, losers[i]]));
+          setEliminatedNames(prev => {
+            const newSet = new Set([...prev, losers[i]]);
+            // Auto-scroll and play elimination sound
+            setTimeout(() => {
+              scrollToCurrentElimination(newSet.size, losers.length);
+              playEliminationSound();
+            }, 100);
+            return newSet;
+          });
         }
       }
 
       // Wait to show final winners (skippable)
       if (!animationSkipped) {
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Play win sound for final winners
+        playWinSound();
         
         // Animation completed naturally, close modal and apply changes
         setIsAnimationModalOpen(false);
@@ -1818,25 +1908,37 @@ export default function SlotsCalls() {
                 />
               </div>
               
-              {/* Skip Animation Button */}
-              <Button
-                onClick={() => {
-                  // Call the global skip function that handles everything properly
-                  if ((window as any).skipRouletteAnimation) {
-                    (window as any).skipRouletteAnimation();
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="mb-4"
-                disabled={eliminatedNames.size === animationNames.length - finalWinners.length}
-              >
-                ⏭️ Skip Animation
-              </Button>
+              {/* Skip Animation and Mute Buttons */}
+              <div className="flex gap-2 justify-center">
+                <Button
+                  onClick={() => {
+                    // Call the global skip function that handles everything properly
+                    if ((window as any).skipRouletteAnimation) {
+                      (window as any).skipRouletteAnimation();
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mb-4"
+                  disabled={eliminatedNames.size === animationNames.length - finalWinners.length}
+                >
+                  ⏭️ Skip Animation
+                </Button>
+                
+                <Button
+                  onClick={() => setIsSoundMuted(!isSoundMuted)}
+                  variant="outline"
+                  size="sm"
+                  className="mb-4"
+                >
+                  {isSoundMuted ? '🔇 Unmute' : '🔊 Mute'}
+                </Button>
+              </div>
             </div>
 
-            {/* Results Grid - Scrolling enabled only when animation is complete */}
+            {/* Results Grid - Auto-scrolling with animation */}
             <div 
+              ref={gridRef}
               className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 p-4 border rounded-lg bg-secondary/10"
               style={{ 
                 overflowY: eliminatedNames.size === animationNames.length - finalWinners.length ? 'auto' : 'hidden'
