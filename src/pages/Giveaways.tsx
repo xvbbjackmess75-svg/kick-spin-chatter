@@ -1438,11 +1438,14 @@ export default function Giveaways() {
       // Check verification status for each participant using verified_viewer role
       for (const participant of participants) {
         // Get user_id first - check both linked_kick_username and kick_username fields
-        const { data: profileData } = await supabase
+        console.log(`🔧 Debug: Looking up profile for ${participant.kick_username}`);
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('user_id')
+          .select('user_id, linked_kick_username, kick_username')
           .or(`linked_kick_username.eq.${participant.kick_username},kick_username.eq.${participant.kick_username}`)
           .maybeSingle();
+
+        console.log(`🔧 Debug: Profile query result for ${participant.kick_username}:`, { profileData, profileError });
 
         let isVerified = false;
         if (profileData?.user_id) {
