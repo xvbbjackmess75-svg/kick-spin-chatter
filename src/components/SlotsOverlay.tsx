@@ -25,6 +25,7 @@ interface SlotsEvent {
 interface SlotsOverlayProps {
   userId?: string;
   maxCalls?: number;
+  customSettings?: OverlaySettings;
 }
 
 interface OverlaySettings {
@@ -40,7 +41,7 @@ interface OverlaySettings {
   animation_enabled: boolean;
 }
 
-export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProps) {
+export default function SlotsOverlay({ userId, maxCalls = 10, customSettings }: SlotsOverlayProps) {
   const [calls, setCalls] = useState<SlotsCall[]>([]);
   const [event, setEvent] = useState<SlotsEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,8 +64,12 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
   const urlParams = new URLSearchParams(window.location.search);
   const cacheBuster = urlParams.get('cb') || 'default';
 
+  // Effect to handle custom settings and initial setup
   useEffect(() => {
-    if (userId) {
+    if (customSettings) {
+      console.log('🎨 Using custom settings from parent:', customSettings);
+      setOverlaySettings(customSettings);
+    } else if (userId) {
       console.log(`🔄 Setting up overlay for userId: ${userId}`);
       
       // Load settings first, then data
@@ -125,8 +130,19 @@ export default function SlotsOverlay({ userId, maxCalls = 10 }: SlotsOverlayProp
         supabase.removeChannel(callsSubscription);
         clearInterval(intervalId);
       };
+    } else if (!customSettings) {
+      console.log('⚠️ No userId provided and no custom settings');
     }
-  }, [userId]);
+  }, [userId, customSettings]);
+
+  
+  // Separate effect to update settings when customSettings change
+  useEffect(() => {
+    if (customSettings) {
+      console.log('🎨 Updating overlay with custom settings:', customSettings);
+      setOverlaySettings(customSettings);
+    }
+  }, [customSettings]);
 
   // Infinite cascade scroll effect for OBS overlay
   useEffect(() => {

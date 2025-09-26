@@ -62,7 +62,7 @@ export default function SlotsOverlayPage() {
         .from('overlay_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // Not found error
         console.error("Error fetching overlay settings:", error);
@@ -162,7 +162,7 @@ export default function SlotsOverlayPage() {
       )}
       
       <div className="p-4">
-        <SlotsOverlay userId={userId || undefined} maxCalls={maxCalls} />
+        <SlotsOverlay userId={userId || undefined} maxCalls={maxCalls} customSettings={overlaySettings} />
       </div>
 
       {/* Overlay Customization Dialog */}
