@@ -19,7 +19,25 @@ import {
   Upload,
   Download,
   Eye,
-  Trash2
+  Trash2,
+  Trophy,
+  TrendingUp,
+  Target,
+  Gift,
+  DollarSign,
+  Zap,
+  Star,
+  Timer,
+  UserCheck,
+  Award,
+  Hash,
+  Crown,
+  Coins,
+  Calculator,
+  TrendingDown,
+  Activity,
+  Percent,
+  Plus
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { toast } from 'sonner';
@@ -35,6 +53,7 @@ interface OverlayElement {
 }
 
 const elementLibrary: OverlayElement[] = [
+  // Basic Elements
   {
     id: 'text',
     type: 'text',
@@ -73,25 +92,241 @@ const elementLibrary: OverlayElement[] = [
       strokeWidth: 2
     }
   },
+  
+  // Slots Overlay Elements
   {
-    id: 'stats-box',
+    id: 'total-calls',
     type: 'data',
-    name: 'Stats Box',
-    icon: BarChart3,
+    name: 'Total Calls',
+    icon: Users,
     properties: {
-      width: 150,
-      height: 80,
+      width: 120,
+      height: 60,
       dataSource: 'totalCalls',
-      backgroundColor: 'rgba(0,0,0,0.8)',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      textColor: '#22c55e',
+      fontSize: 16,
+      label: 'Total'
+    }
+  },
+  {
+    id: 'completed-calls',
+    type: 'data',
+    name: 'Completed Calls',
+    icon: Trophy,
+    properties: {
+      width: 120,
+      height: 60,
+      dataSource: 'completedCalls',
+      backgroundColor: 'rgba(59,130,246,0.1)',
+      textColor: '#3b82f6',
+      fontSize: 16,
+      label: 'Done'
+    }
+  },
+  {
+    id: 'pending-calls',
+    type: 'data',
+    name: 'Pending Calls',
+    icon: Clock,
+    properties: {
+      width: 120,
+      height: 60,
+      dataSource: 'pendingCalls',
+      backgroundColor: 'rgba(245,158,11,0.1)',
+      textColor: '#f59e0b',
+      fontSize: 16,
+      label: 'Pending'
+    }
+  },
+  {
+    id: 'top-multiplier',
+    type: 'data',
+    name: 'Top Multiplier',
+    icon: TrendingUp,
+    properties: {
+      width: 140,
+      height: 60,
+      dataSource: 'topMultiplier',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      textColor: '#22c55e',
+      fontSize: 16,
+      label: 'Top Win'
+    }
+  },
+  {
+    id: 'event-title',
+    type: 'data',
+    name: 'Event Title',
+    icon: Star,
+    properties: {
+      width: 300,
+      height: 50,
+      dataSource: 'eventTitle',
+      backgroundColor: 'transparent',
       textColor: '#ffffff',
-      fontSize: 18
+      fontSize: 24,
+      fontWeight: 'bold'
+    }
+  },
+  {
+    id: 'event-status',
+    type: 'data',
+    name: 'Event Status',
+    icon: Activity,
+    properties: {
+      width: 200,
+      height: 40,
+      dataSource: 'eventStatus',
+      backgroundColor: 'rgba(34,197,94,0.9)',
+      textColor: '#000000',
+      fontSize: 14,
+      borderRadius: 20
+    }
+  },
+
+  // Bonus Hunt Elements
+  {
+    id: 'total-bonuses',
+    type: 'data',
+    name: 'Total Bonuses',
+    icon: Gift,
+    properties: {
+      width: 120,
+      height: 80,
+      dataSource: 'totalBonuses',
+      backgroundColor: 'rgba(245,158,11,0.1)',
+      textColor: '#f59e0b',
+      fontSize: 16,
+      label: 'Total'
+    }
+  },
+  {
+    id: 'profit-loss',
+    type: 'data',
+    name: 'Profit/Loss',
+    icon: DollarSign,
+    properties: {
+      width: 140,
+      height: 60,
+      dataSource: 'profitLoss',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      textColor: '#22c55e',
+      fontSize: 16,
+      label: 'P&L'
+    }
+  },
+  {
+    id: 'current-avg',
+    type: 'data',
+    name: 'Current Average',
+    icon: Calculator,
+    properties: {
+      width: 140,
+      height: 60,
+      dataSource: 'currentAvg',
+      backgroundColor: 'rgba(59,130,246,0.1)',
+      textColor: '#3b82f6',
+      fontSize: 16,
+      label: 'Current Avg'
+    }
+  },
+  {
+    id: 'required-avg',
+    type: 'data',
+    name: 'Required Average',
+    icon: Target,
+    properties: {
+      width: 140,
+      height: 60,
+      dataSource: 'requiredAvg',
+      backgroundColor: 'rgba(245,158,11,0.1)',
+      textColor: '#f59e0b',
+      fontSize: 16,
+      label: 'Required Avg'
+    }
+  },
+  {
+    id: 'currently-opening',
+    type: 'data',
+    name: 'Currently Opening',
+    icon: Zap,
+    properties: {
+      width: 200,
+      height: 80,
+      dataSource: 'currentlyOpening',
+      backgroundColor: 'rgba(139,92,246,0.1)',
+      textColor: '#8b5cf6',
+      fontSize: 14,
+      borderStyle: 'dashed'
+    }
+  },
+
+  // Additional Stats Elements
+  {
+    id: 'win-rate',
+    type: 'data',
+    name: 'Win Rate',
+    icon: Percent,
+    properties: {
+      width: 120,
+      height: 60,
+      dataSource: 'winRate',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      textColor: '#22c55e',
+      fontSize: 16,
+      label: 'Win Rate'
+    }
+  },
+  {
+    id: 'avg-bet',
+    type: 'data',
+    name: 'Average Bet',
+    icon: Coins,
+    properties: {
+      width: 120,
+      height: 60,
+      dataSource: 'avgBet',
+      backgroundColor: 'rgba(245,158,11,0.1)',
+      textColor: '#f59e0b',
+      fontSize: 16,
+      label: 'Avg Bet'
+    }
+  },
+  {
+    id: 'biggest-win',
+    type: 'data',
+    name: 'Biggest Win',
+    icon: Crown,
+    properties: {
+      width: 140,
+      height: 60,
+      dataSource: 'biggestWin',
+      backgroundColor: 'rgba(255,215,0,0.1)',
+      textColor: '#ffd700',
+      fontSize: 16,
+      label: 'Big Win'
+    }
+  },
+  {
+    id: 'timer',
+    type: 'data',
+    name: 'Timer',
+    icon: Timer,
+    properties: {
+      width: 100,
+      height: 50,
+      dataSource: 'timer',
+      backgroundColor: 'rgba(239,68,68,0.9)',
+      textColor: '#ffffff',
+      fontSize: 14
     }
   },
   {
     id: 'participant-counter',
     type: 'data',
     name: 'Participant Count',
-    icon: Users,
+    icon: UserCheck,
     properties: {
       width: 120,
       height: 60,
@@ -102,17 +337,29 @@ const elementLibrary: OverlayElement[] = [
     }
   },
   {
-    id: 'timer',
-    type: 'data',
-    name: 'Timer',
-    icon: Clock,
+    id: 'call-list',
+    type: 'container',
+    name: 'Call List Container',
+    icon: BarChart3,
     properties: {
-      width: 100,
-      height: 50,
-      dataSource: 'timer',
-      backgroundColor: 'rgba(239,68,68,0.9)',
-      textColor: '#ffffff',
-      fontSize: 14
+      width: 400,
+      height: 300,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      borderColor: '#374151',
+      borderWidth: 1
+    }
+  },
+  {
+    id: 'bonus-grid',
+    type: 'container',
+    name: 'Bonus Grid Container',
+    icon: Hash,
+    properties: {
+      width: 600,
+      height: 400,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      borderColor: '#374151',
+      borderWidth: 1
     }
   }
 ];
@@ -372,77 +619,122 @@ export default function TestOverlayBuilder() {
           </div>
         </Card>
 
-        <div className="grid grid-cols-12 gap-6 h-[800px]">
+        <div className="grid grid-cols-12 gap-6 min-h-[700px]">
           {/* Element Palette - Left Panel */}
           <Card className="col-span-3 p-4">
             <h3 className="font-semibold mb-4">Elements</h3>
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4 text-xs">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="data">Data</TabsTrigger>
-                <TabsTrigger value="templates">Templates</TabsTrigger>
+                <TabsTrigger value="slots">Slots</TabsTrigger>
+                <TabsTrigger value="bonus">Bonus</TabsTrigger>
+                <TabsTrigger value="stats">Stats</TabsTrigger>
               </TabsList>
               
               <TabsContent value="basic" className="space-y-2">
-                {elementLibrary.filter(el => el.type === 'text' || el.type === 'shape').map((element) => (
+                {elementLibrary.filter(el => el.type === 'text' || el.type === 'shape' || el.type === 'container').map((element) => (
                   <Button
                     key={element.id}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start text-xs h-8"
                     onClick={() => addElement(element)}
                   >
-                    <element.icon className="h-4 w-4 mr-2" />
+                    <element.icon className="h-3 w-3 mr-2" />
                     {element.name}
                   </Button>
                 ))}
               </TabsContent>
               
-              <TabsContent value="data" className="space-y-2">
-                {elementLibrary.filter(el => el.type === 'data').map((element) => (
+              <TabsContent value="slots" className="space-y-2">
+                {elementLibrary.filter(el => 
+                  ['total-calls', 'completed-calls', 'pending-calls', 'top-multiplier', 'event-title', 'event-status', 'call-list'].includes(el.id)
+                ).map((element) => (
                   <Button
                     key={element.id}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start text-xs h-8"
                     onClick={() => addElement(element)}
                   >
-                    <element.icon className="h-4 w-4 mr-2" />
+                    <element.icon className="h-3 w-3 mr-2" />
                     {element.name}
                   </Button>
                 ))}
               </TabsContent>
-              
-              <TabsContent value="templates" className="space-y-2">
-                <p className="text-sm text-muted-foreground">Templates coming soon...</p>
+
+              <TabsContent value="bonus" className="space-y-2">
+                {elementLibrary.filter(el => 
+                  ['total-bonuses', 'profit-loss', 'current-avg', 'required-avg', 'currently-opening', 'bonus-grid'].includes(el.id)
+                ).map((element) => (
+                  <Button
+                    key={element.id}
+                    variant="outline"
+                    className="w-full justify-start text-xs h-8"
+                    onClick={() => addElement(element)}
+                  >
+                    <element.icon className="h-3 w-3 mr-2" />
+                    {element.name}
+                  </Button>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="stats" className="space-y-2">
+                {elementLibrary.filter(el => 
+                  ['win-rate', 'avg-bet', 'biggest-win', 'timer', 'participant-counter'].includes(el.id)
+                ).map((element) => (
+                  <Button
+                    key={element.id}
+                    variant="outline"
+                    className="w-full justify-start text-xs h-8"
+                    onClick={() => addElement(element)}
+                  >
+                    <element.icon className="h-3 w-3 mr-2" />
+                    {element.name}
+                  </Button>
+                ))}
               </TabsContent>
             </Tabs>
           </Card>
 
           {/* Canvas - Center Panel */}
-          <Card className="col-span-6 p-4">
+          {/* Canvas with Responsive Sizing */}
+          <Card className="col-span-8 p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Canvas (1920x1080)</h3>
-              <Badge variant="secondary">
-                <Eye className="h-3 w-3 mr-1" />
-                Live Preview
-              </Badge>
+              <h3 className="font-semibold">Canvas (1920x1080) - Responsive View</h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  <Eye className="h-3 w-3 mr-1" />
+                  Live Preview
+                </Badge>
+                <Select defaultValue="fit">
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fit">Fit to Screen</SelectItem>
+                    <SelectItem value="50">50%</SelectItem>
+                    <SelectItem value="75">75%</SelectItem>
+                    <SelectItem value="100">100%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden bg-gray-900">
-              <canvas 
-                ref={canvasRef} 
-                className="max-w-full max-h-[600px] object-contain cursor-default" 
-                style={{ 
-                  width: '100%', 
-                  height: 'auto',
-                  aspectRatio: '16/9',
-                  pointerEvents: 'auto',
-                  userSelect: 'none'
-                }}
-              />
+            <div className="border border-border rounded-lg overflow-hidden bg-gray-900 flex justify-center">
+              <div className="relative w-full max-w-full" style={{ aspectRatio: '16/9' }}>
+                <canvas 
+                  ref={canvasRef} 
+                  className="w-full h-full object-contain cursor-default" 
+                  style={{ 
+                    maxHeight: '60vh',
+                    pointerEvents: 'auto',
+                    userSelect: 'none'
+                  }}
+                />
+              </div>
             </div>
           </Card>
 
           {/* Properties Panel - Right Panel */}
-          <Card className="col-span-3 p-4">
+          <Card className="col-span-4 p-4">
             <h3 className="font-semibold mb-4">Properties</h3>
             {selectedElement ? (
               <div className="space-y-4">
