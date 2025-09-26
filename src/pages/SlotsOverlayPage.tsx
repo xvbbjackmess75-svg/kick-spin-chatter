@@ -74,12 +74,7 @@ export default function SlotsOverlayPage() {
       console.log('🔍 Opened via window.open?', window.opener !== null);
       console.log('🔍 Auth user:', user?.id);
       
-      // Wait a bit for auth to initialize if opened in new tab
-      if (window.opener && !user) {
-        console.log('⏳ Waiting for auth to initialize...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
+      // For public overlay access, try immediately without waiting for auth
       const { data, error } = await supabase
         .from('overlay_settings')
         .select('*')
