@@ -118,6 +118,11 @@ export default function Giveaways() {
       giveawayEntries: number;
       firstSeen: Date;
       lastSeen: Date;
+      mostActiveHour?: {
+        hour: number;
+        messageCount: number;
+      };
+      averageMessagesPerDay?: number;
     };
   } | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -498,31 +503,10 @@ export default function Giveaways() {
     }
   };
 
-  const viewUserActivity = (username: string) => {
+  const viewUserActivity = async (username: string) => {
     const userMessages = chatHistory.filter(msg => msg.username === username);
     const userParticipations = liveParticipants.filter(p => p.username === username);
     
-    if (userMessages.length === 0 && userParticipations.length === 0) {
-      toast({
-        title: "No Activity Found",
-        description: `No chat activity found for ${username}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const allTimestamps = [
-      ...userMessages.map(m => m.timestamp),
-      ...userParticipations.map(p => p.timestamp)
-    ];
-
-    const stats = {
-      totalMessages: userMessages.length,
-      giveawayEntries: userParticipations.length,
-      firstSeen: allTimestamps.length > 0 ? new Date(Math.min(...allTimestamps.map(t => t.getTime()))) : new Date(),
-      lastSeen: allTimestamps.length > 0 ? new Date(Math.max(...allTimestamps.map(t => t.getTime()))) : new Date()
-    };
-
     setSelectedUserActivity({
       username,
       messages: userMessages.map(m => ({
@@ -530,8 +514,86 @@ export default function Giveaways() {
         timestamp: m.timestamp,
         badges: m.badges
       })),
-      stats
+      stats: {
+        totalMessages: userMessages.length,
+        giveawayEntries: userParticipations.length,
+        firstSeen: new Date(),
+        lastSeen: new Date()
+      }
     });
+
+    // Fetch comprehensive chat history from Kick API
+    try {
+      const channelInfo = getChannelInfo();
+      const targetChannel = channelInfo?.channelName || connectedChannel;
+      
+      if (!targetChannel) {
+        console.warn('No channel available for chat history fetch');
+        return;
+      }
+
+      console.log(`Fetching chat history for ${username} in channel ${targetChannel}`);
+      
+      const { data: historyData, error } = await supabase.functions.invoke('kick-user-chat-history', {
+        body: {
+          username,
+          channelName: targetChannel,
+          limit: 100
+        }
+      });
+
+      if (error) {
+        console.error('Error fetching chat history:', error);
+        toast({
+          title: "Chat History Unavailable", 
+          description: "Could not fetch complete chat history from Kick",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { messages: fullHistory, statistics } = historyData;
+      
+      console.log(`Fetched ${fullHistory?.length || 0} historical messages for ${username}`);
+
+      // Update the activity modal with comprehensive data
+      setSelectedUserActivity({
+        username,
+        messages: [
+          ...fullHistory.map((m: any) => ({
+            message: m.message,
+            timestamp: new Date(m.timestamp),
+            badges: m.badges || []
+          })),
+          ...userMessages.map(m => ({
+            message: m.message,
+            timestamp: m.timestamp,
+            badges: m.badges
+          }))
+        ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+        stats: {
+          totalMessages: statistics.totalMessages + userMessages.length,
+          giveawayEntries: userParticipations.length,
+          firstSeen: statistics.firstMessageDate ? new Date(statistics.firstMessageDate) : new Date(),
+          lastSeen: statistics.lastMessageDate ? new Date(statistics.lastMessageDate) : new Date(),
+          mostActiveHour: statistics.mostActiveHour,
+          averageMessagesPerDay: statistics.averageMessagesPerDay
+        }
+      });
+
+      toast({
+        title: "📊 Chat History Loaded",
+        description: `Found ${statistics.totalMessages} historical messages for ${username}`,
+      });
+
+    } catch (error) {
+      console.error('Failed to fetch user chat history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load comprehensive chat history",
+        variant: "destructive"
+      });
+    }
   };
 
   const stopChatMonitoring = () => {
@@ -1834,12 +1896,12 @@ export default function Giveaways() {
             {selectedUserActivity && (
               <div className="space-y-4">
                 {/* User Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   <div className="text-center p-3 bg-secondary/20 rounded-lg">
                     <div className="text-lg font-bold text-blue-400">
                       {selectedUserActivity.stats.totalMessages}
                     </div>
-                    <div className="text-xs text-muted-foreground">Messages</div>
+                    <div className="text-xs text-muted-foreground">Total Messages</div>
                   </div>
                   <div className="text-center p-3 bg-secondary/20 rounded-lg">
                     <div className="text-lg font-bold text-green-400">
@@ -1849,9 +1911,9 @@ export default function Giveaways() {
                   </div>
                   <div className="text-center p-3 bg-secondary/20 rounded-lg">
                     <div className="text-lg font-bold text-purple-400">
-                      {((new Date().getTime() - selectedUserActivity.stats.firstSeen.getTime()) / (1000 * 60)).toFixed(0)}m
+                      {selectedUserActivity.stats.firstSeen.toLocaleDateString()}
                     </div>
-                    <div className="text-xs text-muted-foreground">Time Active</div>
+                    <div className="text-xs text-muted-foreground">First Seen</div>
                   </div>
                   <div className="text-center p-3 bg-secondary/20 rounded-lg">
                     <div className="text-lg font-bold text-orange-400">
@@ -1859,7 +1921,36 @@ export default function Giveaways() {
                     </div>
                     <div className="text-xs text-muted-foreground">Last Seen</div>
                   </div>
+                  {selectedUserActivity.stats.mostActiveHour && (
+                    <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                      <div className="text-lg font-bold text-yellow-400">
+                        {selectedUserActivity.stats.mostActiveHour.hour}:00
+                      </div>
+                      <div className="text-xs text-muted-foreground">Most Active Hour</div>
+                    </div>
+                  )}
+                  {selectedUserActivity.stats.averageMessagesPerDay !== undefined && (
+                    <div className="text-center p-3 bg-secondary/20 rounded-lg">
+                      <div className="text-lg font-bold text-cyan-400">
+                        {selectedUserActivity.stats.averageMessagesPerDay.toFixed(1)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Avg/Day</div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Activity Insights */}
+                {selectedUserActivity.stats.mostActiveHour && (
+                  <div className="bg-secondary/10 rounded-lg p-3">
+                    <h4 className="font-medium mb-2 text-sm text-foreground">📊 Activity Insights</h4>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Most active at {selectedUserActivity.stats.mostActiveHour.hour}:00 with {selectedUserActivity.stats.mostActiveHour.messageCount} messages</p>
+                      {selectedUserActivity.stats.averageMessagesPerDay && (
+                        <p>Sends an average of {selectedUserActivity.stats.averageMessagesPerDay.toFixed(1)} messages per day</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Recent Messages */}
                 <div>
