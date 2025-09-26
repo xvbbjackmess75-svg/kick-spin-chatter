@@ -953,6 +953,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_user_verification_by_kick_username: {
+        Args: { kick_username_param: string }
+        Returns: boolean
+      }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string

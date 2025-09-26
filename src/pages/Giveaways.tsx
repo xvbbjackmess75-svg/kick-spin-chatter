@@ -300,30 +300,13 @@ export default function Giveaways() {
           for (const p of participants) {
             console.log(`🔍 Checking real-time verification for ${p.kick_username} in live chat...`);
             
-            // Check if user has verified_viewer role instead of just linked accounts
-            let profileData = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('linked_kick_username', p.kick_username)
-              .maybeSingle();
+            // Use the new verification function that bypasses RLS
+            const { data: isVerified } = await supabase
+              .rpc('check_user_verification_by_kick_username', { 
+                kick_username_param: p.kick_username 
+              });
             
-            // If not found, try kick_username field
-            if (!profileData.data) {
-              profileData = await supabase
-                .from('profiles')
-                .select('user_id')
-                .eq('kick_username', p.kick_username)
-                .maybeSingle();
-            }
-            
-            let isVerified = false;
-            if (profileData.data?.user_id) {
-              const { data: roleData } = await supabase
-                .rpc('get_user_role', { _user_id: profileData.data.user_id });
-              isVerified = roleData === 'verified_viewer';
-            }
-            
-            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified} (Role check for user_id: ${profileData.data?.user_id})`);
+            console.log(`✅ ${p.kick_username} live chat verification: ${isVerified || false}`);
             
             allParticipants.push({
               username: p.kick_username,
@@ -742,40 +725,17 @@ export default function Giveaways() {
       // Always check current verification status using verified_viewer role
       console.log(`🔍 Checking real-time verification status for ${username}...`);
       
-      // Get user_id first from profiles - try linked_kick_username first, then kick_username
-      console.log(`🔧 Debug: Starting profile lookup for "${username}"`);
+      // Use the new verification function that bypasses RLS
+      console.log(`🔧 Debug: Checking verification for "${username}"`);
       
-      let profileData = await supabase
-        .from('profiles')
-        .select('user_id, linked_kick_username, kick_username')
-        .eq('linked_kick_username', username)
-        .maybeSingle();
+      const { data: isVerified, error: verificationError } = await supabase
+        .rpc('check_user_verification_by_kick_username', { 
+          kick_username_param: username 
+        });
       
-      console.log(`🔧 Debug: First query (linked_kick_username) result:`, profileData);
+      console.log(`🔧 Debug: Verification result for ${username}:`, { isVerified, verificationError });
       
-      // If not found, try kick_username field
-      if (!profileData.data) {
-        console.log(`🔧 Debug: Trying kick_username field...`);
-        profileData = await supabase
-          .from('profiles')
-          .select('user_id, linked_kick_username, kick_username')
-          .eq('kick_username', username)
-          .maybeSingle();
-        console.log(`🔧 Debug: Second query (kick_username) result:`, profileData);
-      }
-      
-      let isVerified = false;
-      if (profileData.data?.user_id) {
-        console.log(`🔧 Debug: Found user_id: ${profileData.data.user_id}, checking role...`);
-        const { data: roleData } = await supabase
-          .rpc('get_user_role', { _user_id: profileData.data.user_id });
-        console.log(`🔧 Debug: Role data returned:`, roleData);
-        isVerified = roleData === 'verified_viewer';
-      } else {
-        console.log(`🔧 Debug: No user_id found in profile data`);
-      }
-      
-      console.log(`✅ ${username} verification status: ${isVerified} (Role: ${isVerified ? 'verified_viewer' : 'viewer'}, User ID: ${profileData.data?.user_id})`);
+      console.log(`✅ ${username} verification status: ${isVerified || false} (User verified: ${isVerified || false})`);
 
       // Fetch user's recent giveaway participations
       const { data: participations, error } = await supabase
@@ -1465,47 +1425,27 @@ export default function Giveaways() {
 
       // Check verification status for each participant using verified_viewer role
       for (const participant of participants) {
-        // Get user_id first - try linked_kick_username first, then kick_username
-        console.log(`🔧 Debug: Looking up profile for ${participant.kick_username}`);
-        let profileData = await supabase
-          .from('profiles')
-          .select('user_id, linked_kick_username, kick_username')
-          .eq('linked_kick_username', participant.kick_username)
-          .maybeSingle();
-        
-        // If not found, try kick_username field
-        if (!profileData.data) {
-          profileData = await supabase
-            .from('profiles')
-            .select('user_id, linked_kick_username, kick_username')
-            .eq('kick_username', participant.kick_username)
-            .maybeSingle();
-        }
+        // Use the new verification function that bypasses RLS
+        console.log(`🔧 Debug: Checking verification for ${participant.kick_username}`);
+        const { data: isVerified, error: verificationError } = await supabase
+          .rpc('check_user_verification_by_kick_username', { 
+            kick_username_param: participant.kick_username 
+          });
 
-        console.log(`🔧 Debug: Profile query result for ${participant.kick_username}:`, profileData);
-
-        let isVerified = false;
-        if (profileData.data?.user_id) {
-          const { data: roleData } = await supabase
-            .rpc('get_user_role', { _user_id: profileData.data.user_id });
-          isVerified = roleData === 'verified_viewer';
-          console.log(`🔍 ${participant.kick_username} role check: ${roleData} (user_id: ${profileData.data.user_id})`);
-        } else {
-          console.log(`🔍 No profile found for ${participant.kick_username}`);
-        }
+        console.log(`🔧 Debug: Verification result for ${participant.kick_username}:`, { isVerified, verificationError });
         
-        console.log(`🔍 ${participant.kick_username}: verified=${isVerified}`);
+        console.log(`🔍 ${participant.kick_username}: verified=${isVerified || false}`);
         
         // Update the participant's verification status
         const { error: updateError } = await supabase
           .from('giveaway_participants')
-          .update({ is_verified: isVerified })
+          .update({ is_verified: isVerified || false })
           .eq('id', participant.id);
 
         if (updateError) {
           console.error(`❌ Error updating verification for ${participant.kick_username}:`, updateError);
         } else {
-          console.log(`✅ Updated verification status for ${participant.kick_username}: ${isVerified}`);
+          console.log(`✅ Updated verification status for ${participant.kick_username}: ${isVerified || false}`);
         }
       }
 
