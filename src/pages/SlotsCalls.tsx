@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKickAccount } from "@/hooks/useKickAccount";
 import { useAutoMonitor } from "@/hooks/useAutoMonitor";
-import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette } from "lucide-react";
+import { Dices, Trophy, Play, Square, Clock, Users, Target, ExternalLink, Copy, Settings, Palette, Trash2 } from "lucide-react";
 
 interface SlotsEvent {
   id: string;
@@ -807,6 +807,33 @@ export default function SlotsCalls() {
     }
   };
 
+  const deleteCall = async (callId: string) => {
+    try {
+      const { error } = await supabase
+        .from('slots_calls')
+        .delete()
+        .eq('id', callId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Call Deleted",
+        description: "The slot call has been removed from the queue",
+      });
+
+      if (selectedEvent) {
+        fetchCalls(selectedEvent.id);
+      }
+    } catch (error) {
+      console.error("Error deleting call:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the call",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getWinner = () => {
     const completedCalls = calls.filter(call => call.status === 'completed' && call.multiplier);
     if (completedCalls.length === 0) return null;
@@ -1395,13 +1422,86 @@ export default function SlotsCalls() {
                       </>
                     )}
                     {selectedEvent.status === 'closed' && (
-                      <Button 
-                        onClick={() => updateEventStatus(selectedEvent.id, 'completed')}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Complete Event
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => updateEventStatus(selectedEvent.id, 'active')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Re-open Entry
+                        </Button>
+                        
+                        {/* Random Selection for Closed Events */}
+                        {calls.filter(call => call.status === 'pending').length > 1 && (
+                          <Dialog open={isRandomSelectionDialogOpen} onOpenChange={setIsRandomSelectionDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gaming-button"
+                              >
+                                🎲 Random Select
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Random Selection (Optional)</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="p-4 bg-secondary/20 rounded-lg">
+                                  <div className="text-sm text-muted-foreground mb-2">
+                                    <strong>Current Queue:</strong> {calls.filter(call => call.status === 'pending').length} pending calls
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    This will randomly select the specified number of calls and <strong className="text-destructive">permanently delete</strong> the rest.
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <Label htmlFor="randomCount">Number of calls to randomly select:</Label>
+                                  <Input
+                                    id="randomCount"
+                                    type="number"
+                                    min="1"
+                                    max={calls.filter(call => call.status === 'pending').length - 1}
+                                    value={randomSelectionCount}
+                                    onChange={(e) => setRandomSelectionCount(parseInt(e.target.value) || 10)}
+                                    className="mt-2"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Max: {calls.filter(call => call.status === 'pending').length - 1} (must be less than total pending calls)
+                                  </p>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={performRandomSelection}
+                                    className="flex-1 gaming-button"
+                                    variant="destructive"
+                                  >
+                                    🎲 Perform Random Selection
+                                  </Button>
+                                  <Button
+                                    onClick={() => setIsRandomSelectionDialogOpen(false)}
+                                    variant="outline"
+                                    className="flex-1"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        
+                        <Button 
+                          onClick={() => updateEventStatus(selectedEvent.id, 'completed')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Complete Event
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1525,13 +1625,22 @@ export default function SlotsCalls() {
                                           </Button>
                                         </div>
                                       ) : (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline"
-                                          onClick={() => setSelectedCallId(call.id)}
-                                        >
-                                          Add Result
-                                        </Button>
+                                        <>
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={() => setSelectedCallId(call.id)}
+                                          >
+                                            Add Result
+                                          </Button>
+                                          <Button 
+                                            size="sm" 
+                                            variant="destructive"
+                                            onClick={() => deleteCall(call.id)}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </>
                                       )}
                                     </div>
                                   )}
