@@ -85,26 +85,34 @@ Deno.serve(async (req) => {
 
     // Remove duplicates based on name + provider combination
     const uniqueSlots = Array.from(
-      new Map(allSlots.map(slot => [`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`, slot])).values()
+      new Map(allSlots.map(slot => [`${slot.name.toLowerCase().trim()}-${slot.provider.toLowerCase().trim()}`, slot])).values()
     );
 
     console.log(`Unique slots after deduplication: ${uniqueSlots.length}`);
 
-    // Get existing slots to avoid duplicates
+    // Get existing slots to avoid duplicates - normalize names for comparison
     const { data: existingSlots } = await supabase
       .from('slots')
       .select('name, provider');
 
     const existingSlotKeys = new Set(
-      (existingSlots || []).map(slot => `${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`)
+      (existingSlots || []).map(slot => `${slot.name.toLowerCase().trim()}-${slot.provider.toLowerCase().trim()}`)
     );
 
-    // Filter out duplicates
-    const newSlots = uniqueSlots.filter(slot => 
-      !existingSlotKeys.has(`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`)
-    );
+    console.log(`Found ${existingSlotKeys.size} existing slots in database`);
+
+    // Filter out duplicates with detailed logging
+    const newSlots = uniqueSlots.filter(slot => {
+      const key = `${slot.name.toLowerCase().trim()}-${slot.provider.toLowerCase().trim()}`;
+      const exists = existingSlotKeys.has(key);
+      if (exists) {
+        console.log(`Skipping existing slot: ${slot.name} by ${slot.provider}`);
+      }
+      return !exists;
+    });
 
     console.log(`New slots to insert: ${newSlots.length}`);
+    console.log(`Skipped existing slots: ${uniqueSlots.length - newSlots.length}`);
 
     if (newSlots.length === 0) {
       return new Response(
@@ -277,7 +285,7 @@ function parseSlotData(html: string, pageNumber: number): SlotData[] {
     
     // Remove duplicates from this page
     const uniqueSlots = Array.from(
-      new Map(slots.map(slot => [`${slot.name.toLowerCase()}-${slot.provider.toLowerCase()}`, slot])).values()
+      new Map(slots.map(slot => [`${slot.name.toLowerCase().trim()}-${slot.provider.toLowerCase().trim()}`, slot])).values()
     );
     
     console.log(`Page ${pageNumber}: Parsed ${uniqueSlots.length} unique slots`);
