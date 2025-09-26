@@ -349,37 +349,6 @@ export function GiveawayRoulette({
           <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-kick-dark to-transparent pointer-events-none z-10" />
         </div>
 
-        {/* Animation Controls */}
-        {isSpinning && (
-          <div className="text-center py-4">
-            <Button
-              onClick={() => {
-                console.log("⏭️ Animation skipped manually");
-                setIsSpinning(false);
-                setShowResult(true);
-                
-                // Calculate and set final position
-                const participantWidth = 80;
-                const actualContainerWidth = containerRef.current?.offsetWidth || 800;
-                const centerPosition = actualContainerWidth / 2;
-                const winnerIndex = participants.findIndex(p => p.username === selectedWinner?.username);
-                const cycles = 25;
-                const targetIndex = (cycles * participants.length) + winnerIndex;
-                const targetPosition = (targetIndex * participantWidth) + (participantWidth / 2) - centerPosition;
-                
-                setScrollPosition(targetPosition);
-                setLockedIndicatorPosition(centerPosition);
-              }}
-              variant="outline"
-              size="sm"
-            >
-              ⏭️ Skip Animation (ESC)
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              Winner is already predetermined • Press ESC or click to skip
-            </p>
-          </div>
-        )}
 
         {/* Winner Actions */}
         {showResult && selectedWinner && (
