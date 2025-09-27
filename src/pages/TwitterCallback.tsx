@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useTwitterAccount } from '@/hooks/useTwitterAccount';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TwitterCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { linkTwitterAccount } = useTwitterAccount();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(true);
@@ -15,6 +15,11 @@ export default function TwitterCallback() {
   useEffect(() => {
     const processCallback = async () => {
       try {
+        // Wait for auth to finish loading
+        if (loading) {
+          return;
+        }
+
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
@@ -54,7 +59,7 @@ export default function TwitterCallback() {
           return;
         }
 
-        // Use the user from auth context directly - it should be available since we're authenticated
+        // Check if user is authenticated
         if (!user) {
           console.error('No user found during Twitter callback');
           toast({
@@ -105,9 +110,9 @@ export default function TwitterCallback() {
     };
 
     processCallback();
-  }, [searchParams, navigate, user, linkTwitterAccount, toast]);
+  }, [searchParams, navigate, user, loading, linkTwitterAccount, toast]);
 
-  if (isProcessing) {
+  if (isProcessing || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
