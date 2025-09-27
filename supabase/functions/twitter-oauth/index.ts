@@ -72,9 +72,13 @@ Deno.serve(async (req) => {
       const refererUrl = req.headers.get('referer') || ''
       const originUrl = req.headers.get('origin') || ''
       
-      // Extract the correct origin - prioritize the referer which comes from the browser
+      // Extract the correct origin - prioritize kickhelper.app, then lovableproject.com
       let appOrigin = '';
-      if (refererUrl && refererUrl.includes('lovableproject.com')) {
+      if (refererUrl && refererUrl.includes('kickhelper.app')) {
+        appOrigin = new URL(refererUrl).origin;
+      } else if (originUrl && originUrl.includes('kickhelper.app')) {
+        appOrigin = originUrl;
+      } else if (refererUrl && refererUrl.includes('lovableproject.com')) {
         appOrigin = new URL(refererUrl).origin;
       } else if (originUrl && originUrl.includes('lovableproject.com')) {
         appOrigin = originUrl;
@@ -122,7 +126,11 @@ Deno.serve(async (req) => {
         const originUrl = req.headers.get('origin') || ''
         
         let appOrigin = '';
-        if (refererUrl && refererUrl.includes('lovableproject.com')) {
+        if (refererUrl && refererUrl.includes('kickhelper.app')) {
+          appOrigin = new URL(refererUrl).origin;
+        } else if (originUrl && originUrl.includes('kickhelper.app')) {
+          appOrigin = originUrl;
+        } else if (refererUrl && refererUrl.includes('lovableproject.com')) {
           appOrigin = new URL(refererUrl).origin;
         } else if (originUrl && originUrl.includes('lovableproject.com')) {
           appOrigin = originUrl;
