@@ -112,12 +112,15 @@ export default function TwitterCallback() {
     processCallback();
   }, [searchParams, navigate, user, loading, linkTwitterAccount, toast]);
 
+  // Show loading while auth is loading or processing
   if (isProcessing || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <h2 className="text-xl font-semibold">Linking Twitter Account...</h2>
+          <h2 className="text-xl font-semibold">
+            {loading ? "Loading..." : "Linking Twitter Account..."}
+          </h2>
           <p className="text-muted-foreground">Please wait while we complete the process.</p>
         </div>
       </div>

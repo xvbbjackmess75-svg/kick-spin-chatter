@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function LinkTwitterAccount() {
   const { user } = useAuth();
-  const { twitterUser, isTwitterLinked, unlinkTwitterAccount } = useTwitterAccount();
+  const { twitterUser, loading: twitterLoading, isTwitterLinked, unlinkTwitterAccount } = useTwitterAccount();
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
   const [isUnlinking, setIsUnlinking] = useState(false);
@@ -86,6 +86,30 @@ export function LinkTwitterAccount() {
       setIsUnlinking(false);
     }
   };
+
+  // Show loading state while Twitter data is being fetched
+  if (twitterLoading) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            X (Twitter) Integration
+          </CardTitle>
+          <CardDescription>
+            Loading Twitter account status...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
