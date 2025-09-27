@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import StreamerAuth from "./pages/StreamerAuth";
 import AuthCallback from "./pages/AuthCallback";
 import DiscordCallback from "./pages/DiscordCallback";
+import TwitterCallback from "./pages/TwitterCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
 import SlotsCalls from "./pages/SlotsCalls";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/kick-onboarding" element={<KickOnboarding />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/discord/callback" element={<DiscordCallback />} />
+            <Route path="/twitter-callback" element={<TwitterCallback />} />
             <Route path="/overlay/slots" element={<SlotsOverlayPage />} />
             <Route path="/bonus-hunt-overlay" element={<BonusHuntOverlayPage />} />
             <Route

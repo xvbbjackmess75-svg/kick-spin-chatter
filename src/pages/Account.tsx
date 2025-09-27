@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { LinkKickAccount } from '@/components/LinkKickAccount';
+import { LinkTwitterAccount } from '@/components/LinkTwitterAccount';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Mail, Save, LogOut, ArrowLeft, Crown, ArrowRight } from 'lucide-react';
@@ -154,6 +155,9 @@ export default function Account() {
 
           {/* Kick Account Integration */}
           <LinkKickAccount />
+
+          {/* Twitter Account Integration */}
+          <LinkTwitterAccount />
 
           {/* Change Password */}
           <Card className="gaming-card">

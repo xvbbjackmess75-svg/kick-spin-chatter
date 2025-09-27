@@ -673,6 +673,10 @@ export type Database = {
           linked_kick_avatar: string | null
           linked_kick_user_id: string | null
           linked_kick_username: string | null
+          linked_twitter_avatar: string | null
+          linked_twitter_display_name: string | null
+          linked_twitter_user_id: string | null
+          linked_twitter_username: string | null
           updated_at: string
           user_id: string
         }
@@ -694,6 +698,10 @@ export type Database = {
           linked_kick_avatar?: string | null
           linked_kick_user_id?: string | null
           linked_kick_username?: string | null
+          linked_twitter_avatar?: string | null
+          linked_twitter_display_name?: string | null
+          linked_twitter_user_id?: string | null
+          linked_twitter_username?: string | null
           updated_at?: string
           user_id: string
         }
@@ -715,6 +723,10 @@ export type Database = {
           linked_kick_avatar?: string | null
           linked_kick_user_id?: string | null
           linked_kick_username?: string | null
+          linked_twitter_avatar?: string | null
+          linked_twitter_display_name?: string | null
+          linked_twitter_user_id?: string | null
+          linked_twitter_username?: string | null
           updated_at?: string
           user_id?: string
         }
