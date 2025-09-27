@@ -161,7 +161,7 @@ export function TwitterRouletteModal({
         .maybeSingle();
 
       if (stateData && Array.isArray(stateData.pending_winners)) {
-        setPendingWinners(stateData.pending_winners);
+        setPendingWinners(stateData.pending_winners as unknown as TwitterPendingWinner[]);
       }
 
     } catch (error) {

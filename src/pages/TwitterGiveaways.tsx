@@ -19,6 +19,7 @@ import { TwitterRouletteModal } from "@/components/TwitterRouletteModal";
 
 interface TwitterGiveaway {
   id: string;
+  user_id: string;
   title: string;
   description: string | null;
   tweet_id: string;
