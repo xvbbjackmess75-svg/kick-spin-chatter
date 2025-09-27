@@ -13,10 +13,12 @@ export default function TwitterCallback() {
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
+    let isProcessed = false; // Prevent multiple executions
+    
     const processCallback = async () => {
       try {
         // Wait for auth to finish loading
-        if (loading) {
+        if (loading || isProcessed) {
           return;
         }
 
@@ -72,8 +74,9 @@ export default function TwitterCallback() {
         }
 
         console.log('User found, proceeding with Twitter linking for user:', user.id);
+        isProcessed = true; // Mark as processed to prevent duplicate calls
 
-        // Process the Twitter linking
+        // Process the Twitter linking - only once
         const { data, error: linkError } = await linkTwitterAccount({ code, state });
 
         if (linkError || !data?.success) {
@@ -109,7 +112,10 @@ export default function TwitterCallback() {
       }
     };
 
-    processCallback();
+    // Only process once and when we have the required data
+    if (!isProcessed && searchParams.has('code')) {
+      processCallback();
+    }
   }, [searchParams, navigate, user, loading, linkTwitterAccount, toast]);
 
   // Show loading while auth is loading or processing

@@ -59,8 +59,16 @@ export function useTwitterAccount() {
   const hasSupabaseAccount = !!user;
 
   const linkTwitterAccount = async (twitterData: any) => {
+    // Prevent multiple simultaneous requests
+    if (loading) {
+      console.log('Link request already in progress, skipping...');
+      return { data: null, error: new Error('Request already in progress') };
+    }
+
     try {
       setLoading(true);
+      console.log('Attempting to link Twitter account with code:', twitterData.code?.substring(0, 10) + '...');
+      
       const { data, error } = await supabase.functions.invoke('twitter-oauth', {
         body: {
           action: 'callback',
@@ -69,8 +77,13 @@ export function useTwitterAccount() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error linking Twitter account:', error);
+        throw error;
+      }
 
+      console.log('Twitter account linked successfully');
+      
       // Refresh Twitter user data after successful linking
       if (user) {
         await fetchTwitterUserData(user.id);
@@ -78,7 +91,7 @@ export function useTwitterAccount() {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Error linking Twitter account:', error);
+      console.error('Failed to link Twitter account:', error);
       return { data: null, error };
     } finally {
       setLoading(false);
