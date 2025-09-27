@@ -55,12 +55,19 @@ export default function TwitterCallback() {
         }
 
         // Wait a bit for auth to be ready, then check again
-        if (!user) {
+        let currentUser = user;
+        if (!currentUser) {
           console.log('No user found initially, waiting for auth...');
-          // Wait for auth to be available
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait for auth to be available with multiple attempts
+          for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            if (user) {
+              currentUser = user;
+              break;
+            }
+          }
           
-          if (!user) {
+          if (!currentUser) {
             console.error('No user found during Twitter callback after waiting');
             toast({
               title: "Authentication Required",
@@ -72,7 +79,7 @@ export default function TwitterCallback() {
           }
         }
 
-        console.log('User found, proceeding with Twitter linking for user:', user?.id);
+        console.log('User found, proceeding with Twitter linking for user:', currentUser.id);
 
         // Process the Twitter linking
         const { data, error: linkError } = await linkTwitterAccount({ code, state });

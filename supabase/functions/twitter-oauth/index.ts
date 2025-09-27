@@ -40,13 +40,15 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       console.error('❌ User authentication failed:', userError)
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
+        JSON.stringify({ error: 'Authentication required', details: userError?.message }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
+
+    console.log('✅ User authenticated:', user.id)
 
     const { action, code, state }: TwitterOAuthRequest = await req.json()
     console.log('🐦 Twitter OAuth request:', { action, hasCode: !!code, state })
@@ -237,10 +239,11 @@ Deno.serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Twitter OAuth error:', error)
+    console.error('Error stack:', error?.stack)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error?.message || 'Unknown error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
