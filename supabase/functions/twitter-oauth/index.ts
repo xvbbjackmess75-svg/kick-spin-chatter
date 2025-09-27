@@ -67,13 +67,29 @@ Deno.serve(async (req) => {
 
     if (action === 'initiate') {
       // Generate OAuth URL for Twitter/X
-      // Get the referer URL (the app's origin) instead of the edge function origin
-      const refererUrl = req.headers.get('referer') || req.headers.get('origin') || ''
-      const appOrigin = refererUrl ? new URL(refererUrl).origin : ''
+      // Get the correct app origin from the request body or use a hardcoded value
+      // First try to get from referer, then origin, then fall back to current preview URL
+      const refererUrl = req.headers.get('referer') || ''
+      const originUrl = req.headers.get('origin') || ''
+      
+      // Extract the correct origin - prioritize the referer which comes from the browser
+      let appOrigin = '';
+      if (refererUrl && refererUrl.includes('lovableproject.com')) {
+        appOrigin = new URL(refererUrl).origin;
+      } else if (originUrl && originUrl.includes('lovableproject.com')) {
+        appOrigin = originUrl;
+      } else {
+        // Fallback to the current known working URL
+        appOrigin = 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.lovableproject.com';
+      }
+      
       const redirectUri = `${appOrigin}/twitter-callback`
       const authState = crypto.randomUUID()
       
-      console.log('🔧 Using redirect URI:', redirectUri)
+      console.log('🔧 Referer:', refererUrl)
+      console.log('🔧 Origin:', originUrl)
+      console.log('🔧 Using app origin:', appOrigin)
+      console.log('🔧 Final redirect URI:', redirectUri)
       
       const params = new URLSearchParams({
         response_type: 'code',
@@ -101,12 +117,23 @@ Deno.serve(async (req) => {
         console.log('🔄 Processing Twitter OAuth callback...')
         
         // Exchange code for access token
-        // Get the referer URL (the app's origin) instead of the edge function origin
-        const refererUrl = req.headers.get('referer') || req.headers.get('origin') || ''
-        const appOrigin = refererUrl ? new URL(refererUrl).origin : ''
+        // Get the correct app origin - same logic as initiate
+        const refererUrl = req.headers.get('referer') || ''
+        const originUrl = req.headers.get('origin') || ''
+        
+        let appOrigin = '';
+        if (refererUrl && refererUrl.includes('lovableproject.com')) {
+          appOrigin = new URL(refererUrl).origin;
+        } else if (originUrl && originUrl.includes('lovableproject.com')) {
+          appOrigin = originUrl;
+        } else {
+          // Fallback to the current known working URL
+          appOrigin = 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.lovableproject.com';
+        }
+        
         const redirectUri = `${appOrigin}/twitter-callback`
         
-        console.log('🔧 Using redirect URI for token exchange:', redirectUri)
+        console.log('🔧 Token exchange - using redirect URI:', redirectUri)
         const tokenResponse = await fetch('https://api.twitter.com/2/oauth2/token', {
           method: 'POST',
           headers: {
