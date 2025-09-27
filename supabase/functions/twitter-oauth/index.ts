@@ -67,8 +67,13 @@ Deno.serve(async (req) => {
 
     if (action === 'initiate') {
       // Generate OAuth URL for Twitter/X
-      const redirectUri = `${req.headers.get('origin')}/twitter-callback`
+      // Get the referer URL (the app's origin) instead of the edge function origin
+      const refererUrl = req.headers.get('referer') || req.headers.get('origin') || ''
+      const appOrigin = refererUrl ? new URL(refererUrl).origin : ''
+      const redirectUri = `${appOrigin}/twitter-callback`
       const authState = crypto.randomUUID()
+      
+      console.log('🔧 Using redirect URI:', redirectUri)
       
       const params = new URLSearchParams({
         response_type: 'code',
@@ -96,7 +101,12 @@ Deno.serve(async (req) => {
         console.log('🔄 Processing Twitter OAuth callback...')
         
         // Exchange code for access token
-        const redirectUri = `${req.headers.get('origin')}/twitter-callback`
+        // Get the referer URL (the app's origin) instead of the edge function origin
+        const refererUrl = req.headers.get('referer') || req.headers.get('origin') || ''
+        const appOrigin = refererUrl ? new URL(refererUrl).origin : ''
+        const redirectUri = `${appOrigin}/twitter-callback`
+        
+        console.log('🔧 Using redirect URI for token exchange:', redirectUri)
         const tokenResponse = await fetch('https://api.twitter.com/2/oauth2/token', {
           method: 'POST',
           headers: {
