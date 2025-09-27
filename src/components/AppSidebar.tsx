@@ -33,6 +33,7 @@ const mainItems = [
 
 const streamerItems = [
   { title: "Giveaways", url: "/giveaways", icon: Gift },
+  { title: "Twitter Giveaways", url: "/twitter-giveaways", icon: Gift },
   { title: "Slots Calls", url: "/slots-calls", icon: Dices },
   { title: "History", url: "/history", icon: History },
 ];

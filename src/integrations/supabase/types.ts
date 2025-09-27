@@ -1000,6 +1000,156 @@ export type Database = {
         }
         Relationships: []
       }
+      twitter_giveaway_participants: {
+        Row: {
+          conditions_met: Json
+          display_name: string | null
+          engagement_score: number | null
+          entered_at: string
+          follower_since: string | null
+          giveaway_id: string
+          id: string
+          profile_image_url: string | null
+          twitter_user_id: string
+          twitter_username: string
+        }
+        Insert: {
+          conditions_met?: Json
+          display_name?: string | null
+          engagement_score?: number | null
+          entered_at?: string
+          follower_since?: string | null
+          giveaway_id: string
+          id?: string
+          profile_image_url?: string | null
+          twitter_user_id: string
+          twitter_username: string
+        }
+        Update: {
+          conditions_met?: Json
+          display_name?: string | null
+          engagement_score?: number | null
+          entered_at?: string
+          follower_since?: string | null
+          giveaway_id?: string
+          id?: string
+          profile_image_url?: string | null
+          twitter_user_id?: string
+          twitter_username?: string
+        }
+        Relationships: []
+      }
+      twitter_giveaway_states: {
+        Row: {
+          created_at: string
+          giveaway_id: string
+          id: string
+          pending_winners: Json | null
+          remaining_participants: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          giveaway_id: string
+          id?: string
+          pending_winners?: Json | null
+          remaining_participants?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          giveaway_id?: string
+          id?: string
+          pending_winners?: Json | null
+          remaining_participants?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      twitter_giveaway_winners: {
+        Row: {
+          giveaway_id: string
+          id: string
+          notified_at: string | null
+          selected_at: string
+          total_tickets: number | null
+          twitter_user_id: string
+          twitter_username: string
+          winning_ticket: number | null
+        }
+        Insert: {
+          giveaway_id: string
+          id?: string
+          notified_at?: string | null
+          selected_at?: string
+          total_tickets?: number | null
+          twitter_user_id: string
+          twitter_username: string
+          winning_ticket?: number | null
+        }
+        Update: {
+          giveaway_id?: string
+          id?: string
+          notified_at?: string | null
+          selected_at?: string
+          total_tickets?: number | null
+          twitter_user_id?: string
+          twitter_username?: string
+          winning_ticket?: number | null
+        }
+        Relationships: []
+      }
+      twitter_giveaways: {
+        Row: {
+          auto_end_enabled: boolean | null
+          conditions: Json
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          status: string
+          title: string
+          tweet_id: string
+          tweet_url: string
+          updated_at: string
+          user_id: string
+          winner_count: number
+        }
+        Insert: {
+          auto_end_enabled?: boolean | null
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          status?: string
+          title: string
+          tweet_id: string
+          tweet_url: string
+          updated_at?: string
+          user_id: string
+          winner_count?: number
+        }
+        Update: {
+          auto_end_enabled?: boolean | null
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          status?: string
+          title?: string
+          tweet_id?: string
+          tweet_url?: string
+          updated_at?: string
+          user_id?: string
+          winner_count?: number
+        }
+        Relationships: []
+      }
       user_ip_tracking: {
         Row: {
           country_code: string | null

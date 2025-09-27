@@ -18,6 +18,7 @@ import DiscordCallback from "./pages/DiscordCallback";
 import TwitterCallback from "./pages/TwitterCallback";
 import NotFound from "./pages/NotFound";
 import Giveaways from "./pages/Giveaways";
+import TwitterGiveaways from "./pages/TwitterGiveaways";
 import SlotsCalls from "./pages/SlotsCalls";
 import BonusHunt from "./pages/BonusHunt";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
@@ -75,6 +76,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Giveaways />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/twitter-giveaways"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TwitterGiveaways />
                   </Layout>
                 </ProtectedRoute>
               }
