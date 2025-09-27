@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
           appOrigin = originUrl;
         } else {
           // Fallback to the current known working URL
-          appOrigin = 'https://7c92ba76-0c21-4cc0-8512-993c19e87036.lovableproject.com';
+          appOrigin = 'https://kickhelper.app';
         }
         
         const redirectUri = `${appOrigin}/twitter-callback`
