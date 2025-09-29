@@ -11,6 +11,9 @@ import { SupportChat } from "./components/SupportChat";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Landing from "./pages/Landing";
+import KickLogin from "./pages/KickLogin";
+import RoleSelection from "./pages/RoleSelection";
+import StreamerVerification from "./pages/StreamerVerification";
 import Auth from "./pages/Auth";
 import StreamerAuth from "./pages/StreamerAuth";
 import AuthCallback from "./pages/AuthCallback";
@@ -47,6 +50,16 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<KickLogin />} />
+            <Route path="/role-selection" element={<RoleSelection />} />
+            <Route path="/streamer-verification" element={
+              <ProtectedRoute>
+                <Layout>
+                  <StreamerVerification />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            {/* Legacy auth routes - will be phased out */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/streamer-auth" element={<StreamerAuth />} />
             <Route path="/viewer-benefits" element={<ViewerBenefits />} />

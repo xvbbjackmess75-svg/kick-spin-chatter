@@ -1,8 +1,9 @@
 import { Badge } from '@/components/ui/badge';
-import { Shield, Star } from 'lucide-react';
+import { Shield, Star, Crown } from 'lucide-react';
 
 interface VerificationBadgeProps {
   isVerified: boolean;
+  type?: 'verified_viewer' | 'verified_streamer';
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
   className?: string;
@@ -10,6 +11,7 @@ interface VerificationBadgeProps {
 
 export function VerificationBadge({ 
   isVerified, 
+  type = 'verified_viewer',
   size = 'sm', 
   showText = true,
   className = '' 
@@ -24,13 +26,34 @@ export function VerificationBadge({
 
   const iconSize = sizeClasses[size];
 
+  // Different styling for different verification types
+  const getVerificationStyle = () => {
+    switch (type) {
+      case 'verified_streamer':
+        return {
+          className: 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30',
+          icon: <Crown className={`${iconSize} mr-1`} />,
+          text: 'Verified Streamer'
+        };
+      case 'verified_viewer':
+      default:
+        return {
+          className: 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
+          icon: <Shield className={`${iconSize} mr-1`} />,
+          text: 'Verified'
+        };
+    }
+  };
+
+  const verificationStyle = getVerificationStyle();
+
   return (
     <Badge 
       variant="secondary"
-      className={`bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30 ${className}`}
+      className={`${verificationStyle.className} ${className}`}
     >
-      <Shield className={`${iconSize} mr-1`} />
-      {showText && 'Verified'}
+      {verificationStyle.icon}
+      {showText && verificationStyle.text}
     </Badge>
   );
 }

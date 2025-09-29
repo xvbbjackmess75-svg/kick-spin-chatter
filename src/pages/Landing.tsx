@@ -234,7 +234,7 @@ export default function Landing() {
                         </Button>
                         <Button 
                           variant="outline" 
-                          onClick={() => navigate('/auth')}
+                          onClick={() => navigate('/login')}
                         >
                           <Target className="h-4 w-4 mr-2" />
                           Get Started
@@ -351,10 +351,10 @@ export default function Landing() {
                 <Button 
                   size="lg" 
                   className="gaming-button text-lg px-8 py-6"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/login')}
                 >
                   <Zap className="h-5 w-5 mr-2" />
-                  Start Your Free Trial
+                  Continue with Kick
                 </Button>
                 <Button 
                   size="lg" 

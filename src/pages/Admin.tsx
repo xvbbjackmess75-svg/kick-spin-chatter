@@ -21,7 +21,7 @@ import { VpnProxyDetector } from '@/components/VpnProxyDetector';
 interface FeaturePermission {
   id: string;
   feature_name: string;
-  required_role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
+  required_role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin';
   description: string;
   is_enabled: boolean;
 }
@@ -54,7 +54,7 @@ interface ProfileData {
 
 export default function Admin() {
   const { user } = useAuth();
-  const [userRole, setUserRole] = useState<'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin' | null>(null);
+  const [userRole, setUserRole] = useState<'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin' | null>(null);
   const [users, setUsers] = useState<UserWithProfile[]>([]);
   const [featurePermissions, setFeaturePermissions] = useState<FeaturePermission[]>([]);
   const [loading, setLoading] = useState(true);

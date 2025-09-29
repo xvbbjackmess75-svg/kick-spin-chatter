@@ -656,11 +656,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string | null
           avatar_url: string | null
           created_at: string
           custom_avatar_url: string | null
           display_name: string | null
           id: string
+          initial_role_selected: boolean | null
           is_kick_hybrid: boolean | null
           is_streamer: boolean | null
           kick_channel_id: string | null
@@ -679,13 +681,16 @@ export type Database = {
           linked_twitter_username: string | null
           updated_at: string
           user_id: string
+          verification_status: Json | null
         }
         Insert: {
+          account_type?: string | null
           avatar_url?: string | null
           created_at?: string
           custom_avatar_url?: string | null
           display_name?: string | null
           id?: string
+          initial_role_selected?: boolean | null
           is_kick_hybrid?: boolean | null
           is_streamer?: boolean | null
           kick_channel_id?: string | null
@@ -704,13 +709,16 @@ export type Database = {
           linked_twitter_username?: string | null
           updated_at?: string
           user_id: string
+          verification_status?: Json | null
         }
         Update: {
+          account_type?: string | null
           avatar_url?: string | null
           created_at?: string
           custom_avatar_url?: string | null
           display_name?: string | null
           id?: string
+          initial_role_selected?: boolean | null
           is_kick_hybrid?: boolean | null
           is_streamer?: boolean | null
           kick_channel_id?: string | null
@@ -729,6 +737,7 @@ export type Database = {
           linked_twitter_username?: string | null
           updated_at?: string
           user_id?: string
+          verification_status?: Json | null
         }
         Relationships: []
       }
@@ -1306,6 +1315,10 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_verification_status: {
+        Args: { _user_id: string }
+        Returns: Json
       }
       get_vpn_proxy_users: {
         Args: Record<PropertyKey, never>
