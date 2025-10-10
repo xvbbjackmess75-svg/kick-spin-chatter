@@ -280,10 +280,14 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
   const getFontSizeClass = (size: string) => {
     switch (size) {
-      case 'small': return 'text-sm';
-      case 'large': return 'text-lg';
-      default: return 'text-base';
+      case 'small': return 'text-base';
+      case 'large': return 'text-2xl';
+      default: return 'text-xl';
     }
+  };
+
+  const getTextShadow = () => {
+    return '0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 2px 2px 4px rgba(0,0,0,1)';
   };
 
   const getOverlayStyle = () => ({
@@ -367,15 +371,17 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2" style={{color: overlaySettings.text_color}}>
+          <h1 className="text-5xl font-black mb-4" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
             {session.session_name || 'Bonus Hunt'}
           </h1>
           <div className="flex items-center justify-center gap-2">
             <div 
-              className="px-4 py-2 rounded-full text-sm font-medium"
+              className="px-6 py-3 rounded-full text-xl font-bold border-4"
               style={{
                 backgroundColor: session.bonus_opening_phase ? '#8b5cf6' : '#22c55e',
-                color: '#000000'
+                color: '#ffffff',
+                borderColor: session.bonus_opening_phase ? '#a78bfa' : '#4ade80',
+                textShadow: getTextShadow()
               }}
             >
               {session.bonus_opening_phase ? 'Opening Bonuses' : 'Active Session'}
@@ -384,109 +390,109 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
         </div>
 
         {/* Stats Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {/* Starting Balance */}
           <div 
-            className="p-2 rounded-md border"
+            className="p-4 rounded-lg border-4"
             style={{
-              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+              backgroundColor: overlaySettings.show_background ? 'rgba(0, 0, 0, 0.85)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? '#22c55e' : 'transparent'
             }}
           >
-            <div className="flex items-center gap-1 mb-1">
-              <DollarSign className="h-3 w-3" style={{color: '#22c55e'}} />
-              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Starting</span>
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-6 w-6" style={{color: '#22c55e', filter: 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))'}} />
+              <span className="text-base font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>Starting</span>
             </div>
-            <div className="text-sm font-bold" style={{color: '#22c55e'}}>
+            <div className="text-2xl font-black" style={{color: '#22c55e', textShadow: getTextShadow()}}>
               ${session.starting_balance.toFixed(2)}
             </div>
           </div>
 
           {/* Current Balance */}
           <div 
-            className="p-2 rounded-md border"
+            className="p-4 rounded-lg border-4"
             style={{
-              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+              backgroundColor: overlaySettings.show_background ? 'rgba(0, 0, 0, 0.85)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? overlaySettings.accent_color : 'transparent'
             }}
           >
-            <div className="flex items-center gap-1 mb-1">
-              <TrendingUp className="h-3 w-3" style={{color: overlaySettings.accent_color}} />
-              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Balance</span>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="h-6 w-6" style={{color: overlaySettings.accent_color, filter: `drop-shadow(0 0 8px ${overlaySettings.accent_color})`}} />
+              <span className="text-base font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>Balance</span>
             </div>
-            <div className="text-sm font-bold" style={{color: overlaySettings.text_color}}>
+            <div className="text-2xl font-black" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
               ${session.current_balance.toFixed(2)}
             </div>
           </div>
 
           {/* Total Bonuses */}
           <div 
-            className="p-2 rounded-md border"
+            className="p-4 rounded-lg border-4"
             style={{
-              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+              backgroundColor: overlaySettings.show_background ? 'rgba(0, 0, 0, 0.85)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? '#f59e0b' : 'transparent'
             }}
           >
-            <div className="flex items-center gap-1 mb-1">
-              <Gift className="h-3 w-3" style={{color: '#f59e0b'}} />
-              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>Total</span>
+            <div className="flex items-center gap-2 mb-2">
+              <Gift className="h-6 w-6" style={{color: '#f59e0b', filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.8))'}} />
+              <span className="text-base font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>Total</span>
             </div>
-            <div className="text-sm font-bold" style={{color: overlaySettings.text_color}}>
+            <div className="text-2xl font-black" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
               {totalBonuses}
             </div>
-            <div className="text-xs mt-0.5" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+            <div className="text-base mt-1 font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
               {completedBonuses} opened • {pendingBonuses} pending
             </div>
           </div>
 
           {/* Profit/Loss */}
           <div 
-            className="p-2 rounded-md border"
+            className="p-4 rounded-lg border-4"
             style={{
-              backgroundColor: overlaySettings.show_background ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-              borderColor: overlaySettings.show_borders ? overlaySettings.border_color : 'transparent'
+              backgroundColor: overlaySettings.show_background ? 'rgba(0, 0, 0, 0.85)' : 'transparent',
+              borderColor: overlaySettings.show_borders ? (isProfit ? '#22c55e' : '#ef4444') : 'transparent'
             }}
           >
-            <div className="flex items-center gap-1 mb-1">
-              <Target className="h-3 w-3" style={{color: isProfit ? '#22c55e' : '#ef4444'}} />
-              <span className="text-xs opacity-70" style={{color: overlaySettings.text_color}}>P&L</span>
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-6 w-6" style={{color: isProfit ? '#22c55e' : '#ef4444', filter: `drop-shadow(0 0 8px ${isProfit ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)'})`}} />
+              <span className="text-base font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>P&L</span>
             </div>
-            <div className="text-sm font-bold" style={{color: isProfit ? '#22c55e' : '#ef4444'}}>
+            <div className="text-2xl font-black" style={{color: isProfit ? '#22c55e' : '#ef4444', textShadow: getTextShadow()}}>
               {isProfit ? '+' : ''}${totalPnL.toFixed(2)}
             </div>
           </div>
         </div>
 
         {/* Current Avg and Required Avg Highlighted Box */}
-        <div className="mb-3">
+        <div className="mb-6">
           <div 
-            className="grid grid-cols-2 gap-2 p-2 rounded-md border-2"
+            className="grid grid-cols-2 gap-4 p-6 rounded-xl border-4"
             style={{
-              backgroundColor: overlaySettings.show_background ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+              backgroundColor: overlaySettings.show_background ? 'rgba(0, 0, 0, 0.85)' : 'transparent',
               borderColor: overlaySettings.accent_color
             }}
           >
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <TrendingUp className="h-3 w-3" style={{color: overlaySettings.accent_color}} />
-                <span className="text-xs font-medium opacity-70" style={{color: overlaySettings.text_color}}>Current Avg</span>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <TrendingUp className="h-7 w-7" style={{color: overlaySettings.accent_color, filter: `drop-shadow(0 0 8px ${overlaySettings.accent_color})`}} />
+                <span className="text-xl font-black" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>Current Avg</span>
               </div>
-              <div className="text-sm font-bold" style={{color: overlaySettings.accent_color}}>
+              <div className="text-4xl font-black" style={{color: overlaySettings.accent_color, textShadow: getTextShadow()}}>
                 {avgMultiplier.toFixed(2)}x
               </div>
-              <div className="text-xs mt-0.5" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+              <div className="text-lg mt-2 font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
                 {openedBonuses.length} opened
               </div>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Target className="h-3 w-3" style={{color: isProfit ? '#22c55e' : '#f59e0b'}} />
-                <span className="text-xs font-medium opacity-70" style={{color: overlaySettings.text_color}}>Required Avg</span>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Target className="h-7 w-7" style={{color: isProfit ? '#22c55e' : '#f59e0b', filter: `drop-shadow(0 0 8px ${isProfit ? 'rgba(34, 197, 94, 0.8)' : 'rgba(245, 158, 11, 0.8)'})`}} />
+                <span className="text-xl font-black" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>Required Avg</span>
               </div>
-              <div className="text-sm font-bold" style={{color: isProfit ? '#22c55e' : '#f59e0b'}}>
+              <div className="text-4xl font-black" style={{color: isProfit ? '#22c55e' : '#f59e0b', textShadow: getTextShadow()}}>
                 {isProfit ? `Profit: ${profitPercentage.toFixed(1)}%` : `${requiredAvgMulti.toFixed(2)}x`}
               </div>
-              <div className="text-xs mt-0.5" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+              <div className="text-lg mt-2 font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
                 {isProfit ? 'Above break even' : 'To break even'}
               </div>
             </div>
@@ -495,31 +501,31 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
         {/* Currently Opening Bonus */}
         {session?.bonus_opening_phase && bonuses.length > 0 && (
-          <div className="mb-3">
-            <h2 className="text-xs font-semibold mb-1" style={{color: overlaySettings.text_color}}>
+          <div className="mb-6">
+            <h2 className="text-2xl font-black mb-3" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
               Currently Opening
             </h2>
             {(() => {
               const nextBonusToOpen = bonuses.find(bonus => !bonus.payout_recorded_at);
               return nextBonusToOpen ? (
                 <div 
-                  className="p-2 rounded-md border-2 border-dashed"
+                  className="p-6 rounded-xl border-4 border-dashed"
                   style={{
-                    backgroundColor: overlaySettings.show_background ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                    backgroundColor: overlaySettings.show_background ? 'rgba(139, 92, 246, 0.3)' : 'transparent',
                     borderColor: '#8b5cf6'
                   }}
                 >
                   <div className="text-center">
-                    <div className="text-sm font-bold mb-0.5" style={{color: '#8b5cf6'}}>
+                    <div className="text-3xl font-black mb-2" style={{color: '#a78bfa', textShadow: getTextShadow()}}>
                       {nextBonusToOpen.slot_name}
                     </div>
-                    <div className="text-xs" style={{color: overlaySettings.text_color}}>
+                    <div className="text-xl font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
                       ${nextBonusToOpen.bet_size.toFixed(2)} spin
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-3" style={{color: overlaySettings.text_color, opacity: 0.7}}>
+                <div className="text-center py-6 text-xl font-bold" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
                   All bonuses have been opened!
                 </div>
               );
@@ -529,7 +535,7 @@ export default function BonusHuntOverlay({ userId, maxBonuses = 5 }: BonusHuntOv
 
         {/* Bonuses Grid */}
         <div>
-          <h2 className="text-sm font-semibold mb-2" style={{color: overlaySettings.text_color}}>
+          <h2 className="text-2xl font-black mb-4" style={{color: overlaySettings.text_color, textShadow: getTextShadow()}}>
             Bonus Queue ({bonuses.length})
           </h2>
           

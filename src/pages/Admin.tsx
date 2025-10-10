@@ -29,7 +29,7 @@ interface FeaturePermission {
 interface UserRole {
   id: string;
   user_id: string;
-  role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
+  role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin';
   granted_by: string;
   granted_at: string;
 }
@@ -37,7 +37,7 @@ interface UserRole {
 interface UserWithProfile {
   id: string;
   email: string;
-  role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin';
+  role: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin';
   display_name?: string;
   kick_username?: string;
   kick_user_id?: string;
@@ -183,7 +183,7 @@ export default function Admin() {
     }
   };
 
-  const updateFeaturePermission = async (featureName: string, requiredRole: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin', isEnabled: boolean) => {
+  const updateFeaturePermission = async (featureName: string, requiredRole: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin', isEnabled: boolean) => {
     try {
       const { error } = await supabase
         .from('feature_permissions')
@@ -472,7 +472,7 @@ export default function Admin() {
                         <TableCell>
                           <Select
                             value={permission.required_role}
-                            onValueChange={(newRole: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'admin') => 
+                            onValueChange={(newRole: 'viewer' | 'user' | 'premium' | 'vip_plus' | 'verified_viewer' | 'streamer' | 'verified_streamer' | 'admin') => 
                               updateFeaturePermission(permission.feature_name, newRole, permission.is_enabled)
                             }
                           >
