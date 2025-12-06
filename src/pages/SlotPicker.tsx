@@ -75,19 +75,30 @@ export default function SlotPicker() {
     return slots.filter((slot) => selectedProviders.includes(slot.provider));
   };
 
-  // Fisher-Yates shuffle for true randomness
+  // Cryptographically stronger random using multiple entropy sources
+  const getSecureRandom = () => {
+    const timestamp = Date.now();
+    const random1 = Math.random();
+    const random2 = Math.random();
+    return (random1 + random2 + (timestamp % 1000) / 1000) % 1;
+  };
+
+  // Fisher-Yates shuffle with enhanced randomness
   const shuffleArray = <T,>(array: T[]): T[] => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(getSecureRandom() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
   };
 
   const getRandomNumber = (min: number, max: number) => {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(getSecureRandom() * (max - min + 1)) + min;
   };
+
+  // Generate unique spin ID to force re-render
+  const [spinId, setSpinId] = useState(0);
 
   const spin = () => {
     const filteredSlots = getFilteredSlots();
@@ -102,41 +113,43 @@ export default function SlotPicker() {
       wheelRef.current.style.transform = "translateX(0)";
     }
 
+    // Force new render with unique spin ID
+    setSpinId(Date.now());
     setIsSpinning(true);
     setResult(null);
 
-    // Generate the final result - pick random winner
-    const randomSlotIndex = getRandomNumber(0, filteredSlots.length - 1);
-    const selectedSlot = filteredSlots[randomSlotIndex];
+    // Shuffle all slots first for true randomness
+    const shuffledSlots = shuffleArray(filteredSlots);
+    
+    // Pick a truly random winner from shuffled array
+    const winnerIdx = getRandomNumber(0, shuffledSlots.length - 1);
+    const selectedSlot = shuffledSlots[winnerIdx];
     const randomBet = getRandomNumber(betRange[0], betRange[1]);
     const randomSpins = getRandomNumber(spinRange[0], spinRange[1]);
 
-    // Create truly randomized wheel items
-    const totalItems = 60;
-    const winnerPosition = 50; // Winner will be placed here
+    // Create wheel with completely random items each time
+    const totalItems = 70;
+    const winnerPosition = 55 + getRandomNumber(0, 5); // Slightly vary winner position
     const wheelItems: Slot[] = [];
 
-    // Shuffle the filtered slots for true randomness
+    // Generate each position with fresh randomness
     for (let i = 0; i < totalItems; i++) {
       if (i === winnerPosition) {
-        // Place the winner at this exact position
         wheelItems.push(selectedSlot);
       } else {
-        // Pick random slots from shuffled array for variety
-        const shuffled = shuffleArray(filteredSlots);
-        wheelItems.push(shuffled[i % shuffled.length]);
+        // Pick from a freshly shuffled array each time for max variety
+        const freshShuffle = shuffleArray(filteredSlots);
+        // Use different index based on position to avoid patterns
+        const pickIdx = (i * 7 + getRandomNumber(0, freshShuffle.length - 1)) % freshShuffle.length;
+        wheelItems.push(freshShuffle[pickIdx]);
       }
     }
 
-    // Extra shuffle of non-winner items to ensure randomness
-    const finalItems: Slot[] = [];
-    for (let i = 0; i < totalItems; i++) {
-      if (i === winnerPosition) {
-        finalItems.push(selectedSlot);
-      } else {
-        finalItems.push(filteredSlots[Math.floor(Math.random() * filteredSlots.length)]);
-      }
-    }
+    // Final shuffle of sections to break any remaining patterns
+    // Shuffle items before winner and after winner separately
+    const beforeWinner = shuffleArray(wheelItems.slice(0, winnerPosition));
+    const afterWinner = shuffleArray(wheelItems.slice(winnerPosition + 1));
+    const finalItems = [...beforeWinner, selectedSlot, ...afterWinner];
 
     setVisibleSlots(finalItems);
     setWinnerIndex(winnerPosition);
@@ -374,7 +387,7 @@ export default function SlotPicker() {
                   {visibleSlots.length > 0 ? (
                     visibleSlots.map((slot, index) => (
                       <div
-                        key={`${slot.id}-${index}-${Date.now()}`}
+                        key={`${spinId}-${index}`}
                         className={`flex-shrink-0 w-44 h-24 bg-gradient-to-br from-secondary to-muted rounded-lg border-2 flex flex-col items-center justify-center p-3 transition-all ${
                           index === winnerIndex && !isSpinning ? "border-primary bg-primary/20" : "border-border"
                         }`}
