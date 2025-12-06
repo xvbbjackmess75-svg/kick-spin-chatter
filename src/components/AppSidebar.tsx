@@ -8,6 +8,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { 
@@ -19,16 +22,23 @@ import {
   Zap,
   Trophy,
   History,
-  
   Dices,
-  Shield
+  Shield,
+  ChevronDown,
+  Target
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useProfile } from "@/hooks/useProfile";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+];
+
+const bonusHuntItems = [
   { title: "Bonus Hunt", url: "/bonus-hunt", icon: Trophy },
+  { title: "Slot Picker", url: "/slot-picker", icon: Target },
 ];
 
 const streamerItems = [
@@ -44,6 +54,9 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
   const { isAdmin, hasStreamerAccess, role, loading } = useUserRole();
+  const [bonusHuntOpen, setBonusHuntOpen] = useState(
+    currentPath === "/bonus-hunt" || currentPath === "/slot-picker"
+  );
   
   console.log('🔧 AppSidebar - Full state:', { 
     role, 
@@ -96,6 +109,42 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              
+              {/* Bonus Hunt Submenu */}
+              <Collapsible open={bonusHuntOpen} onOpenChange={setBonusHuntOpen}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="w-full justify-start transition-all duration-200 hover:bg-secondary/50 text-muted-foreground hover:text-foreground">
+                      <Trophy className="h-5 w-5 mr-3" />
+                      {!collapsed && (
+                        <>
+                          <span className="font-medium flex-1">Bonus Hunt</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${bonusHuntOpen ? "rotate-180" : ""}`} />
+                        </>
+                      )}
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {bonusHuntItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild>
+                            <NavLink 
+                              to={item.url} 
+                              className={({ isActive }) => 
+                                `transition-all duration-200 ${isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`
+                              }
+                            >
+                              <item.icon className="h-4 w-4 mr-2" />
+                              {!collapsed && <span>{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
