@@ -33,7 +33,11 @@ export default function SlotPicker() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
   const [visibleSlots, setVisibleSlots] = useState<Slot[]>([]);
+  const [winnerIndex, setWinnerIndex] = useState<number>(0);
   const wheelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const ITEM_WIDTH = 176; // w-44 = 11rem = 176px
+  const ITEM_GAP = 16; // gap-4 = 1rem = 16px
 
   useEffect(() => {
     fetchSlots();
@@ -71,6 +75,16 @@ export default function SlotPicker() {
     return slots.filter((slot) => selectedProviders.includes(slot.provider));
   };
 
+  // Fisher-Yates shuffle for true randomness
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const getRandomNumber = (min: number, max: number) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
@@ -82,39 +96,67 @@ export default function SlotPicker() {
       return;
     }
 
+    // Reset wheel position instantly before starting new spin
+    if (wheelRef.current) {
+      wheelRef.current.style.transition = "none";
+      wheelRef.current.style.transform = "translateX(0)";
+    }
+
     setIsSpinning(true);
     setResult(null);
 
-    // Generate the final result
+    // Generate the final result - pick random winner
     const randomSlotIndex = getRandomNumber(0, filteredSlots.length - 1);
     const selectedSlot = filteredSlots[randomSlotIndex];
     const randomBet = getRandomNumber(betRange[0], betRange[1]);
     const randomSpins = getRandomNumber(spinRange[0], spinRange[1]);
 
-    // Create wheel items - repeat slots for animation effect
+    // Create truly randomized wheel items
+    const totalItems = 60;
+    const winnerPosition = 50; // Winner will be placed here
     const wheelItems: Slot[] = [];
-    const totalItems = 50; // Total items in the wheel
-    const winnerPosition = 45; // Where winner will land
 
+    // Shuffle the filtered slots for true randomness
     for (let i = 0; i < totalItems; i++) {
       if (i === winnerPosition) {
+        // Place the winner at this exact position
         wheelItems.push(selectedSlot);
       } else {
-        wheelItems.push(filteredSlots[getRandomNumber(0, filteredSlots.length - 1)]);
+        // Pick random slots from shuffled array for variety
+        const shuffled = shuffleArray(filteredSlots);
+        wheelItems.push(shuffled[i % shuffled.length]);
       }
     }
 
-    setVisibleSlots(wheelItems);
-
-    // Animate the wheel
-    setTimeout(() => {
-      if (wheelRef.current) {
-        const itemWidth = 200; // Width of each item + gap
-        const targetPosition = winnerPosition * itemWidth - (wheelRef.current.parentElement?.clientWidth || 0) / 2 + itemWidth / 2;
-        wheelRef.current.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
-        wheelRef.current.style.transform = `translateX(-${targetPosition}px)`;
+    // Extra shuffle of non-winner items to ensure randomness
+    const finalItems: Slot[] = [];
+    for (let i = 0; i < totalItems; i++) {
+      if (i === winnerPosition) {
+        finalItems.push(selectedSlot);
+      } else {
+        finalItems.push(filteredSlots[Math.floor(Math.random() * filteredSlots.length)]);
       }
-    }, 50);
+    }
+
+    setVisibleSlots(finalItems);
+    setWinnerIndex(winnerPosition);
+
+    // Calculate position dynamically based on actual container width
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (wheelRef.current && containerRef.current) {
+          const containerWidth = containerRef.current.clientWidth;
+          const itemTotalWidth = ITEM_WIDTH + ITEM_GAP;
+          
+          // Calculate to center the winner under the pointer
+          // Position = (winnerIndex * itemWidth) - (containerWidth / 2) + (itemWidth / 2)
+          const targetPosition = (winnerPosition * itemTotalWidth) - (containerWidth / 2) + (ITEM_WIDTH / 2) + 16; // +16 for padding
+          
+          wheelRef.current.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
+          wheelRef.current.style.transform = `translateX(-${targetPosition}px)`;
+        }
+      }, 50);
+    });
 
     // Show result after animation
     setTimeout(() => {
@@ -315,7 +357,10 @@ export default function SlotPicker() {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[30px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
               
               {/* Wheel Track */}
-              <div className="relative overflow-hidden bg-secondary/50 rounded-xl h-32 mt-8 border-2 border-border">
+              <div 
+                ref={containerRef}
+                className="relative overflow-hidden bg-secondary/50 rounded-xl h-32 mt-8 border-2 border-border"
+              >
                 {/* Gradient Overlays */}
                 <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
                 <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
@@ -329,8 +374,10 @@ export default function SlotPicker() {
                   {visibleSlots.length > 0 ? (
                     visibleSlots.map((slot, index) => (
                       <div
-                        key={`${slot.id}-${index}`}
-                        className="flex-shrink-0 w-44 h-24 bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-border flex flex-col items-center justify-center p-3 transition-all"
+                        key={`${slot.id}-${index}-${Date.now()}`}
+                        className={`flex-shrink-0 w-44 h-24 bg-gradient-to-br from-secondary to-muted rounded-lg border-2 flex flex-col items-center justify-center p-3 transition-all ${
+                          index === winnerIndex && !isSpinning ? "border-primary bg-primary/20" : "border-border"
+                        }`}
                       >
                         <span className="text-sm font-bold text-foreground text-center line-clamp-2">
                           {slot.name}
