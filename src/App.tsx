@@ -24,6 +24,7 @@ import Giveaways from "./pages/Giveaways";
 import TwitterGiveaways from "./pages/TwitterGiveaways";
 import SlotsCalls from "./pages/SlotsCalls";
 import BonusHunt from "./pages/BonusHunt";
+import SlotPicker from "./pages/SlotPicker";
 import SlotsOverlayPage from "./pages/SlotsOverlayPage";
 import BonusHuntOverlayPage from "./pages/BonusHuntOverlayPage";
 import Account from "./pages/Account";
@@ -129,6 +130,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <BonusHunt />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/slot-picker"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SlotPicker />
                   </Layout>
                 </ProtectedRoute>
               }

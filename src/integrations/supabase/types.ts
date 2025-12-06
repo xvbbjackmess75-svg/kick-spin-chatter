@@ -1270,14 +1270,8 @@ export type Database = {
         Args: { target_username: string }
         Returns: boolean
       }
-      get_current_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_next_call_order: {
-        Args: { event_uuid: string }
-        Returns: number
-      }
+      get_current_user_id: { Args: never; Returns: string }
+      get_next_call_order: { Args: { event_uuid: string }; Returns: number }
       get_overlay_slots_calls: {
         Args: { target_user_id?: string }
         Returns: {
@@ -1295,23 +1289,34 @@ export type Database = {
         }[]
       }
       get_potential_alt_accounts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           ip_address: unknown
           user_count: number
           users: Json
         }[]
       }
-      get_secure_overlay_event: {
-        Args: Record<PropertyKey, never> | { target_user_id?: string }
-        Returns: {
-          event_bet_size: number
-          event_id: string
-          event_status: string
-          event_title: string
-          is_active: boolean
-        }[]
-      }
+      get_secure_overlay_event:
+        | {
+            Args: never
+            Returns: {
+              event_bet_size: number
+              event_id: string
+              event_status: string
+              event_title: string
+              is_active: boolean
+            }[]
+          }
+        | {
+            Args: { target_user_id?: string }
+            Returns: {
+              event_bet_size: number
+              event_id: string
+              event_status: string
+              event_title: string
+              is_active: boolean
+            }[]
+          }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1321,7 +1326,7 @@ export type Database = {
         Returns: Json
       }
       get_vpn_proxy_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           country: string
           detection_count: number
@@ -1356,9 +1361,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      track_user_ip: {
-        Args:
-          | {
+      track_user_ip:
+        | {
+            Args: {
               p_country_code?: string
               p_country_name?: string
               p_ip_address: unknown
@@ -1371,13 +1376,17 @@ export type Database = {
               p_user_agent?: string
               p_user_id: string
             }
-          | { p_ip_address: unknown; p_user_agent?: string; p_user_id: string }
-        Returns: undefined
-      }
-      verify_viewer: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_ip_address: unknown
+              p_user_agent?: string
+              p_user_id: string
+            }
+            Returns: undefined
+          }
+      verify_viewer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
