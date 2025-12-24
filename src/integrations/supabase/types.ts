@@ -1364,6 +1364,14 @@ export type Database = {
       track_user_ip:
         | {
             Args: {
+              p_ip_address: unknown
+              p_user_agent?: string
+              p_user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_country_code?: string
               p_country_name?: string
               p_ip_address: unknown
@@ -1373,14 +1381,6 @@ export type Database = {
               p_provider?: string
               p_proxy_type?: string
               p_risk_score?: number
-              p_user_agent?: string
-              p_user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_ip_address: unknown
               p_user_agent?: string
               p_user_id: string
             }
